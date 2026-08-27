@@ -1,26 +1,32 @@
 # EU Product Radar
 
-Versión reconstruida en **Next.js + TypeScript** a partir de la especificación acordada.
+Next.js 15.5.24 + TypeScript. Primera implementación de cuentas reales y catálogos privados con Supabase.
 
-## Incluye
-- Landing comercial responsive.
-- Selector multilenguaje: ES, EN, FR, DE, IT, PT.
-- Demo de login.
-- Dashboard.
-- Importación CSV / XLS / XLSX.
-- Risk Score 0–100 y prioridades.
-- Historial demo.
-- Exportación de informes Excel.
-- Planes Free / Starter / Pro / Business / Agency.
-- Auditoría puntual de 29 €.
-- Arquitectura preparada para Supabase Auth/PostgreSQL, Stripe, LLM, Resend y PostHog.
+## Activación
+
+Sigue [SETUP.md](SETUP.md) antes de publicar esta versión: incluye la migración SQL, las direcciones de autenticación, las plantillas de correo y la prueba de aceptación. Crear un proyecto en Supabase no aplica automáticamente estas configuraciones.
+
+## Implementado
+
+- Registro, confirmación de correo, acceso, cierre de sesión y cambio/recuperación de contraseña.
+- Panel privado sin productos precargados y con historial persistente.
+- Importación CSV UTF-8 / XLS / XLSX validada, con límites de tamaño y filas.
+- Informes Excel a partir de los análisis guardados.
+- RLS y permisos explícitos que aíslan los catálogos de cada cuenta.
+- Demostración pública independiente, sin guardado.
+- Pruebas automatizadas de importación, reglas y seguridad de base de datos.
 
 ## Ejecutar
+
 ```bash
-npm install
+npm ci
+cp .env.example .env.local
+# Configurar las tres variables públicas.
+npm test
+npm run build
 npm run dev
 ```
-Abre http://localhost:3000
 
-## Producción
-Antes de vender el servicio, conecta backend, autenticación real, pagos y base normativa versionada. El motor incluido es demostrativo y no certifica conformidad legal.
+## Alcance
+
+El indicador actual cuenta campos ausentes: no comprueba veracidad, requisitos por categoría ni conformidad normativa. Los planes y precios son previstos; no se cobran suscripciones. El SMTP para clientes, controles de abuso, proceso de borrado y verificación en el entorno real son necesarios antes de abrir el servicio al público.

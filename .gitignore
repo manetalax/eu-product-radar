@@ -4,3 +4,7 @@ out
 .env
 .env.local
 .DS_Store
+
+.env.*
+!.env.example
+*.tsbuildinfo
