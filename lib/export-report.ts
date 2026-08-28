@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { documentationFor, GUIDE_SCOPE, GUIDE_VERSION } from './documentation';
 import { Analysis, analyze, RULE_VERSION, validateProducts } from './analysis';
 
 const C = { navy: 'FF111827', purple: 'FF4F46E5', muted: 'FF64748B', pale: 'FFF1F5F9', white: 'FFFFFFFF', line: 'FFE2E8F0' };
@@ -102,6 +103,22 @@ export async function buildReport(analysis: Analysis): Promise<ExcelJS.Workbook>
   products.forEach((p, i) => body(technical, i + 13, [p.name, p.manufacturer, p.responsible, p.warning]));
   technical.autoFilter = `A12:D${products.length + 12}`;
   for (const ws of wb.worksheets) ws.pageSetup.printArea = `A1:D${ws.rowCount}`;
+  const guide = sheet(wb, 'Guía documental', [44, 32, 34, 55, 65, 65, 60], 4);
+  band(guide, 1, 'GUÍA DOCUMENTAL · Qué pedir y dónde conseguirlo', 7, true);
+  band(guide, 2, GUIDE_SCOPE + ' Versión: ' + GUIDE_VERSION, 7);
+  guide.getRow(2).height = 58;
+  header(guide, 4, ['Producto', 'Documento / dato', 'Estado', 'Cuándo aplica', 'Dónde conseguirlo', 'Qué comprobar', 'Fuente oficial']);
+  let guideRow = 5;
+  products.forEach(p => documentationFor(p).forEach(action => {
+    body(guide, guideRow, [p.name, action.title, action.status, action.condition, action.obtain, action.check, action.source]);
+    guide.getCell(guideRow, 7).value = { text: action.source, hyperlink: action.source };
+    guideRow++;
+  }));
+  guide.autoFilter = `A4:G${guideRow - 1}`;
+  guide.pageSetup.printArea = `A1:G${guideRow - 1}`;
+  guide.pageSetup.printTitlesRow = '1:4';
+  summary.getCell('A17').value = 'Productos: prioridades y campos. Datos técnicos: reglas y originales. Guía documental: qué solicitar, a quién y fuentes. Instantánea guardada; guía orientativa actual, no validación documental.';
+  summary.getRow(17).height = 58;
   summary.pageSetup.fitToHeight = 1;
   return wb;
 }
