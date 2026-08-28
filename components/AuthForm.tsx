@@ -23,6 +23,24 @@ export default function AuthForm({ initialMode = 'login', initialMessage = '' }:
   const [error, setError] = useState('');
   const [notice, setNotice] = useState(initialMessage);
   const change = (next: Mode) => { setMode(next); setError(''); setNotice(''); setPassword(''); setConfirm(''); };
+  async function signInWithGoogle() {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const { data, error } = await createClient().auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`, skipBrowserRedirect: true }
+      });
+      if (error || !data.url) {
+        setError('No se ha podido iniciar el acceso con Google. Comprueba que el proveedor está configurado en Supabase.');
+        setBusy(false);
+        return;
+      }
+      window.location.assign(data.url);
+    } catch {
+      setError('No se ha podido conectar con Google. Vuelve a intentarlo.');
+      setBusy(false);
+    }
+  }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError(''); setNotice('');
     if ((mode === 'signup' || mode === 'reset') && (password.length < 12 || password !== confirm)) { setError('Usa al menos 12 caracteres y escribe la misma contraseña en los dos campos.'); return; }
@@ -51,6 +69,7 @@ export default function AuthForm({ initialMode = 'login', initialMessage = '' }:
   return <main className="shell"><section className="login card">
     <Link className="brand" href="/">EU <b>Product Radar</b></Link><h1>{titles[mode]}</h1>
     <p className="muted">Tu cuenta y tus catálogos son privados. La comprobación actual detecta campos incompletos; no certifica conformidad normativa.</p>
+    {(mode === 'login' || mode === 'signup') && <div className="auth-actions"><button type="button" className="btn ghost full" disabled={busy} onClick={signInWithGoogle}>Continuar con Google</button><p className="muted">O utiliza tu correo y contraseña:</p></div>}
     <form onSubmit={submit}>
       {mode !== 'reset' && <label>Correo electrónico<input required type="email" autoComplete="email" maxLength={254} value={email} disabled={busy} onChange={e => setEmail(e.target.value)} /></label>}
       {mode !== 'forgot' && <label>Contraseña<input required type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={mode === 'login' ? 1 : 12} maxLength={128} value={password} disabled={busy} onChange={e => setPassword(e.target.value)} /></label>}
