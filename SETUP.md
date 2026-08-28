@@ -121,3 +121,11 @@ El formulario de acceso y registro incluye «Continuar con Google» mediante Sup
 5. Probar cancelar el consentimiento: debe regresar al acceso sin crear una sesión. Comprobar también registro con Google, cierre de sesión e historial privado.
 
 La compilación y las pruebas locales no verifican las credenciales ni sustituyen esta prueba real. Las tablas products y price_history no sustituyen la tabla analyses que requiere esta rama.
+
+## Informe Excel con formato
+
+La descarga de análisis privados genera Resumen, Productos y Datos técnicos. Incluye totales con fórmulas y valores calculados, columnas con ancho definido, texto ajustado, prioridades con colores y encabezados fijos. Conserva los valores originales y la fecha en UTC. El libro es una instantánea: editarlo no cambia el análisis guardado.
+
+ExcelJS se carga únicamente al descargar. El secreto de Google y las credenciales de sesión nunca se exportan. La dependencia uuid de ExcelJS se fija a 11.1.1 para evitar la versión vulnerable heredada; solo se utiliza la exportación XLSX.
+
+Verificación: pruebas de ida y vuelta XLSX (datos, fórmulas, colores, fechas y texto con apariencia de fórmula), suite existente y compilación Next.js. Revisión visual con LibreOffice. La comprobación final en Apple Numbers requiere abrir una nueva descarga en el dispositivo; no se afirma compatibilidad visual idéntica entre aplicaciones.

@@ -5,9 +5,38 @@ import * as XLSX from 'xlsx';
 import { analyze, validateProducts, MAX_PRODUCTS, MAX_FILE_BYTES } from '../lib/analysis';
 import { parseProducts } from '../lib/import-products';
 import { MAX_BODY_BYTES, readJsonBody, safeAuthDestination, sameOrigin } from '../lib/http';
+import { buildReport, reportBytes } from '../lib/export-report';
+import ExcelJS from 'exceljs';
 
 const fixture = readFileSync(new URL('./fixtures/catalogue.csv', import.meta.url));
 const bytes = (text: string) => new TextEncoder().encode(text).buffer;
+const reportFixture = () => ({ id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', filename: 'Catálogo de prueba.csv', created_at: '2026-08-28T09:30:39Z', rule_version: 'missing-fields-v1', products: parseProducts(Uint8Array.from(fixture).buffer, 'catalogue.csv') });
+test('el informe exportado conserva datos, resumen y formato después de abrir el XLSX', async () => {
+  const source = reportFixture();
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(await reportBytes(source) as unknown as ExcelJS.Buffer);
+  assert.deepEqual(wb.worksheets.map(s => s.name), ['Resumen', 'Productos', 'Datos técnicos']);
+  const summary = wb.getWorksheet('Resumen')!, products = wb.getWorksheet('Productos')!, technical = wb.getWorksheet('Datos técnicos')!;
+  assert.deepEqual([8,9,10,11,13].map(row => summary.getCell(row, 2).result), [5,2,2,1,47]);
+  assert.deepEqual([5,6,7,8,9].map(row => products.getCell(row, 2).value), [92,64,36,36,8]);
+  source.products.forEach((p, i) => assert.deepEqual([1,2,3,4].map(col => technical.getCell(i + 13, col).value ?? ''), [p.name,p.manufacturer,p.responsible,p.warning]));
+  assert.equal(products.getCell('A5').alignment.wrapText, true);
+  assert.equal((products.getCell('C5').fill as ExcelJS.FillPattern).fgColor?.argb, 'FFFEE2E2');
+  assert.ok(products.getColumn(1).width! >= 40);
+  assert.ok(products.getRow(5).height! >= 60);
+  assert.equal(products.views[0].state, 'frozen');
+  assert.equal(summary.getCell('B5').type, ExcelJS.ValueType.Date);
+});
+test('el informe mantiene los textos con apariencia de fórmulas como datos y rechaza reglas desconocidas', async () => {
+  const source = reportFixture();
+  source.products[0].name = '=HYPERLINK("https://example.invalid","texto")';
+  source.products[0].warning = '+SUM(1,2)';
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(await reportBytes(source) as unknown as ExcelJS.Buffer);
+  assert.equal(wb.getWorksheet('Productos')!.getCell('A5').type, ExcelJS.ValueType.String);
+  assert.equal(wb.getWorksheet('Datos técnicos')!.getCell('D13').value, source.products[0].warning);
+  await assert.rejects(buildReport({ ...source, rule_version: 'future-version' }), /Versión/);
+});
 test('el CSV entregado al usuario produce cinco resultados esperados', () => {
   const products = parseProducts(Uint8Array.from(fixture).buffer, 'catalogue.csv');
   assert.equal(products.length, 5);

@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import * as XLSX from 'xlsx';
 import { Analysis, AnalysisSummary, analyze, MAX_FILE_BYTES, RULE_VERSION } from '@/lib/analysis';
 import { parseProducts } from '@/lib/import-products';
 import { createClient } from '@/lib/supabase/client';
@@ -73,12 +72,20 @@ export default function Dashboard({ email }: { email: string }) {
     } catch (e) { setError(e instanceof Error ? e.message : 'No se puede abrir el análisis.'); }
     finally { setBusy(false); }
   }
-  function exportReport() {
-    if (!current) return;
-    const workbook = XLSX.utils.book_new();
-    const values = results.map((result, i) => ({ Producto:result.name, Fabricante:current.products[i].manufacturer, 'Responsable UE':current.products[i].responsible, Advertencias:current.products[i].warning, 'Indicador de campos incompletos':result.score, Prioridad:result.priority, Revisar:result.missing.join(', ') || 'Sin campos básicos vacíos', Fecha:current.created_at, Reglas:current.rule_version, Alcance:'Comprobación de presencia de datos; no verifica su veracidad ni certifica conformidad normativa.' }));
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(values), 'Informe');
-    XLSX.writeFile(workbook, `eu-product-radar-${current.id.slice(0,8)}.xlsx`);
+  async function exportReport() {
+    if (!current || busy) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const { reportBytes } = await import('@/lib/export-report');
+      const bytes = await reportBytes(current);
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      const link = document.createElement('a');
+      link.href = url; link.download = `eu-product-radar-${current.created_at.slice(0,10)}-${current.id.slice(0,8)}.xlsx`;
+      document.body.appendChild(link); link.click(); link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      setNotice('Informe preparado con las hojas Resumen, Productos y Datos técnicos.');
+    } catch { setError('No se ha podido generar el informe. Vuelve a intentarlo; tu análisis sigue guardado.'); }
+    finally { setBusy(false); }
   }
   async function signOut() {
     setBusy(true); setError('');
