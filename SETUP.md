@@ -107,3 +107,17 @@ Las pruebas incluyen CSV/XLS/XLSX, validación de límites, redirecciones restri
 - Mantener acceso de pruebas hasta configurar correo, controles de abuso/cuotas, política de conservación y proceso de borrado, y verificar la instalación real.
 
 Referencias: [Supabase SSR](https://supabase.com/docs/guides/auth/server-side/creating-a-client), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [correo](https://supabase.com/docs/guides/auth/auth-smtp), [plantillas](https://supabase.com/docs/guides/auth/auth-email-templates), [SheetJS](https://docs.sheetjs.com/docs/getting-started/installation/nodejs/).
+
+## Acceso con Google
+
+El formulario de acceso y registro incluye «Continuar con Google» mediante Supabase OAuth con PKCE. No solicita acceso a Drive, Gmail ni tokens de uso sin conexión. Apple todavía no está habilitado en la interfaz.
+
+1. Configurar el cliente OAuth web en Google y el proveedor Google en Supabase. Los secretos van únicamente en Supabase, nunca en el repositorio.
+2. En Supabase → Authentication → URL Configuration, añadir la URL exacta de retorno de la preview:
+   `https://deploy-preview-1--euproductradar.netlify.app/auth/callback`.
+   Mantener también el callback de producción documentado arriba.
+3. Netlify construye cada Deploy Preview con NEXT_PUBLIC_SITE_URL igual a DEPLOY_PRIME_URL; esto conserva el callback y las solicitudes privadas en el mismo entorno.
+4. Probar desde `/login`: pulsar «Continuar con Google», autorizar con una cuenta permitida por la configuración de pruebas de Google y comprobar que se vuelve a `/dashboard` en la misma preview.
+5. Probar cancelar el consentimiento: debe regresar al acceso sin crear una sesión. Comprobar también registro con Google, cierre de sesión e historial privado.
+
+La compilación y las pruebas locales no verifican las credenciales ni sustituyen esta prueba real. Las tablas products y price_history no sustituyen la tabla analyses que requiere esta rama.
