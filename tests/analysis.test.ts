@@ -81,12 +81,19 @@ test('importa XLS y XLSX sin perder los campos', () => {
     assert.deepEqual(result, expected);
   }
 });
-test('rechaza vacíos, formatos inválidos, encabezados ausentes o ambiguos', () => {
+test('rechaza vacíos, formatos inválidos, nombres ausentes o encabezados ambiguos', () => {
   assert.throws(()=>parseProducts(bytes(''), 'test.csv'), /vacío/);
   assert.throws(()=>parseProducts(bytes('a'), 'test.txt'), /CSV/);
-  assert.throws(()=>parseProducts(bytes('nombre,fabricante\nA,B'), 'test.csv'), /columna/);
+  assert.throws(()=>parseProducts(bytes('fabricante,advertencias\nMarca,Aviso'), 'test.csv'), /nombre/);
   assert.throws(()=>parseProducts(bytes('nombre,name,fabricante,responsable,warning\nA,B,C,D,E'), 'test.csv'), /una sola/);
   assert.throws(()=>parseProducts(bytes('nombre,fabricante,responsable,warning\n,Marca,EU,Aviso'), 'test.csv'), /nombre/);
+});
+test('acepta exportaciones habituales de tiendas y marca como vacíos los campos que el canal no incluye', () => {
+  const shopify = parseProducts(bytes('Handle,Title,Vendor,Variant SKU\nlampara,Lámpara LED,Marca Norte,LAMP-1\n'), 'shopify.csv');
+  assert.deepEqual(shopify[0], { name: 'Lámpara LED', manufacturer: 'Marca Norte', responsible: '', warning: '' });
+  assert.deepEqual(analyze(shopify)[0].missing, ['Operador responsable UE', 'Seguridad/advertencias']);
+  const marketplace = parseProducts(bytes('item-name,brand,safety-warning\nAuriculares,Sonora,No usar bajo la lluvia\n'), 'marketplace.csv');
+  assert.deepEqual(marketplace[0], { name: 'Auriculares', manufacturer: 'Sonora', responsible: '', warning: 'No usar bajo la lluvia' });
 });
 test('los límites rechazan archivos grandes y exceso de productos o campos', () => {
   assert.throws(()=>parseProducts(new ArrayBuffer(MAX_FILE_BYTES+1),'large.csv'), /5 MB/);

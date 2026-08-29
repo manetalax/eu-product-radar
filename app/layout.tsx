@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   description: BRAND_DESCRIPTION,
   applicationName: BRAND_NAME,
   manifest: '/manifest.webmanifest',
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: BRAND_NAME },
   alternates: { canonical: '/' },
   openGraph: {
     title: `${BRAND_NAME} · Europa activa`,
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
   robots: process.env.CONTEXT === 'deploy-preview' || process.env.CONTEXT === 'branch-deploy' ? { index: false, follow: false } : { index: true, follow: true },
 };
 
-export const viewport: Viewport = { width: 'device-width', initialScale: 1, themeColor: '#f6f7fb', colorScheme: 'light' };
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#f6f7fb', colorScheme: 'light' };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return <html lang="es"><body>{children}</body></html>;

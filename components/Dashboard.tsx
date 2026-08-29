@@ -3,11 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Brand from '@/components/Brand';
+import BrandLogos from '@/components/BrandLogos';
+import TrustMark from '@/components/TrustMark';
 import { Analysis, AnalysisSummary, analysisMarket, analyze, MAX_FILE_BYTES, supportsRuleVersion } from '@/lib/analysis';
-import { createClient } from '@/lib/supabase/client';
 import { ProductQuota } from '@/lib/quota';
 import { documentationFor, GUIDE_SCOPE } from '@/lib/documentation';
 import { isActiveMarketCode, MarketCode, MARKETS, MARKETS_BY_RANK } from '@/lib/markets';
+import { formatPrice, formatProductCount, landingCopy } from '@/lib/landing-i18n';
+import { PlanId, PLANS, PLANS_BY_ID } from '@/lib/plans';
+import { authService } from '@/lib/services/auth-client';
+import { clearPlanIntent, readPlanIntent, registerPlanInterest } from '@/lib/services/plan-interest';
 
 type Tab = 'dashboard' | 'products' | 'history' | 'reports' | 'settings';
 const tabs: [Tab, string, string][] = [
@@ -76,24 +81,25 @@ export default function Dashboard({ email }: { email: string }) {
   }, [page]);
 
   useEffect(() => {
-    const { data: { subscription } } = createClient().auth.onAuthStateChange(event => {
+    const unsubscribe = authService.onAuthStateChange(event => {
       if (event === 'SIGNED_OUT') window.location.replace('/login');
     });
     const refresh = (event: PageTransitionEvent) => { if (event.persisted) window.location.reload(); };
     window.addEventListener('pageshow', refresh);
     return () => {
-      subscription.unsubscribe();
+      unsubscribe();
       window.removeEventListener('pageshow', refresh);
     };
   }, []);
 
   useEffect(() => {
-    const plan = window.localStorage.getItem('product-radar-plan-intent');
-    if (!plan || !['Pro', 'Business', 'Auditoría'].includes(plan)) return;
-    createClient().auth.updateUser({ data: { plan_interest: plan, plan_interest_at: new Date().toISOString() } }).then(({ error: planError }) => {
+    const planId = readPlanIntent();
+    if (!planId) return;
+    const plan = PLANS_BY_ID[planId];
+    registerPlanInterest(planId).then(({ error: planError }) => {
       if (!planError) {
-        window.localStorage.removeItem('product-radar-plan-intent');
-        setNotice(`Interés en ${plan} registrado. No se ha activado ningún cobro.`);
+        clearPlanIntent();
+        setNotice(`Interés en ${plan.name} registrado. No se ha activado ningún cobro.`);
       }
     });
   }, []);
@@ -199,13 +205,14 @@ export default function Dashboard({ email }: { email: string }) {
     setNotice('Plantilla de Europa descargada. Sustituye el ejemplo por tus productos y conserva los cuatro encabezados.');
   }
 
-  async function reservePlan(plan: 'Pro' | 'Business' | 'Auditoría') {
+  async function reservePlan(planId: PlanId) {
+    const plan = PLANS_BY_ID[planId];
     setBusy(true);
     setError('');
     setNotice('');
-    const { error: updateError } = await createClient().auth.updateUser({ data: { plan_interest: plan, plan_interest_at: new Date().toISOString() } });
+    const { error: updateError } = await registerPlanInterest(planId);
     if (updateError) setError('No se ha podido registrar tu solicitud. Vuelve a intentarlo.');
-    else setNotice(`Interés en ${plan} registrado. Te avisaremos antes de activar cualquier cobro.`);
+    else setNotice(`Interés en ${plan.name} registrado. Te avisaremos antes de activar cualquier cobro.`);
     setBusy(false);
   }
 
@@ -213,7 +220,7 @@ export default function Dashboard({ email }: { email: string }) {
     setBusy(true);
     setError('');
     try {
-      const { error: signOutError } = await createClient().auth.signOut();
+      const { error: signOutError } = await authService.signOut();
       if (signOutError) throw signOutError;
       window.location.replace('/login');
     } catch {
@@ -269,6 +276,7 @@ export default function Dashboard({ email }: { email: string }) {
           <div className="import-actions"><button className="btn primary import-cta" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{busy ? 'Analizando…' : quotaBlocked ? 'Disponible el próximo mes' : 'Elegir archivo'}</button><button className="text-button template-link" onClick={downloadTemplate}>Descargar plantilla</button></div>
           <div className="quota-inline"><span>{quota ? `${quota.remaining} de ${quota.limit} productos disponibles` : 'Calculando cuota…'}</span><div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div></div>
         </div>}
+        {(tab === 'dashboard' || tab === 'products') && <BrandLogos group="commerce" label="Compatible con exportaciones de" note="Importa CSV o Excel; los campos disponibles dependen de cada exportación y los conectores directos siguen en preparación." compact />}
 
         {tab === 'dashboard' && <>
           <div className="onboarding-card card"><div><span className="eyebrow">PUESTA EN MARCHA</span><h2>Tu primera revisión, sin dudas.</h2></div><ol><li className="done"><span>1</span><div><strong>Mercado</strong><small>Europa seleccionada</small></div></li><li className={templateReady ? 'done' : ''}><span>2</span><div><strong>Plantilla</strong><small>{templateReady ? 'Descargada' : 'Lista para descargar'}</small></div></li><li className={current ? 'done' : ''}><span>3</span><div><strong>Análisis</strong><small>{current ? 'Catálogo guardado' : 'Sube tu catálogo'}</small></div></li><li className={reportReady ? 'done' : ''}><span>4</span><div><strong>Informe</strong><small>{reportReady ? 'Exportado' : 'Excel o PDF'}</small></div></li></ol></div>
@@ -294,9 +302,9 @@ export default function Dashboard({ email }: { email: string }) {
         {tab === 'settings' && <div className="settings-grid">
           <div className="card content-card"><span className="eyebrow">CUENTA</span><h2>Tu perfil</h2><p className="account-email settings-email">{email}</p><Link className="btn ghost" href="/reset-password">Cambiar contraseña</Link></div>
           <div className="card content-card"><span className="eyebrow">PLAN ACTUAL</span><h2>Gratis</h2><div className="settings-quota"><strong>{quota?.remaining ?? '—'}</strong><span>productos disponibles este mes</span></div><div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div><p className="muted">5 productos al mes. La cuota se reinicia el primer día de cada mes.</p></div>
-          <div className="card content-card plan-interest"><span className="eyebrow">PRÓXIMA APERTURA</span><h2>Reserva el plan que necesitas</h2><div className="mini-plans"><button disabled={busy} onClick={() => reservePlan('Pro')}><span>Pro</span><strong>19 €/mes</strong><small>Hasta 100 productos</small></button><button disabled={busy} onClick={() => reservePlan('Business')}><span>Business</span><strong>49 €/mes</strong><small>Hasta 500 productos</small></button><button disabled={busy} onClick={() => reservePlan('Auditoría')}><span>Auditoría</span><strong>29 €</strong><small>Revisión puntual</small></button></div><p className="muted">Registrar interés no activa cobros ni cambia tu plan.</p></div>
+          <div className="card content-card plan-interest"><span className="eyebrow">PRÓXIMA APERTURA</span><h2>Reserva el plan que necesitas</h2><div className="mini-plans">{PLANS.map(plan => <button className={plan.featured ? 'featured' : ''} key={plan.id} disabled={busy} onClick={() => reservePlan(plan.id)}><span>{plan.name}{plan.featured ? ' · Recomendado' : ''}</span><strong>{formatPrice('es', plan.monthlyPriceEur)}/mes</strong><small>{landingCopy.es.pricing.upTo} {formatProductCount('es', plan.monthlyProductLimit)}</small></button>)}</div><p className="muted">Registrar interés no activa cobros ni cambia tu plan.</p></div>
           <div className="card content-card expansion-card"><span className="eyebrow">EXPANSIÓN INTERNACIONAL</span><h2>Un núcleo, cada mercado como módulo.</h2><p>Europa está activa. EE. UU., China, Reino Unido y Japón son los siguientes destinos preparados en la arquitectura.</p><div className="expansion-flags">{MARKETS_BY_RANK.map(market => <span key={market.code} title={market.name}>{market.flag}</span>)}</div></div>
-          <div className="card content-card settings-security"><span className="eyebrow">PRIVACIDAD</span><h2>Tu información permanece separada</h2><p>Los análisis de esta cuenta no son visibles desde otras cuentas.</p><p className="muted">Evita subir datos personales innecesarios o información confidencial que no sea necesaria para analizar tus productos.</p></div>
+          <div className="card content-card settings-security"><span className="eyebrow">PRIVACIDAD</span><h2>Tu información permanece separada</h2><p>Los análisis de esta cuenta no son visibles desde otras cuentas.</p><p className="muted">Evita subir datos personales innecesarios o información confidencial que no sea necesaria para analizar tus productos.</p><TrustMark title="EPR Trust Mark" detail="Comprobaciones internas de transparencia" httpsLabel="Conexión HTTPS segura" explanation="Sello interno de Product Radar. No es una certificación externa ni acredita la conformidad de un producto." compact /></div>
         </div>}
       </section>
     </div>
