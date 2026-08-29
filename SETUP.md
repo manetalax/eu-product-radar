@@ -12,6 +12,8 @@ En Supabase, abre **SQL Editor → New query**, copia el contenido completo de `
 - No permite lectura anónima, cambios en análisis previos ni escritura para otro usuario.
 - El indicador se recalcula con la versión de reglas guardada; solo existe `missing-fields-v1` en esta entrega.
 
+Si la tabla `analyses` ya existe, ejecuta después **una sola vez** `supabase/migrations/202608290001_free_monthly_quota.sql`. Esta segunda migración conserva el consumo ya realizado y activa de forma atómica el límite gratuito de cinco productos por cuenta y mes UTC.
+
 ## 2. Configurar las direcciones de autenticación
 
 En **Authentication → URL Configuration**:
@@ -81,6 +83,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 6. Con contraseña incorrecta se deniega el acceso. Sin sesión, `/api/analyses` devuelve 401. Cerrar sesión en una pestaña cierra también el panel de las otras.
 7. Probar un CSV vacío, sin encabezados o con más de 1.000 productos: se muestra un error y no se guarda una importación parcial.
 8. Solicitar recuperación de contraseña, seguir el enlace, cambiarla y entrar con la nueva.
+9. Con una cuenta nueva, guardar un archivo de cinco productos. Un sexto producto, incluso en otro archivo o mediante dos solicitudes simultáneas, debe rechazarse sin guardado parcial. La otra cuenta conserva sus propios cinco productos disponibles.
 
 No declarar este bloque activado hasta completar estas pruebas en el proyecto real. Las pruebas automatizadas locales no sustituyen la configuración ni los correos reales.
 
@@ -102,7 +105,7 @@ Las pruebas incluyen CSV/XLS/XLSX, validación de límites, redirecciones restri
 - El historial contiene datos reales de cada cuenta; la demostración pública se mantiene separada y no guarda datos.
 - Solo se comprueba la presencia de fabricante, responsable UE y advertencias. No se evalúa si son correctos, suficientes o exigibles para una categoría.
 - 5 MB de archivo, 1.000 productos por importación, 1.000 caracteres por campo y 2 MB de solicitud JSON. Se analiza únicamente la primera hoja de Excel.
-- No hay pagos ni límites por plan comercial implementados.
+- El plan gratuito limita a cinco productos por cuenta y mes UTC. Los pagos y las mejoras a planes comerciales todavía no están implementados.
 - No hay aún verificación normativa, alertas regulatorias, conectores a tiendas, borrado de cuenta desde la web, ni traducción completa de los nuevos formularios.
 - Mantener acceso de pruebas hasta configurar correo, controles de abuso/cuotas, política de conservación y proceso de borrado, y verificar la instalación real.
 

@@ -5,7 +5,7 @@ import DemoDashboard from '@/components/DemoDashboard';
 import Link from 'next/link';
 
 const plans=[
- {n:'Free',p:'0 €',l:'5 productos',d:'Para probar el radar'},
+ {n:'Free',p:'0 €',l:'5 productos/mes',d:'Para probar el radar'},
  {n:'Starter',p:'19 €/mes',l:'100 productos',d:'Para vendedores pequeños'},
  {n:'Pro',p:'49 €/mes',l:'1.000 productos',d:'Historial e informes'},
  {n:'Business',p:'149 €/mes',l:'10.000 productos',d:'Equipos y mayor volumen'},

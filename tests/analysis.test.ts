@@ -7,6 +7,7 @@ import { parseProducts } from '../lib/import-products';
 import { MAX_BODY_BYTES, readJsonBody, safeAuthDestination, sameOrigin } from '../lib/http';
 import { buildReport, reportBytes } from '../lib/export-report';
 import ExcelJS from 'exceljs';
+import { productQuota, quotaExceededMessage } from '../lib/quota';
 
 const fixture = readFileSync(new URL('./fixtures/catalogue.csv', import.meta.url));
 const bytes = (text: string) => new TextEncoder().encode(text).buffer;
@@ -15,7 +16,7 @@ test('el informe exportado conserva datos, resumen y formato después de abrir e
   const source = reportFixture();
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(await reportBytes(source) as unknown as ExcelJS.Buffer);
-  assert.deepEqual(wb.worksheets.map(s => s.name), ['Resumen', 'Productos', 'Datos técnicos']);
+  assert.deepEqual(wb.worksheets.map(s => s.name), ['Resumen', 'Productos', 'Datos técnicos', 'Guía documental']);
   const summary = wb.getWorksheet('Resumen')!, products = wb.getWorksheet('Productos')!, technical = wb.getWorksheet('Datos técnicos')!;
   assert.deepEqual([8,9,10,11,13].map(row => summary.getCell(row, 2).result), [5,2,2,1,47]);
   assert.deepEqual([5,6,7,8,9].map(row => products.getCell(row, 2).value), [92,64,36,36,8]);
@@ -75,6 +76,12 @@ test('los límites rechazan archivos grandes y exceso de productos o campos', ()
 test('el indicador solo evalúa presencia, no cumplimiento', () => {
   const products=validateProducts([{name:'Ejemplo',manufacturer:'No comprobado',responsible:'No comprobado',warning:'No comprobado'}]);
   assert.equal(analyze(products)[0].score,8);
+});
+test('la cuota gratuita cuenta cinco productos por mes UTC y nunca queda negativa', () => {
+  const quota = productQuota(3, new Date('2026-08-29T23:30:00Z'));
+  assert.deepEqual(quota, { limit: 5, used: 3, remaining: 2, periodStart: '2026-08-01' });
+  assert.equal(productQuota(8).remaining, 0);
+  assert.match(quotaExceededMessage(4, quota), /contiene 4.*te quedan 2/);
 });
 test('redirecciones de autenticación limitadas a destinos internos concretos', () => {
   for(const path of ['https://evil.example','//evil.example','/\\evil.example',null,'/dashboard?token=x']) assert.equal(safeAuthDestination(path),'/dashboard');
