@@ -8,6 +8,8 @@ import { MAX_BODY_BYTES, readJsonBody, safeAuthDestination, sameOrigin } from '.
 import { buildReport, reportBytes } from '../lib/export-report';
 import ExcelJS from 'exceljs';
 import { productQuota, quotaExceededMessage } from '../lib/quota';
+import { ACTIVE_MARKET_CODES, MARKETS_BY_RANK } from '../lib/markets';
+import { documentationFor } from '../lib/documentation';
 
 const fixture = readFileSync(new URL('./fixtures/catalogue.csv', import.meta.url));
 const bytes = (text: string) => new TextEncoder().encode(text).buffer;
@@ -47,7 +49,28 @@ test('el CSV entregado al usuario produce cinco resultados esperados', () => {
 test('acepta CSV separado por punto y coma, encabezados españoles y espacios', () => {
   const rows = parseProducts(bytes('nombre;fabricante;responsable UE;advertencias seguridad\r\nMochila;Marca;;Aviso\r\n'), 'test.csv');
   assert.equal(analyze(rows)[0].score, 36);
-  assert.deepEqual(analyze(rows)[0].missing, ['Responsable UE']);
+  assert.deepEqual(analyze(rows)[0].missing, ['Operador responsable UE']);
+});
+test('acepta el encabezado global de operador sin romper responsable_ue', () => {
+  const rows = parseProducts(bytes('nombre,fabricante,operador_mercado,advertencias_seguridad\nMochila,Marca,,Aviso\n'), 'global.csv');
+  assert.deepEqual(analyze(rows)[0].missing, ['Operador responsable UE']);
+});
+test('el motor está separado por mercado y Europa es el único módulo operativo', () => {
+  const product = validateProducts([{name:'Ejemplo',manufacturer:'Marca',responsible:'',warning:'Aviso'}]);
+  assert.deepEqual(analyze(product, 'US')[0].missing, ['Importador de registro']);
+  assert.deepEqual(analyze(product, 'JP')[0].missing, ['Importador en Japón']);
+  assert.deepEqual(ACTIVE_MARKET_CODES, ['EU']);
+  assert.deepEqual(MARKETS_BY_RANK.map(market => market.code), ['US','EU','CN','GB','JP']);
+});
+test('la guía europea conserva fuentes oficiales y los próximos mercados tienen módulos aislados', () => {
+  const product = validateProducts([{name:'Ejemplo',manufacturer:'',responsible:'',warning:''}])[0];
+  const eu = documentationFor(product, 'EU');
+  const us = documentationFor(product, 'US');
+  assert.equal(eu.length, 7);
+  assert.match(eu[1].title, /UE/);
+  assert.match(eu[5].condition, /no todos/i);
+  assert.notEqual(eu[5].source, us[5].source);
+  assert.match(us[5].title, /GCC/);
 });
 test('importa XLS y XLSX sin perder los campos', () => {
   const expected = parseProducts(Uint8Array.from(fixture).buffer, 'test.csv');

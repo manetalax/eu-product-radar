@@ -1,10 +1,22 @@
-export const RULE_VERSION = 'missing-fields-v1';
+import { MarketCode, MARKETS, marketCodeOrEu } from './markets';
+
+export const LEGACY_RULE_VERSION = 'missing-fields-v1';
+export const RULE_VERSION = 'market-readiness-v2';
+export const SUPPORTED_RULE_VERSIONS = [LEGACY_RULE_VERSION, RULE_VERSION] as const;
 export const MAX_PRODUCTS = 1000;
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
 export type Product = { name: string; manufacturer: string; responsible: string; warning: string };
 export type Result = { name: string; score: number; priority: 'ALTA' | 'MEDIA' | 'BAJA'; missing: string[] };
-export type Analysis = { id: string; filename: string; created_at: string; rule_version: string; products: Product[] };
+export type Analysis = { id: string; filename: string; created_at: string; rule_version: string; market_code?: MarketCode; products: Product[] };
 export type AnalysisSummary = Omit<Analysis, 'products'> & { product_count: number };
+
+export function supportsRuleVersion(value: unknown): boolean {
+  return typeof value === 'string' && (SUPPORTED_RULE_VERSIONS as readonly string[]).includes(value);
+}
+
+export function analysisMarket(analysis: Pick<Analysis, 'market_code'>): MarketCode {
+  return marketCodeOrEu(analysis.market_code);
+}
 
 export function validateProducts(input: unknown): Product[] {
   if (!Array.isArray(input) || input.length === 0) throw new Error('El archivo no contiene productos.');
@@ -21,11 +33,12 @@ export function validateProducts(input: unknown): Product[] {
   });
 }
 
-export function analyze(products: Product[]): Result[] {
+export function analyze(products: Product[], marketCode: MarketCode = 'EU'): Result[] {
+  const operatorLabel = MARKETS[marketCode].operatorFieldLabel;
   return products.map(p => {
     const missing: string[] = [];
     if (!p.manufacturer.trim()) missing.push('Fabricante');
-    if (!p.responsible.trim()) missing.push('Responsable UE');
+    if (!p.responsible.trim()) missing.push(operatorLabel);
     if (!p.warning.trim()) missing.push('Seguridad/advertencias');
     const score = 8 + missing.length * 28;
     return { name: p.name, score, priority: score >= 60 ? 'ALTA' : score >= 30 ? 'MEDIA' : 'BAJA', missing };

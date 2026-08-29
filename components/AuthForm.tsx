@@ -2,8 +2,11 @@
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import Brand from '@/components/Brand';
 
 type Mode = 'login' | 'signup' | 'forgot' | 'reset';
+type RequestedPlan = 'pro' | 'business' | 'audit';
+const planNames: Record<RequestedPlan, string> = { pro: 'Pro', business: 'Business', audit: 'Auditoría' };
 const titles: Record<Mode, string> = {
   login: 'Entrar en tu cuenta',
   signup: 'Crear cuenta',
@@ -40,7 +43,7 @@ function authMessage(error: { code?: string; message: string }) {
   return 'No se ha podido completar la operación. Revisa los datos, la conexión y vuelve a intentarlo.';
 }
 
-export default function AuthForm({ initialMode = 'login', initialMessage = '' }: { initialMode?: Mode; initialMessage?: string }) {
+export default function AuthForm({ initialMode = 'login', initialMessage = '', requestedPlan }: { initialMode?: Mode; initialMessage?: string; requestedPlan?: RequestedPlan }) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -66,6 +69,7 @@ export default function AuthForm({ initialMode = 'login', initialMessage = '' }:
     setError('');
     setNotice('');
     try {
+      if (requestedPlan) window.localStorage.setItem('product-radar-plan-intent', planNames[requestedPlan]);
       const { data, error } = await createClient().auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`, skipBrowserRedirect: true }
@@ -96,12 +100,17 @@ export default function AuthForm({ initialMode = 'login', initialMessage = '' }:
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!;
       if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-        if (error) setError(authMessage(error)); else window.location.assign('/dashboard');
+        if (error) setError(authMessage(error));
+        else {
+          if (requestedPlan) window.localStorage.setItem('product-radar-plan-intent', planNames[requestedPlan]);
+          window.location.assign('/dashboard');
+        }
       } else if (mode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${siteUrl}/auth/callback` } });
+        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${siteUrl}/auth/callback`, data: requestedPlan ? { plan_interest: planNames[requestedPlan], plan_interest_at: new Date().toISOString() } : undefined } });
         if (error) setError(authMessage(error));
         else if (data.session) window.location.assign('/dashboard');
         else {
+          if (requestedPlan) window.localStorage.setItem('product-radar-plan-intent', planNames[requestedPlan]);
           setNotice('Si el registro puede completarse, recibirás un correo de confirmación. Revisa también spam. Si ya tenías cuenta, utiliza Entrar o Recuperar contraseña.');
           setPassword('');
           setConfirm('');
@@ -125,8 +134,9 @@ export default function AuthForm({ initialMode = 'login', initialMessage = '' }:
   }
 
   return <main className="shell"><section className="login card auth-card">
-    <Link className="brand" href="/">EU <b>Product Radar</b></Link>
+    <Brand />
     <h1>{titles[mode]}</h1>
+    {requestedPlan && (mode === 'login' || mode === 'signup') && <p className="plan-intent-note"><strong>{planNames[requestedPlan]} seleccionado.</strong> Primero crea tu cuenta o entra. Solo registraremos tu interés; no se activa ningún cobro.</p>}
     <p className="muted">Tu cuenta y tus catálogos son privados. La comprobación actual detecta campos incompletos; no certifica conformidad normativa.</p>
 
     {(mode === 'login' || mode === 'signup') && <div className="auth-actions oauth-section">

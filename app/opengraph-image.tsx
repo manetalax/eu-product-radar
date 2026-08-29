@@ -1,0 +1,28 @@
+import { ImageResponse } from 'next/og';
+
+export const alt = 'Product Radar · Catálogos preparados para Europa';
+export const size = { width: 1200, height: 630 };
+export const contentType = 'image/png';
+
+export default function OpenGraphImage() {
+  return new ImageResponse(
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: 72, color: '#101828', background: 'linear-gradient(135deg,#ffffff 0%,#f4f3ff 55%,#eef2ff 100%)', fontFamily: 'Arial, sans-serif' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
+        <svg width="78" height="78" viewBox="0 0 144 144">
+          <path d="M20 48.5 72 20l52 28.5v57L72 134l-52-28.5v-57Z" fill="none" stroke="#101828" strokeWidth="10" strokeLinejoin="round" />
+          <path d="m20 48.5 52 28.5 52-28.5M72 77v57" fill="none" stroke="#101828" strokeWidth="10" strokeLinejoin="round" />
+          <path d="m72 77 38-38" fill="none" stroke="#4f46e5" strokeWidth="10" strokeLinecap="round" />
+          <path d="M80 23a50 50 0 0 1 45 45" fill="none" stroke="#4f46e5" strokeWidth="10" strokeLinecap="round" />
+          <circle cx="72" cy="77" r="9" fill="#4f46e5" />
+        </svg>
+        <div style={{ display: 'flex', fontSize: 46, fontWeight: 800, letterSpacing: -2 }}>Product&nbsp;<span style={{ color: '#4f46e5' }}>Radar</span></div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 940 }}>
+        <div style={{ display: 'flex', marginBottom: 22, color: '#4f46e5', fontSize: 22, fontWeight: 800, letterSpacing: 2 }}>EUROPA ACTIVA · PLATAFORMA GLOBAL</div>
+        <div style={{ display: 'flex', fontSize: 78, lineHeight: 1.02, fontWeight: 800, letterSpacing: -4 }}>Tu catálogo europeo, preparado antes de vender.</div>
+      </div>
+      <div style={{ display: 'flex', gap: 16, color: '#475467', fontSize: 22 }}><span>CSV y Excel</span><span>·</span><span>Fuentes oficiales</span><span>·</span><span>Informes trazables</span></div>
+    </div>,
+    size,
+  );
+}

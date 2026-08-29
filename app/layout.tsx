@@ -1,10 +1,31 @@
 import './globals.css';
 import './dashboard-polish.css';
-import type { Metadata } from 'next';
+import './premium-global.css';
+import type { Metadata, Viewport } from 'next';
+import { BRAND_DESCRIPTION, BRAND_NAME } from '@/lib/brand';
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://euproductradar.netlify.app';
+
 export const metadata: Metadata = {
-  title: 'EU Product Radar',
-  description: 'Detecta campos documentales incompletos, prioriza revisiones y genera informes para catálogos de producto en Europa.'
+  metadataBase: new URL(siteUrl),
+  title: { default: `${BRAND_NAME} · Catálogos preparados para Europa`, template: `%s · ${BRAND_NAME}` },
+  description: BRAND_DESCRIPTION,
+  applicationName: BRAND_NAME,
+  manifest: '/manifest.webmanifest',
+  alternates: { canonical: '/' },
+  openGraph: {
+    title: `${BRAND_NAME} · Europa activa`,
+    description: BRAND_DESCRIPTION,
+    type: 'website',
+    locale: 'es_ES',
+    siteName: BRAND_NAME,
+  },
+  twitter: { card: 'summary_large_image', title: `${BRAND_NAME} · Europa activa`, description: BRAND_DESCRIPTION },
+  robots: process.env.CONTEXT === 'deploy-preview' || process.env.CONTEXT === 'branch-deploy' ? { index: false, follow: false } : { index: true, follow: true },
 };
+
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, themeColor: '#f6f7fb', colorScheme: 'light' };
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return <html lang="es"><body>{children}</body></html>;
 }
