@@ -1,6 +1,8 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { Analysis, analyze, RULE_VERSION, validateProducts } from './analysis';
+import { Analysis, analysisMarket, analyze, supportsRuleVersion, validateProducts } from './analysis';
 import { documentationFor, GUIDE_SCOPE, GUIDE_VERSION } from './documentation';
+import { BRAND_NAME } from './brand';
+import { MARKETS } from './markets';
 
 // Standard PDF fonts cover Spanish. Preserve other scripts as explicit Unicode
 // escapes instead of silently dropping names or failing the entire download.
@@ -10,11 +12,12 @@ export const pdfText = (text: string) => Array.from(text).map(c => {
 }).join('');
 
 export async function pdfBytes(analysis: Analysis): Promise<Uint8Array<ArrayBuffer>> {
-  if (analysis.rule_version !== RULE_VERSION) throw new Error('Versión de reglas no compatible.');
-  const products = validateProducts(analysis.products), results = analyze(products);
+  if (!supportsRuleVersion(analysis.rule_version)) throw new Error('Versión de reglas no compatible.');
+  const marketCode = analysisMarket(analysis), market = MARKETS[marketCode];
+  const products = validateProducts(analysis.products), results = analyze(products, marketCode);
   const doc = await PDFDocument.create();
-  doc.setTitle('EU Product Radar - Informe documental');
-  doc.setCreator('EU Product Radar');
+  doc.setTitle(`${BRAND_NAME} - Informe documental · ${market.name}`);
+  doc.setCreator(BRAND_NAME);
   const regular = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const ink = rgb(.07, .1, .17), purple = rgb(.31, .27, .9);
@@ -40,8 +43,8 @@ export async function pdfBytes(analysis: Analysis): Promise<Uint8Array<ArrayBuff
     if (line) emit();
     y -= 7;
   }
-  lineBlock('EU PRODUCT RADAR', 24, true);
-  lineBlock('Informe del catálogo y guía documental', 16, true);
+  lineBlock('PRODUCT RADAR', 24, true);
+  lineBlock(`Informe del catálogo · ${market.name}`, 16, true);
   lineBlock('Archivo: ' + analysis.filename);
   lineBlock('Análisis (UTC): ' + new Date(analysis.created_at).toISOString());
   lineBlock('Identificador: ' + analysis.id);
@@ -61,8 +64,8 @@ export async function pdfBytes(analysis: Analysis): Promise<Uint8Array<ArrayBuff
     lineBlock(p.name, 16, true);
     lineBlock(`Indicador: ${results[i].score}/100 | Prioridad: ${results[i].priority}`);
     lineBlock('Campos vacíos: ' + (results[i].missing.join(', ') || 'Ninguno de los tres campos básicos'));
-    for (const [label, value] of [['Fabricante', p.manufacturer], ['Responsable UE', p.responsible], ['Advertencias', p.warning]]) lineBlock(`${label}: ${value || 'No aportado'}`);
-    documentationFor(p).forEach(a => {
+    for (const [label, value] of [['Fabricante', p.manufacturer], [market.operatorFieldLabel, p.responsible], ['Advertencias', p.warning]]) lineBlock(`${label}: ${value || 'No aportado'}`);
+    documentationFor(p, marketCode).forEach(a => {
       if (y < 210) newPage();
       lineBlock(a.title + ' - ' + a.status, 12, true);
       lineBlock('Aplicabilidad: ' + a.condition);
@@ -73,7 +76,7 @@ export async function pdfBytes(analysis: Analysis): Promise<Uint8Array<ArrayBuff
   });
   const pages = doc.getPages();
   pages.forEach((p, i) => {
-    p.drawText(`EU Product Radar | Guía orientativa | ${i + 1} / ${pages.length}`, { x: 48, y: 30, size: 8, font: regular, color: ink });
+    p.drawText(`${BRAND_NAME} | ${market.shortName} · Guía orientativa | ${i + 1} / ${pages.length}`, { x: 48, y: 30, size: 8, font: regular, color: ink });
   });
   return new Uint8Array(await doc.save());
 }

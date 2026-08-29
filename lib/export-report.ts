@@ -1,6 +1,8 @@
 import ExcelJS from 'exceljs';
 import { documentationFor, GUIDE_SCOPE, GUIDE_VERSION } from './documentation';
-import { Analysis, analyze, RULE_VERSION, validateProducts } from './analysis';
+import { Analysis, analysisMarket, analyze, supportsRuleVersion, validateProducts } from './analysis';
+import { BRAND_NAME } from './brand';
+import { MARKETS } from './markets';
 
 const C = { navy: 'FF111827', purple: 'FF4F46E5', muted: 'FF64748B', pale: 'FFF1F5F9', white: 'FFFFFFFF', line: 'FFE2E8F0' };
 const priorityColors = { ALTA: ['FFFEE2E2', 'FF991B1B'], MEDIA: ['FFFEF3C7', 'FF92400E'], BAJA: ['FFDCFCE7', 'FF166534'] };
@@ -10,7 +12,7 @@ function sheet(wb: ExcelJS.Workbook, name: string, widths: number[], frozen = 0)
   const ws = wb.addWorksheet(name, { views: [{ state: frozen ? 'frozen' : 'normal', ySplit: frozen, showGridLines: false }], properties: { defaultRowHeight: 24 } });
   ws.columns = widths.map(width => ({ width }));
   ws.pageSetup = { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: .3, right: .3, top: .4, bottom: .4, header: .2, footer: .2 } };
-  ws.headerFooter.oddFooter = 'EU Product Radar | Página &P de &N';
+  ws.headerFooter.oddFooter = `${BRAND_NAME} | Página &P de &N`;
   return ws;
 }
 function band(ws: ExcelJS.Worksheet, row: number, text: string, end: number, title = false) {
@@ -48,18 +50,20 @@ function body(ws: ExcelJS.Worksheet, row: number, values: (string | number | Dat
 }
 
 export async function buildReport(analysis: Analysis): Promise<ExcelJS.Workbook> {
-  if (analysis.rule_version !== RULE_VERSION) throw new Error('Versión de reglas no compatible.');
+  if (!supportsRuleVersion(analysis.rule_version)) throw new Error('Versión de reglas no compatible.');
   const products = validateProducts(analysis.products);
-  const results = analyze(products);
+  const marketCode = analysisMarket(analysis);
+  const market = MARKETS[marketCode];
+  const results = analyze(products, marketCode);
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'EU Product Radar'; wb.title = 'Informe de campos del catálogo';
+  wb.creator = BRAND_NAME; wb.title = `Informe de preparación · ${market.name}`;
   wb.created = new Date(analysis.created_at); wb.modified = new Date();
   wb.calcProperties.fullCalcOnLoad = true;
   const summary = sheet(wb, 'Resumen', [38, 24, 24, 24]);
   const details = sheet(wb, 'Productos', [46, 17, 16, 48], 4);
   const technical = sheet(wb, 'Datos técnicos', [46, 32, 38, 64], 12);
-  band(summary, 1, 'EU PRODUCT RADAR', 4, true);
-  band(summary, 2, 'INFORME DEL CATÁLOGO · Comprobación de campos', 4);
+  band(summary, 1, 'PRODUCT RADAR', 4, true);
+  band(summary, 2, `INFORME DEL CATÁLOGO · Mercado: ${market.name}`, 4);
   body(summary, 4, ['Archivo', analysis.filename]); summary.mergeCells('B4:D4'); summary.getRow(4).height = 42;
   body(summary, 5, ['Fecha del análisis (UTC)', new Date(analysis.created_at)]); summary.getCell('B5').numFmt = 'dd/mm/yyyy hh:mm';
   header(summary, 7, ['Resumen', 'Productos', 'Lectura', '']);
@@ -96,10 +100,10 @@ export async function buildReport(analysis: Analysis): Promise<ExcelJS.Workbook>
   body(technical, 4, ['Identificador del análisis', analysis.id]); technical.mergeCells('B4:D4');
   body(technical, 5, ['Versión de reglas', analysis.rule_version]); technical.mergeCells('B5:D5');
   body(technical, 6, ['Fecha del análisis (UTC)', new Date(analysis.created_at)]); technical.getCell('B6').numFmt = 'dd/mm/yyyy hh:mm';
-  body(technical, 7, ['Cómo se calcula', '8 puntos de base + 28 por cada campo ausente: fabricante, responsable UE y advertencias.']); technical.mergeCells('B7:D7'); technical.getRow(7).height = 42;
+  body(technical, 7, ['Cómo se calcula', `8 puntos de base + 28 por cada campo ausente: fabricante, ${market.operatorFieldLabel.toLowerCase()} y advertencias.`]); technical.mergeCells('B7:D7'); technical.getRow(7).height = 42;
   body(technical, 8, ['Prioridades', 'ALTA: ≥60 · MEDIA: ≥30 y <60 · BAJA: <30. Incluso una prioridad baja no garantiza cumplimiento.']); technical.mergeCells('B8:D8'); technical.getRow(8).height = 42;
   band(technical, 10, 'DATOS ORIGINALES · Los campos vacíos se conservan vacíos. Los datos y puntuaciones corresponden al momento del análisis; editar este archivo no actualiza la web.', 4);
-  header(technical, 12, ['Producto', 'Fabricante', 'Responsable UE', 'Advertencias de seguridad']);
+  header(technical, 12, ['Producto', 'Fabricante', market.operatorFieldLabel, 'Advertencias de seguridad']);
   products.forEach((p, i) => body(technical, i + 13, [p.name, p.manufacturer, p.responsible, p.warning]));
   technical.autoFilter = `A12:D${products.length + 12}`;
   for (const ws of wb.worksheets) ws.pageSetup.printArea = `A1:D${ws.rowCount}`;
@@ -109,7 +113,7 @@ export async function buildReport(analysis: Analysis): Promise<ExcelJS.Workbook>
   guide.getRow(2).height = 58;
   header(guide, 4, ['Producto', 'Documento / dato', 'Estado', 'Cuándo aplica', 'Dónde conseguirlo', 'Qué comprobar', 'Fuente oficial']);
   let guideRow = 5;
-  products.forEach(p => documentationFor(p).forEach(action => {
+  products.forEach(p => documentationFor(p, marketCode).forEach(action => {
     body(guide, guideRow, [p.name, action.title, action.status, action.condition, action.obtain, action.check, action.source]);
     guide.getCell(guideRow, 7).value = { text: action.source, hyperlink: action.source };
     guideRow++;

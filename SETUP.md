@@ -10,9 +10,11 @@ En Supabase, abre **SQL Editor → New query**, copia el contenido completo de `
 - Ejecútala una sola vez. Si indica que la función o tabla ya existe, no la borres: comprueba primero si ya se aplicó esta migración.
 - Activa RLS y permite solo leer e insertar análisis de la cuenta autenticada.
 - No permite lectura anónima, cambios en análisis previos ni escritura para otro usuario.
-- El indicador se recalcula con la versión de reglas guardada; solo existe `missing-fields-v1` en esta entrega.
+- El indicador se recalcula con la versión de reglas guardada. Los análisis históricos conservan `missing-fields-v1` y los nuevos utilizan `market-readiness-v2`.
 
 Si la tabla `analyses` ya existe, ejecuta después **una sola vez** `supabase/migrations/202608290001_free_monthly_quota.sql`. Esta segunda migración conserva el consumo ya realizado y activa de forma atómica el límite gratuito de cinco productos por cuenta y mes UTC.
+
+Ejecuta por último `supabase/migrations/20260829075235_global_market_architecture.sql`. Añade el mercado `EU` a los análisis existentes, conserva su versión histórica y deja códigos de dos letras para futuros módulos internacionales.
 
 ## 2. Configurar las direcciones de autenticación
 
@@ -56,6 +58,8 @@ La aplicación también admite el callback PKCE predeterminado; en ese caso soli
 El SMTP integrado de Supabase solo entrega a direcciones autorizadas del equipo del proyecto y tiene un límite de envío muy bajo. Para la primera prueba de registro usa el email de tu cuenta de Supabase. No presupongas que otro correo cualquiera recibirá el mensaje.
 
 Antes de abrir el registro a clientes, configura **Custom SMTP**, un remitente verificado y revisa los límites de Auth. No publiques las credenciales SMTP ni las pegues en el repositorio.
+
+En **Authentication → Attack Protection**, activa la protección frente a contraseñas filtradas. El asesor de seguridad de Supabase la marca como pendiente; requiere configuración administrativa y no puede activarse mediante una migración SQL.
 
 Para probar el aislamiento con dos usuarios sin enviar invitaciones, el propietario puede crear dos cuentas de prueba en **Authentication → Users → Add user → Create new user**, eligiendo él mismo las contraseñas. Esto no prueba la entrega de correos: registro y recuperación deben probarse por separado.
 
@@ -102,8 +106,8 @@ Las pruebas incluyen CSV/XLS/XLSX, validación de límites, redirecciones restri
 
 ## Alcance y límites
 
-- El historial contiene datos reales de cada cuenta; la demostración pública se mantiene separada y no guarda datos.
-- Solo se comprueba la presencia de fabricante, responsable UE y advertencias. No se evalúa si son correctos, suficientes o exigibles para una categoría.
+- El historial contiene datos reales de cada cuenta. La portada muestra únicamente un ejemplo ilustrativo y no procesa ni guarda datos.
+- El módulo europeo comprueba la presencia de fabricante, operador responsable en la UE y advertencias. No se evalúa si son correctos, suficientes o exigibles para una categoría.
 - 5 MB de archivo, 1.000 productos por importación, 1.000 caracteres por campo y 2 MB de solicitud JSON. Se analiza únicamente la primera hoja de Excel.
 - El plan gratuito limita a cinco productos por cuenta y mes UTC. Los pagos y las mejoras a planes comerciales todavía no están implementados.
 - No hay aún verificación normativa, alertas regulatorias, conectores a tiendas, borrado de cuenta desde la web, ni traducción completa de los nuevos formularios.

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { RULE_VERSION, validateProducts } from '@/lib/analysis';
 import { PRIVATE_HEADERS, readJsonBody, sameOrigin } from '@/lib/http';
 import { currentUtcMonthStart, productQuota, quotaExceededMessage } from '@/lib/quota';
+import { isActiveMarketCode, MarketCode } from '@/lib/markets';
 
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
   const id = params.get('id');
   if (id) {
     if (!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)) return json({ error: 'Identificador no válido.' }, 400);
-    const { data, error } = await supabase.from('analyses').select('id,filename,created_at,rule_version,products').eq('user_id', user.id).eq('id', id).maybeSingle();
+    const { data, error } = await supabase.from('analyses').select('id,filename,created_at,rule_version,market_code,products').eq('user_id', user.id).eq('id', id).maybeSingle();
     if (error) return json({ error: 'No se puede leer el análisis. Comprueba la configuración de la base de datos.' }, 503);
     if (!data) return json({ error: 'Análisis no encontrado.' }, 404);
     return json({ analysis: data });
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
   if (!/^\d{1,6}$/.test(rawPage)) return json({ error: 'Página no válida.' }, 400);
   const page = Number(rawPage);
   const [{ data, error }, quotaResult] = await Promise.all([
-    supabase.from('analyses').select('id,filename,created_at,rule_version,product_count').eq('user_id', user.id).order('created_at', { ascending: false }).order('id', { ascending: false }).range(page * 20, page * 20 + 20),
+    supabase.from('analyses').select('id,filename,created_at,rule_version,market_code,product_count').eq('user_id', user.id).order('created_at', { ascending: false }).order('id', { ascending: false }).range(page * 20, page * 20 + 20),
     readQuota(supabase, user.id).then(quota => ({ quota })).catch(quotaError => ({ error: quotaError })),
   ]);
   if (error) return json({ error: 'El historial no está disponible. Puede faltar ejecutar la configuración SQL en Supabase.' }, 503);
@@ -48,21 +49,24 @@ export async function POST(request: Request) {
   let products;
   let filename;
   let requestId;
+  let marketCode: MarketCode;
   try {
     const body = await readJsonBody(request) as Record<string, unknown> | null;
     if (!body || typeof body.filename !== 'string' || !body.filename.trim() || body.filename.length > 120) throw new Error('El nombre de archivo debe tener entre 1 y 120 caracteres.');
     if (typeof body.requestId !== 'string' || !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(body.requestId)) throw new Error('Identificador de importación no válido.');
+    if (!isActiveMarketCode(body.marketCode)) throw new Error('Europa es el mercado operativo en esta fase. Los siguientes mercados se activarán después de validar sus reglas.');
     filename = body.filename.trim(); requestId = body.requestId;
+    marketCode = body.marketCode;
     products = validateProducts(body.products);
   } catch (error) { return json({ error: error instanceof Error ? error.message : 'Archivo no válido.' }, 400); }
-  const existing = await supabase.from('analyses').select('id,filename,created_at,rule_version,products').eq('id', requestId).eq('user_id', user.id).maybeSingle();
+  const existing = await supabase.from('analyses').select('id,filename,created_at,rule_version,market_code,products').eq('id', requestId).eq('user_id', user.id).maybeSingle();
   if (existing.error) return json({ error: 'No se ha podido comprobar la importación. Vuelve a intentarlo.' }, 503);
   let quota;
   try { quota = await readQuota(supabase, user.id); }
   catch (quotaError) { return json({ error: quotaError instanceof Error ? quotaError.message : 'La cuota no está disponible.' }, 503); }
   if (existing.data) return json({ analysis: existing.data, quota });
   if (products.length > quota.remaining) return json({ error: quotaExceededMessage(products.length, quota), quota }, 429);
-  const { data, error } = await supabase.from('analyses').insert({ id: requestId, user_id: user.id, filename, products, rule_version: RULE_VERSION }).select('id,filename,created_at,rule_version,products').single();
+  const { data, error } = await supabase.from('analyses').insert({ id: requestId, user_id: user.id, filename, products, market_code: marketCode, rule_version: RULE_VERSION }).select('id,filename,created_at,rule_version,market_code,products').single();
   if (error?.message?.includes('free_monthly_product_limit_exceeded')) {
     const latestQuota = await readQuota(supabase, user.id).catch(() => quota);
     return json({ error: quotaExceededMessage(products.length, latestQuota), quota: latestQuota }, 429);

@@ -2,10 +2,10 @@ import * as XLSX from 'xlsx';
 import { MAX_FILE_BYTES, MAX_PRODUCTS, Product, validateProducts } from './analysis';
 
 const aliases: Record<keyof Product, string[]> = {
-  name: ['name', 'title', 'nombre', 'producto'],
-  manufacturer: ['manufacturer', 'fabricante'],
-  responsible: ['responsible', 'responsable', 'responsableue', 'responsibleeu'],
-  warning: ['warning', 'warnings', 'advertencia', 'advertencias', 'seguridad', 'safety', 'advertenciasseguridad'],
+  name: ['name', 'title', 'nombre', 'producto', 'productname', 'producttitle', 'itemname', 'itemtitle'],
+  manufacturer: ['manufacturer', 'fabricante', 'vendor', 'brand', 'brands', 'marca', 'productbrand'],
+  responsible: ['responsible', 'responsable', 'responsableue', 'responsibleeu', 'responsibleperson', 'euresponsibleperson', 'euoperator', 'economicoperator', 'operadormercado', 'operadoreconomico', 'importador', 'importer', 'importername', 'euimporter', 'localoperator', 'marketoperator'],
+  warning: ['warning', 'warnings', 'advertencia', 'advertencias', 'seguridad', 'safety', 'safetywarning', 'safetywarnings', 'productwarning', 'caution', 'advertenciasseguridad'],
 };
 const normalize = (value: unknown) => String(value ?? '').replace(/^\uFEFF/, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[\s_-]/g, '');
 
@@ -31,8 +31,8 @@ export function parseProducts(bytes: ArrayBuffer, filename: string): Product[] {
   const indexes = {} as Record<keyof Product, number>;
   for (const key of Object.keys(aliases) as (keyof Product)[]) {
     const matches = headers.map((header, index) => aliases[key].includes(normalize(header)) ? index : -1).filter(index => index >= 0);
-    if (matches.length !== 1) throw new Error(`Incluye una sola columna para ${key}. Encabezados recomendados: nombre, fabricante, responsable_ue, advertencias_seguridad.`);
-    indexes[key] = matches[0];
+    if (matches.length > 1 || (key === 'name' && matches.length !== 1)) throw new Error('Incluye una sola columna para el nombre del producto y evita encabezados duplicados. Recomendados: nombre, fabricante, operador_mercado y advertencias_seguridad. También reconocemos campos habituales de exportaciones de comercio electrónico.');
+    indexes[key] = matches[0] ?? -1;
   }
-  return validateProducts(matrix.map(row => Object.fromEntries(Object.entries(indexes).map(([key, index]) => [key, String(row[index] ?? '')]))));
+  return validateProducts(matrix.map(row => Object.fromEntries(Object.entries(indexes).map(([key, index]) => [key, index >= 0 ? String(row[index] ?? '') : '']))));
 }

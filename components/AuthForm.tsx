@@ -1,7 +1,11 @@
 'use client';
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import Brand from '@/components/Brand';
+import TrustMark from '@/components/TrustMark';
+import { PlanId, PLANS_BY_ID } from '@/lib/plans';
+import { authService } from '@/lib/services/auth-client';
+import { planInterestMetadata, savePlanIntent } from '@/lib/services/plan-interest';
 
 type Mode = 'login' | 'signup' | 'forgot' | 'reset';
 const titles: Record<Mode, string> = {
@@ -40,7 +44,7 @@ function authMessage(error: { code?: string; message: string }) {
   return 'No se ha podido completar la operación. Revisa los datos, la conexión y vuelve a intentarlo.';
 }
 
-export default function AuthForm({ initialMode = 'login', initialMessage = '' }: { initialMode?: Mode; initialMessage?: string }) {
+export default function AuthForm({ initialMode = 'login', initialMessage = '', requestedPlan }: { initialMode?: Mode; initialMessage?: string; requestedPlan?: PlanId }) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -66,10 +70,8 @@ export default function AuthForm({ initialMode = 'login', initialMessage = '' }:
     setError('');
     setNotice('');
     try {
-      const { data, error } = await createClient().auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`, skipBrowserRedirect: true }
-      });
+      if (requestedPlan) savePlanIntent(requestedPlan);
+      const { data, error } = await authService.signInWithOAuth(`${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`);
       if (error || !data.url) {
         setError('No se ha podido iniciar el acceso con Google. Comprueba que el proveedor está configurado en Supabase.');
         setBusy(false);
@@ -92,28 +94,32 @@ export default function AuthForm({ initialMode = 'login', initialMessage = '' }:
     }
     setBusy(true);
     try {
-      const supabase = createClient();
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!;
       if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-        if (error) setError(authMessage(error)); else window.location.assign('/dashboard');
+        const { error } = await authService.signInWithPassword(email.trim(), password);
+        if (error) setError(authMessage(error));
+        else {
+          if (requestedPlan) savePlanIntent(requestedPlan);
+          window.location.assign('/dashboard');
+        }
       } else if (mode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${siteUrl}/auth/callback` } });
+        const { data, error } = await authService.signUp(email.trim(), password, `${siteUrl}/auth/callback`, requestedPlan ? planInterestMetadata(requestedPlan) : undefined);
         if (error) setError(authMessage(error));
         else if (data.session) window.location.assign('/dashboard');
         else {
+          if (requestedPlan) savePlanIntent(requestedPlan);
           setNotice('Si el registro puede completarse, recibirás un correo de confirmación. Revisa también spam. Si ya tenías cuenta, utiliza Entrar o Recuperar contraseña.');
           setPassword('');
           setConfirm('');
         }
       } else if (mode === 'forgot') {
-        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${siteUrl}/auth/callback?next=/reset-password` });
+        const { error } = await authService.resetPasswordForEmail(email.trim(), `${siteUrl}/auth/callback?next=/reset-password`);
         if (error) setError(authMessage(error)); else setNotice('Si existe una cuenta autorizada con ese correo, recibirás un enlace para cambiar la contraseña.');
       } else {
-        const { error } = await supabase.auth.updateUser({ password });
+        const { error } = await authService.updatePassword(password);
         if (error) setError(authMessage(error));
         else {
-          await supabase.auth.signOut();
+          await authService.signOut();
           window.location.assign('/login?message=password_updated');
         }
       }
@@ -125,8 +131,9 @@ export default function AuthForm({ initialMode = 'login', initialMessage = '' }:
   }
 
   return <main className="shell"><section className="login card auth-card">
-    <Link className="brand" href="/">EU <b>Product Radar</b></Link>
+    <Brand />
     <h1>{titles[mode]}</h1>
+    {requestedPlan && (mode === 'login' || mode === 'signup') && <p className="plan-intent-note"><strong>{PLANS_BY_ID[requestedPlan].name} seleccionado.</strong> Primero crea tu cuenta o entra. Solo registraremos tu interés; no se activa ningún cobro.</p>}
     <p className="muted">Tu cuenta y tus catálogos son privados. La comprobación actual detecta campos incompletos; no certifica conformidad normativa.</p>
 
     {(mode === 'login' || mode === 'signup') && <div className="auth-actions oauth-section">
@@ -164,6 +171,7 @@ export default function AuthForm({ initialMode = 'login', initialMessage = '' }:
       <button className="btn ghost" disabled={busy} onClick={() => change(mode === 'login' ? 'signup' : 'login')}>{mode === 'login' ? 'Crear una cuenta' : 'Ya tengo cuenta'}</button>
       {mode === 'login' && <button className="text-button" disabled={busy} onClick={() => change('forgot')}>¿Has olvidado tu contraseña?</button>}
     </div>}
+    <TrustMark title="EPR Trust Mark" detail="Comprobaciones internas de transparencia" httpsLabel="Conexión HTTPS segura" explanation="Sello interno de Product Radar. No es una certificación externa ni acredita la conformidad de un producto." compact />
     <Link className="back-link" href="/">Volver a la portada</Link>
   </section></main>;
 }

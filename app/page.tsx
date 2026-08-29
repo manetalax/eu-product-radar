@@ -1,24 +1,142 @@
 'use client';
-import { useState } from 'react';
-import { copy, Lang, langs } from '@/lib/i18n';
-import DemoDashboard from '@/components/DemoDashboard';
-import Link from 'next/link';
 
-const plans=[
- {n:'Free',p:'0 €',l:'5 productos/mes',d:'Para probar el radar'},
- {n:'Starter',p:'19 €/mes',l:'100 productos',d:'Para vendedores pequeños'},
- {n:'Pro',p:'49 €/mes',l:'1.000 productos',d:'Historial e informes'},
- {n:'Business',p:'149 €/mes',l:'10.000 productos',d:'Equipos y mayor volumen'},
- {n:'Agency',p:'Personalizado',l:'Multi-cliente',d:'Agencias y consultoras'}
-];
-export default function Home(){
- const [lang,setLang]=useState<Lang>('es'); const [view,setView]=useState<'home'|'dashboard'>('home'); const t=copy[lang];
- if(view==='dashboard') return <DemoDashboard lang={lang} onHome={()=>setView('home')}/>;
- return <main className="shell">
-  <nav className="nav"><div className="brand">EU <b>Product Radar</b></div><div className="navlinks"><button className="btn ghost" onClick={()=>document.getElementById('planes')?.scrollIntoView({behavior:'smooth'})}>{t.plans}</button><select value={lang} onChange={e=>setLang(e.target.value as Lang)}>{langs.map(x=><option key={x} value={x}>{x.toUpperCase()}</option>)}</select><Link className="btn primary" href="/login">{t.login}</Link></div></nav>
-  <section className="hero"><div><div className="eyebrow">{t.tag}</div><h1>{t.title}</h1><p className="lead">{t.lead}</p><div style={{display:'flex',gap:10,flexWrap:'wrap'}}><Link className="btn primary" href="/dashboard">{t.scan}</Link><button className="btn ghost" onClick={()=>setView('dashboard')}>{t.demo}</button></div><p className="muted">Orientativo: no certifica conformidad ni sustituye asesoramiento profesional.</p></div><div className="card"><div className="muted">EJEMPLO ILUSTRATIVO · DATOS FICTICIOS</div><div className="score">72</div><p><b>12 productos</b> requieren revisión prioritaria.</p><div className="notice">Primera comprobación: campos de fabricante, responsable UE y advertencias. No es una evaluación normativa.</div></div></section>
-  <section className="grid"><div className="card"><h3>01 · Importa</h3><p className="muted">CSV y Excel. Arquitectura preparada para Shopify, Amazon, eBay, Etsy y WooCommerce.</p></div><div className="card"><h3>02 · Prioriza</h3><p className="muted">Indicador de campos incompletos y detalle de los datos ausentes.</p></div><div className="card"><h3>03 · Actúa</h3><p className="muted">Historial privado de tus análisis e informes descargables.</p></div></section>
-  <section className="section" id="planes"><div className="toprow"><div><div className="eyebrow">PRECIOS</div><h2>Planes para cada volumen</h2></div><div className="notice">Planes previstos · cobros todavía no disponibles</div></div><div className="plans">{plans.map((x,i)=><div className={'plan '+(i===2?'featured':'')} key={x.n}><b>{x.n}</b><div className="price">{x.p}</div><p>{x.l}</p><p className="muted">{x.d}</p><Link className="btn ghost" href="/login">Crear cuenta de prueba</Link></div>)}</div></section>
-  <footer className="muted" style={{padding:'40px 0',textAlign:'center'}}>EU Product Radar · Acceso inicial de pruebas 2026</footer>
- </main>
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import Brand from '@/components/Brand';
+import BrandLogos from '@/components/BrandLogos';
+import TrustMark from '@/components/TrustMark';
+import { formatPrice, formatProductCount, isLanguage, landingCopy, Language, LANGUAGE_OPTIONS } from '@/lib/landing-i18n';
+import { MARKETS_BY_RANK } from '@/lib/markets';
+import { FREE_TRIAL_PRODUCT_LIMIT, PLANS } from '@/lib/plans';
+
+const LANGUAGE_STORAGE_KEY = 'product-radar-language';
+
+export default function Home() {
+  const [language, setLanguage] = useState<Language>('es');
+  const t = landingCopy[language];
+
+  useEffect(() => {
+    const urlLanguage = new URLSearchParams(window.location.search).get('lang');
+    const storedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    const browserLanguage = navigator.language.slice(0, 2);
+    const preferred = [urlLanguage, storedLanguage, browserLanguage].find(isLanguage);
+    if (preferred) setLanguage(preferred);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+  }, [language]);
+
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Product Radar',
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web',
+    description: t.hero.lead,
+    areaServed: { '@type': 'AdministrativeArea', name: 'European Union' },
+    offers: [
+      { '@type': 'Offer', name: t.pricing.freeTitle, price: '0', priceCurrency: 'EUR', description: formatProductCount(language, FREE_TRIAL_PRODUCT_LIMIT) },
+      ...PLANS.map(plan => ({
+        '@type': 'Offer', name: plan.name, price: String(plan.monthlyPriceEur), priceCurrency: 'EUR',
+        description: `${t.pricing.upTo} ${formatProductCount(language, plan.monthlyProductLimit)} ${t.pricing.perMonth}`,
+        availability: 'https://schema.org/PreOrder',
+      })),
+    ],
+    featureList: t.values.map(value => `${value.title}: ${value.body}`),
+  };
+
+  return <main className="shell landing-shell">
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }} />
+
+    <nav className="nav landing-nav" aria-label="Product Radar">
+      <Brand />
+      <div className="navlinks">
+        <button className="nav-link-button" onClick={() => document.getElementById('como-funciona')?.scrollIntoView({ behavior: 'smooth' })}>{t.nav.how}</button>
+        <button className="nav-link-button" onClick={() => document.getElementById('mercados')?.scrollIntoView({ behavior: 'smooth' })}>{t.nav.markets}</button>
+        <button className="nav-link-button" onClick={() => document.getElementById('planes')?.scrollIntoView({ behavior: 'smooth' })}>{t.nav.pricing}</button>
+        <label className="language-picker">
+          <span className="sr-only">{t.nav.language}</span>
+          <select value={language} aria-label={t.nav.language} onChange={event => setLanguage(event.target.value as Language)}>
+            {LANGUAGE_OPTIONS.map(option => <option key={option.code} value={option.code}>{option.shortLabel}</option>)}
+          </select>
+        </label>
+        <Link className="btn primary nav-cta" href="/login">{t.nav.login}</Link>
+      </div>
+    </nav>
+
+    <section className="hero landing-hero">
+      <div className="hero-copy">
+        <div className="eyebrow hero-eyebrow"><span className="status-dot" />{t.hero.eyebrow}</div>
+        <h1>{t.hero.title}</h1>
+        <p className="lead">{t.hero.lead}</p>
+        <div className="hero-actions">
+          <Link className="btn primary hero-primary" href="/dashboard">{t.hero.primary}</Link>
+          <button className="btn ghost hero-secondary" onClick={() => document.getElementById('producto')?.scrollIntoView({ behavior: 'smooth' })}>{t.hero.secondary}</button>
+        </div>
+        <div className="trust-row" aria-label={t.hero.trust.join(', ')}>{t.hero.trust.map(item => <span key={item}>{item}</span>)}</div>
+        <p className="legal-note">{t.hero.legal}</p>
+      </div>
+
+      <div className="product-preview" id="producto" aria-label={t.preview.fictional}>
+        <div className="preview-toolbar"><div><span className="preview-kicker">{t.preview.kicker}</span><strong>{t.preview.file}</strong></div><span className="preview-badge">🇪🇺 {t.preview.count}</span></div>
+        <div className="preview-score-row"><div><span className="preview-label">{t.preview.incomplete}</span><div className="score">72<span>/100</span></div></div><div className="preview-summary"><strong>{t.preview.priority}</strong><p>{t.preview.summary}</p></div></div>
+        <div className="preview-list">{t.preview.products.map((product, index) => <div key={product}><span>{product}</span><span className={`pill ${index === 0 ? 'high' : index === 1 ? 'medium' : 'low'}`}>{t.preview.priorities[index]}</span></div>)}</div>
+        <div className="preview-next">{t.preview.next.map(item => <span key={item}>{item}</span>)}</div>
+        <div className="preview-footer"><span>{t.preview.fictional}</span><span>{t.preview.reports}</span></div>
+      </div>
+    </section>
+
+    <section className="value-strip" aria-label={t.values.map(value => value.title).join(', ')}>{t.values.map(value => <div key={value.title}><strong>{value.title}</strong><span>{value.body}</span></div>)}</section>
+
+    <BrandLogos group="commerce" label={t.compatibility.commerceLabel} note={t.compatibility.commerceNote} />
+
+    <section className="section product-story" id="como-funciona">
+      <div className="section-heading"><div className="eyebrow">{t.flow.eyebrow}</div><h2>{t.flow.title}</h2><p className="lead">{t.flow.lead}</p></div>
+      <div className="grid feature-grid">{t.flow.items.map((item, index) => <article className="card feature-card" key={item.title}><span className="step-number">{String(index + 1).padStart(2, '0')}</span><h3>{item.title}</h3><p className="muted">{item.body}</p></article>)}</div>
+    </section>
+
+    <section className="section market-section" id="mercados">
+      <div className="market-heading"><div><div className="eyebrow">{t.markets.eyebrow}</div><h2>{t.markets.title}</h2></div><p>{t.markets.body}</p></div>
+      <div className="market-grid">{MARKETS_BY_RANK.map(market => {
+        const localized = t.markets.cards[market.code];
+        return <article className={`market-card ${market.code === 'EU' ? 'active' : ''}`} key={market.code}>
+          <div className="market-card-top"><span className="market-card-flag" aria-hidden="true">{market.flag}</span><span className={market.code === 'EU' ? 'coverage-live' : 'coverage-next'}>{market.code === 'EU' ? t.markets.active : t.markets.preparing}</span></div>
+          <h3>{localized.name}</h3><p>{localized.promise}</p><small>#{market.rank} · {localized.volume}</small>
+          {market.code === 'EU' ? <a href={market.sourceUrl.replace('locale=es', `locale=${language}`)} target="_blank" rel="noopener noreferrer">{t.markets.viewSource}</a> : <span>{t.markets.nextModule}</span>}
+        </article>;
+      })}</div>
+      <p className="market-source"><a href="https://www.wto.org/english/res_e/booksp_e/trade_outlook25_e.pdf" target="_blank" rel="noopener noreferrer">{t.markets.source}</a></p>
+    </section>
+
+    <section className="section methodology-section">
+      <div className="method-copy"><div className="eyebrow">{t.method.eyebrow}</div><h2>{t.method.title}</h2><p className="lead">{t.method.lead}</p><div className="official-links"><a href={`https://eur-lex.europa.eu/eli/reg/2023/988/oj?locale=${language}`} target="_blank" rel="noopener noreferrer">{t.method.gpsr}</a><a href="https://single-market-economy.ec.europa.eu/single-market/goods/ce-marking/manufacturers_en" target="_blank" rel="noopener noreferrer">{t.method.ce}</a></div></div>
+      <div className="method-cards">{t.method.items.map((item, index) => <article key={item.title}><span>{String(index + 1).padStart(2, '0')}</span><div><strong>{item.title}</strong><p>{item.body}</p></div></article>)}</div>
+    </section>
+
+    <section className="section pricing-section" id="planes">
+      <div className="toprow pricing-heading"><div><div className="eyebrow">{t.pricing.eyebrow}</div><h2>{t.pricing.title}</h2><p className="muted">{t.pricing.lead}</p></div><div className="availability-note">{t.pricing.availability}</div></div>
+      <div className="free-trial-card"><div><span>{t.pricing.freeTitle}</span><strong>{formatProductCount(language, FREE_TRIAL_PRODUCT_LIMIT)}</strong><p>{t.pricing.freeBody}</p></div><Link className="btn ghost" href="/login">{t.pricing.freeCta}</Link></div>
+      <div className="plans polished-plans global-plans">{PLANS.map(plan => <article className={`plan ${plan.featured ? 'featured' : ''}`} key={plan.id}>
+        {plan.featured && <span className="plan-label">{t.pricing.recommended}</span>}
+        <b>{plan.name}</b><div className="price">{formatPrice(language, plan.monthlyPriceEur)}</div><span className="plan-cadence">{t.pricing.perMonth}</span>
+        <p className="plan-limit">{t.pricing.upTo} {formatProductCount(language, plan.monthlyProductLimit)}</p><p className="muted">{t.pricing.descriptions[plan.id]}</p>
+        <Link className={plan.featured ? 'btn primary plan-button' : 'btn ghost plan-button'} href={`/login?plan=${plan.id}`}>{t.pricing.reserve} {plan.name}</Link>
+      </article>)}</div>
+      <p className="pricing-honesty">{t.pricing.honesty}</p>
+      <div className="pricing-trust-grid">
+        <BrandLogos group="payments" label={t.compatibility.paymentLabel} note={t.compatibility.paymentNote} compact />
+        <TrustMark title={t.trust.title} detail={t.trust.detail} httpsLabel={t.trust.https} explanation={t.trust.explanation} compact />
+      </div>
+    </section>
+
+    <section className="section faq-section"><div className="faq-heading"><div className="eyebrow">{t.faq.eyebrow}</div><h2>{t.faq.title}</h2></div><div className="faq-list">{t.faq.items.map(([question, answer]) => <details key={question}><summary>{question}</summary><p>{answer}</p></details>)}</div></section>
+
+    <section className="final-cta"><div><div className="eyebrow">{t.final.eyebrow}</div><h2>{t.final.title}</h2><p>{t.final.body}</p></div><Link className="btn primary" href="/login">{t.final.cta}</Link></section>
+
+    <BrandLogos group="infrastructure" label={t.compatibility.infrastructureLabel} note={t.compatibility.infrastructureNote} compact />
+
+    <footer className="landing-footer"><Brand asLink={false} /><div><a href={`https://eur-lex.europa.eu/eli/reg/2023/988/oj?locale=${language}`} target="_blank" rel="noopener noreferrer">{t.footer.sources}</a><span>{t.footer.privacy}</span><span>{t.footer.guidance}</span></div></footer>
+  </main>;
 }

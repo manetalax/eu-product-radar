@@ -4,8 +4,8 @@
 - Botón «Descargar PDF» en Productos e Informes para el análisis seleccionado.
 - Excel conserva Resumen, Productos y Datos técnicos; añade Guía documental.
 - Panel Informes muestra instrucciones por producto, estado, aplicabilidad, a quién pedir la documentación y fuentes oficiales.
-- Una guía compartida alimenta las tres presentaciones.
-- Compatible con análisis anteriores missing-fields-v1. Sin migraciones ni cambios en login, permisos o historial.
+- Una guía europea compartida alimenta las tres presentaciones; los siguientes mercados quedan aislados como módulos futuros.
+- Compatible con análisis anteriores `missing-fields-v1`. La migración `20260829075235_global_market_architecture.sql` añade `market_code=EU` sin reescribir el historial y habilita `market-readiness-v2` para análisis nuevos.
 
 ## Límites deliberados
 No se han implementado subida ni verificación de documentos. No se determina normativa sectorial a partir del nombre. «Dato no aportado» significa vacío en el catálogo, no documento inexistente. CE y ensayos permanecen pendientes de determinar aplicabilidad. Para una fase posterior se requieren categoría, características, mercados y papel del operador, más revisión de evidencias y reglas normativas validadas.
@@ -18,7 +18,7 @@ PDF: los caracteres no latinos se representan mediante códigos Unicode visibles
 3. Probar acceso Google con la cuenta existente, abrir un análisis del historial y descargar Excel y PDF.
 4. Comprobar que el Excel tiene cuatro hojas y el PDF muestra resumen, fichas, fuentes y numeración.
 5. Solo después, integrar la rama en main y revisar el dominio de producción y los redirects OAuth existentes.
-No cambiar claves, variables de entorno ni tablas para esta actualización.
+No cambiar claves ni variables de entorno. Aplicar la migración de arquitectura global antes de desplegar el código que lee `market_code`.
 
 ## Verificación local
 npm ci

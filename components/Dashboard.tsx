@@ -1,117 +1,312 @@
 'use client';
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Analysis, AnalysisSummary, analyze, MAX_FILE_BYTES, RULE_VERSION } from '@/lib/analysis';
-import { parseProducts } from '@/lib/import-products';
-import { createClient } from '@/lib/supabase/client';
+import Brand from '@/components/Brand';
+import BrandLogos from '@/components/BrandLogos';
+import TrustMark from '@/components/TrustMark';
+import { Analysis, AnalysisSummary, analysisMarket, analyze, MAX_FILE_BYTES, supportsRuleVersion } from '@/lib/analysis';
 import { ProductQuota } from '@/lib/quota';
-
 import { documentationFor, GUIDE_SCOPE } from '@/lib/documentation';
+import { isActiveMarketCode, MarketCode, MARKETS, MARKETS_BY_RANK } from '@/lib/markets';
+import { formatPrice, formatProductCount, landingCopy } from '@/lib/landing-i18n';
+import { PlanId, PLANS, PLANS_BY_ID } from '@/lib/plans';
+import { authService } from '@/lib/services/auth-client';
+import { clearPlanIntent, readPlanIntent, registerPlanInterest } from '@/lib/services/plan-interest';
 
 type Tab = 'dashboard' | 'products' | 'history' | 'reports' | 'settings';
-const tabs: [Tab, string][] = [['dashboard','Resumen'],['products','Productos'],['history','Historial'],['reports','Informes'],['settings','Mi cuenta']];
-const when = (value: string) => new Date(value).toLocaleString('es-ES');
+const tabs: [Tab, string, string][] = [
+  ['dashboard', 'Resumen', 'Vista general'],
+  ['products', 'Productos', 'Resultados del análisis'],
+  ['history', 'Historial', 'Análisis guardados'],
+  ['reports', 'Informes', 'Excel, PDF y documentación'],
+  ['settings', 'Mi cuenta', 'Plan, privacidad y seguridad'],
+];
+const when = (value: string) => new Date(value).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+
 export default function Dashboard({ email }: { email: string }) {
   const [tab, setTab] = useState<Tab>('dashboard');
+  const [selectedMarket, setSelectedMarket] = useState<MarketCode>('EU');
   const [current, setCurrent] = useState<Analysis | null>(null);
   const [history, setHistory] = useState<AnalysisSummary[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [templateReady, setTemplateReady] = useState(false);
+  const [reportReady, setReportReady] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [quota, setQuota] = useState<ProductQuota | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const pendingImport = useRef<{ fingerprint: string; id: string } | null>(null);
-  const results = useMemo(() => current ? analyze(current.products) : [], [current]);
+
+  const currentMarketCode = current ? analysisMarket(current) : selectedMarket;
+  const currentMarket = MARKETS[currentMarketCode];
+  const results = useMemo(() => current ? analyze(current.products, analysisMarket(current)) : [], [current]);
   const avg = results.length ? Math.round(results.reduce((sum, result) => sum + result.score, 0) / results.length) : 0;
+  const highCount = results.filter(result => result.priority === 'ALTA').length;
+  const quotaBlocked = quota?.remaining === 0;
+  const quotaPercent = quota ? Math.min(100, Math.round((quota.used / quota.limit) * 100)) : 0;
+  const firstName = email.split('@')[0].replace(/[._-]+/g, ' ');
+
   async function api(url: string, options?: RequestInit) {
     const response = await fetch(url, { ...options, cache: 'no-store' });
-    if (response.status === 401) { window.location.replace('/login'); throw new Error('Tu sesión ha caducado.'); }
+    if (response.status === 401) {
+      window.location.replace('/login');
+      throw new Error('Tu sesión ha caducado.');
+    }
     const body = await response.json();
     if (body.quota) setQuota(body.quota);
     if (!response.ok) throw new Error(body.error || 'No se ha podido completar la operación.');
     return body;
   }
+
   useEffect(() => {
-    const controller = new AbortController(); setLoading(true);
+    const controller = new AbortController();
+    setLoading(true);
     api(`/api/analyses?page=${page}`, { signal: controller.signal }).then(body => {
-      if (!controller.signal.aborted) { setHistory(body.analyses); setHasMore(body.hasMore); setQuota(body.quota); }
-    }).catch(e => { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : 'No se puede leer el historial.'); })
-      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+      if (!controller.signal.aborted) {
+        setHistory(body.analyses);
+        setHasMore(body.hasMore);
+        setQuota(body.quota);
+      }
+    }).catch(e => {
+      if (!controller.signal.aborted) setError(e instanceof Error ? e.message : 'No se puede leer el historial.');
+    }).finally(() => {
+      if (!controller.signal.aborted) setLoading(false);
+    });
     return () => controller.abort();
   }, [page]);
+
   useEffect(() => {
-    const { data: { subscription } } = createClient().auth.onAuthStateChange(event => { if (event === 'SIGNED_OUT') window.location.replace('/login'); });
+    const unsubscribe = authService.onAuthStateChange(event => {
+      if (event === 'SIGNED_OUT') window.location.replace('/login');
+    });
     const refresh = (event: PageTransitionEvent) => { if (event.persisted) window.location.reload(); };
     window.addEventListener('pageshow', refresh);
-    return () => { subscription.unsubscribe(); window.removeEventListener('pageshow', refresh); };
+    return () => {
+      unsubscribe();
+      window.removeEventListener('pageshow', refresh);
+    };
   }, []);
+
+  useEffect(() => {
+    const planId = readPlanIntent();
+    if (!planId) return;
+    const plan = PLANS_BY_ID[planId];
+    registerPlanInterest(planId).then(({ error: planError }) => {
+      if (!planError) {
+        clearPlanIntent();
+        setNotice(`Interés en ${plan.name} registrado. No se ha activado ningún cobro.`);
+      }
+    });
+  }, []);
+
   async function load(file: File) {
     if (busy) return;
-    setError(''); setNotice(''); setBusy(true);
+    setError('');
+    setNotice('');
+    setBusy(true);
     try {
+      if (!isActiveMarketCode(selectedMarket)) throw new Error('Este mercado todavía está en preparación.');
       if (file.size > MAX_FILE_BYTES) throw new Error('El archivo supera el límite de 5 MB.');
       if (file.name.length > 120) throw new Error('Acorta el nombre del archivo a 120 caracteres como máximo.');
       const bytes = await file.arrayBuffer();
-      const products = parseProducts(bytes, file.name);
+      const products = (await import('@/lib/import-products')).parseProducts(bytes, file.name);
       const hash = await crypto.subtle.digest('SHA-256', bytes);
-      const fingerprint = file.name + ':' + Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+      const fingerprint = `${selectedMarket}:${file.name}:` + Array.from(new Uint8Array(hash)).map(byte => byte.toString(16).padStart(2, '0')).join('');
       const previous = pendingImport.current;
       const requestId = previous?.fingerprint === fingerprint ? previous.id : crypto.randomUUID();
       pendingImport.current = { fingerprint, id: requestId };
-      const { analysis, quota: updatedQuota } = await api('/api/analyses', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({filename:file.name,products,requestId}) });
+      const { analysis, quota: updatedQuota } = await api('/api/analyses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, products, requestId, marketCode: selectedMarket }),
+      });
       setQuota(updatedQuota);
-      setCurrent(analysis); setTab('products'); setNotice('Análisis guardado en tu cuenta.'); pendingImport.current = null;
-      setHistory(items => [{id:analysis.id,filename:analysis.filename,created_at:analysis.created_at,rule_version:analysis.rule_version,product_count:analysis.products.length}, ...items.filter(item => item.id !== analysis.id)].slice(0,20));
+      setCurrent(analysis);
+      setTab('products');
+      setNotice(`Catálogo analizado para ${MARKETS[selectedMarket].name} y guardado en tu cuenta.`);
+      pendingImport.current = null;
+      setHistory(items => [{
+        id: analysis.id,
+        filename: analysis.filename,
+        created_at: analysis.created_at,
+        rule_version: analysis.rule_version,
+        market_code: analysis.market_code,
+        product_count: analysis.products.length,
+      }, ...items.filter(item => item.id !== analysis.id)].slice(0, 20));
       if (page !== 0) setPage(0);
-    } catch (e) { setError(e instanceof Error ? e.message : 'No se ha podido importar el archivo.'); }
-    finally { setBusy(false); if (input.current) input.current.value = ''; }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se ha podido importar el archivo.');
+    } finally {
+      setBusy(false);
+      setDragging(false);
+      if (input.current) input.current.value = '';
+    }
   }
+
   async function open(id: string) {
-    setError(''); setNotice(''); setBusy(true);
+    setError('');
+    setNotice('');
+    setBusy(true);
     try {
       const { analysis } = await api(`/api/analyses?id=${encodeURIComponent(id)}`);
-      if (analysis.rule_version !== RULE_VERSION) throw new Error('Esta versión de análisis todavía no es compatible con la aplicación.');
-      setCurrent(analysis); setTab('products');
-    } catch (e) { setError(e instanceof Error ? e.message : 'No se puede abrir el análisis.'); }
-    finally { setBusy(false); }
+      if (!supportsRuleVersion(analysis.rule_version)) throw new Error('Esta versión de análisis todavía no es compatible con la aplicación.');
+      setCurrent(analysis);
+      setSelectedMarket(analysisMarket(analysis));
+      setTab('products');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se puede abrir el análisis.');
+    } finally {
+      setBusy(false);
+    }
   }
+
   async function exportReport(format: 'xlsx' | 'pdf' = 'xlsx') {
     if (!current || busy) return;
-    setBusy(true); setError(''); setNotice('');
+    setBusy(true);
+    setError('');
+    setNotice('');
     try {
-      const bytes = format === 'pdf' ? await (await import('@/lib/export-pdf')).pdfBytes(current) : await (await import('@/lib/export-report')).reportBytes(current);
+      const bytes = format === 'pdf'
+        ? await (await import('@/lib/export-pdf')).pdfBytes(current)
+        : await (await import('@/lib/export-report')).reportBytes(current);
       const url = URL.createObjectURL(new Blob([bytes], { type: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
       const link = document.createElement('a');
-      link.href = url; link.download = `eu-product-radar-${current.created_at.slice(0,10)}-${current.id.slice(0,8)}.${format}`;
-      document.body.appendChild(link); link.click(); link.remove();
+      link.href = url;
+      link.download = `product-radar-${analysisMarket(current).toLowerCase()}-${current.created_at.slice(0, 10)}-${current.id.slice(0, 8)}.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 60000);
-      setNotice(format === 'pdf' ? 'PDF preparado con resumen, fichas y guía documental.' : 'Excel preparado con Resumen, Productos, Datos técnicos y Guía documental.');
-    } catch { setError('No se ha podido generar el informe. Vuelve a intentarlo; tu análisis sigue guardado.'); }
-    finally { setBusy(false); }
+      setReportReady(true);
+      setNotice(format === 'pdf' ? 'PDF preparado con resumen, fichas y fuentes oficiales.' : 'Excel preparado con resumen, datos originales, trazabilidad y guía documental.');
+    } catch {
+      setError('No se ha podido generar el informe. Vuelve a intentarlo; tu análisis sigue guardado.');
+    } finally {
+      setBusy(false);
+    }
   }
+
+  function downloadTemplate() {
+    const csv = '\uFEFFnombre,fabricante,operador_mercado,advertencias_seguridad\nProducto de ejemplo,Fabricante SL,Importador Europa SL,Advertencia del modelo\n';
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'plantilla-product-radar-europa.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setTemplateReady(true);
+    setNotice('Plantilla de Europa descargada. Sustituye el ejemplo por tus productos y conserva los cuatro encabezados.');
+  }
+
+  async function reservePlan(planId: PlanId) {
+    const plan = PLANS_BY_ID[planId];
+    setBusy(true);
+    setError('');
+    setNotice('');
+    const { error: updateError } = await registerPlanInterest(planId);
+    if (updateError) setError('No se ha podido registrar tu solicitud. Vuelve a intentarlo.');
+    else setNotice(`Interés en ${plan.name} registrado. Te avisaremos antes de activar cualquier cobro.`);
+    setBusy(false);
+  }
+
   async function signOut() {
-    setBusy(true); setError('');
-    try { const { error } = await createClient().auth.signOut(); if (error) throw error; window.location.replace('/login'); }
-    catch { setError('No se ha podido cerrar la sesión. Comprueba tu conexión y vuelve a intentarlo.'); setBusy(false); }
+    setBusy(true);
+    setError('');
+    try {
+      const { error: signOutError } = await authService.signOut();
+      if (signOutError) throw signOutError;
+      window.location.replace('/login');
+    } catch {
+      setError('No se ha podido cerrar la sesión. Comprueba tu conexión y vuelve a intentarlo.');
+      setBusy(false);
+    }
   }
-  const quotaBlocked = quota?.remaining === 0;
-  return <main className="shell">
-    <header className="toprow account-header"><Link className="brand" href="/">EU <b>Product Radar</b></Link><button className="btn ghost" disabled={busy} onClick={signOut}>Cerrar sesión</button></header>
-    <div className="dashboard"><aside className="side"><h2>Tu espacio</h2><p className="account-email">{email}</p><nav aria-label="Secciones del panel">{tabs.map(([id,label]) => <button key={id} aria-current={tab === id ? 'page' : undefined} className={tab === id ? 'active' : ''} onClick={() => { setTab(id); setNotice(''); }}>{label}</button>)}</nav></aside>
-    <section className="workspace" aria-busy={busy}>
-      <div className="notice">Primera versión: comprobamos si constan fabricante, responsable UE y advertencias. No verificamos su contenido ni determinamos qué obligaciones se aplican a cada producto.</div>
-      {error && <p role="alert" className="message error">{error}</p>}{notice && <p role="status" className="message success">{notice}</p>}
-      <input ref={input} className="file-input" aria-label="Importar catálogo CSV o Excel" type="file" accept=".csv,.xls,.xlsx" disabled={busy || loading || quotaBlocked} onChange={e => { const file=e.target.files?.[0]; if(file) void load(file); }} />
-      {(tab === 'dashboard' || tab === 'products') && <div className="card import-card"><div className="toprow"><div><h2>Importar y guardar catálogo</h2><p className="muted">CSV UTF-8, XLS o XLSX · Hasta 5 MB.</p></div><button className="btn primary" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{busy ? 'Procesando…' : quotaBlocked ? 'Límite mensual alcanzado' : 'Selecciona CSV o Excel'}</button></div><div className="notice quota-notice">Plan gratuito: {quota ? `${quota.used} de ${quota.limit} productos usados este mes · ${quota.remaining} disponibles` : 'calculando consumo…'}. El contador se reinicia el primer día de cada mes.</div><p className="muted">Columnas: nombre, fabricante, responsable_ue, advertencias_seguridad. Los campos vacíos generan avisos. Si un archivo supera tus productos disponibles, no se guarda parcialmente.</p></div>}
-      {tab === 'dashboard' && <><h2>{current ? 'Análisis seleccionado' : 'Empieza con tu primer catálogo'}</h2><div className="kpis"><div className="kpi">Productos<strong>{results.length}</strong></div><div className="kpi">Indicador medio<strong>{current ? `${avg}/100` : '—'}</strong></div><div className="kpi">Prioridad alta<strong>{results.filter(r=>r.priority==='ALTA').length}</strong></div><div className="kpi">Uso mensual<strong>{quota ? `${quota.used}/${quota.limit}` : '—'}</strong></div></div><p className="muted">{current ? `${current.filename} · ${when(current.created_at)}` : 'No hay productos de ejemplo en tu cuenta. Importa un archivo o abre un análisis del historial.'}</p></>}
-      {tab === 'products' && <div className="card"><div className="toprow"><div><h2>{current?.filename ?? 'Sin análisis seleccionado'}</h2>{current && <p className="muted">Guardado: {when(current.created_at)} · {current.rule_version}</p>}</div><button className="btn ghost" disabled={!current || busy} onClick={() => exportReport()}>Descargar informe Excel</button><button className="btn ghost" disabled={!current || busy} onClick={() => exportReport('pdf')}>Descargar PDF</button></div>{current ? <div className="results"><table><caption>Indicador de campos incompletos: no equivale a riesgo legal.</caption><thead><tr><th>PRODUCTO</th><th>INDICADOR</th><th>PRIORIDAD</th><th>CAMPOS VACÍOS</th></tr></thead><tbody>{results.map((r,i)=><tr key={i}><td>{r.name}</td><td>{r.score}/100</td><td><span className={`pill ${r.priority==='ALTA'?'high':r.priority==='MEDIA'?'medium':'low'}`}>{r.priority}</span></td><td>{r.missing.join(', ') || 'Sin campos básicos vacíos'}</td></tr>)}</tbody></table></div> : <p>Importa tu catálogo o abre uno desde el historial.</p>}</div>}
-      {tab === 'history' && <div className="card"><h2>Tu historial</h2>{loading ? <p role="status">Cargando análisis…</p> : history.length ? <ul className="history-list">{history.map(item=><li key={item.id}><div><strong>{item.filename}</strong><p className="muted">{when(item.created_at)} · {item.product_count} productos</p></div><button className="btn ghost" disabled={busy} onClick={()=>open(item.id)}>Abrir</button></li>)}</ul> : <p>Todavía no hay análisis guardados en esta página.</p>}<div className="toprow"><button className="btn ghost" disabled={page===0||loading||busy} onClick={()=>setPage(p=>p-1)}>Anterior</button><span>Página {page+1}</span><button className="btn ghost" disabled={!hasMore||loading||busy} onClick={()=>setPage(p=>p+1)}>Siguiente</button></div></div>}
-      {tab === 'reports' && <div className="card"><h2>Informes</h2><p>{current ? `Informe de ${current.filename}. Incluye los campos importados, avisos, fecha y versión de reglas.` : 'Abre un análisis desde el historial para descargar su informe.'}</p><button className="btn primary" disabled={!current||busy} onClick={() => exportReport()}>Descargar informe Excel</button><button className="btn ghost" disabled={!current || busy} onClick={() => exportReport('pdf')}>Descargar PDF</button></div>}
-      {tab === 'reports' && current && <div className="card"><h2>Guía documental por producto</h2><p className="muted">{GUIDE_SCOPE}</p>{current.products.map((p, i) => <details key={i}><summary>{p.name}</summary>{documentationFor(p).map(a => <section key={a.title}><h3>{a.title}</h3><p><strong>{a.status}</strong> · {a.condition}</p><p><strong>Dónde conseguirlo:</strong> {a.obtain}</p><p><strong>Qué comprobar:</strong> {a.check}</p><a href={a.source} target="_blank" rel="noopener noreferrer">Consultar fuente oficial</a></section>)}</details>)}</div>}
-      {tab === 'settings' && <div className="card"><h2>Mi cuenta</h2><p className="account-email">{email}</p><p>Plan gratuito: 5 productos por mes. Has usado {quota?.used ?? '—'} y te quedan {quota?.remaining ?? '—'}.</p><p>Acceso de pruebas sin cobros. Las mejoras de plan todavía no están activadas.</p><p><Link href="/reset-password">Cambiar mi contraseña</Link></p><p className="muted">Los análisis solo son accesibles para tu cuenta. No subas datos personales innecesarios ni información confidencial durante esta fase de pruebas.</p></div>}
-    </section></div>
+
+  return <main className="shell app-shell">
+    <header className="toprow account-header app-header">
+      <Brand market={current ? currentMarketCode : undefined} />
+      <div className="header-actions"><span className="privacy-badge">Sesión privada</span><button className="btn ghost" disabled={busy} onClick={signOut}>Cerrar sesión</button></div>
+    </header>
+
+    <div className="dashboard premium-dashboard">
+      <aside className="side premium-side">
+        <div className="side-intro"><span className="side-kicker">ESPACIO DE TRABAJO</span><h2>{firstName || 'Tu cuenta'}</h2><p className="account-email">{email}</p></div>
+        <nav aria-label="Secciones del panel" className="side-nav">
+          {tabs.map(([id, label, description]) => <button key={id} aria-current={tab === id ? 'page' : undefined} className={tab === id ? 'active' : ''} onClick={() => { setTab(id); setNotice(''); }}><strong>{label}</strong><span>{description}</span></button>)}
+        </nav>
+        <div className="side-quota">
+          <div className="toprow"><span>Plan gratuito</span><strong>{quota ? `${quota.remaining} libres` : '—'}</strong></div>
+          <div className="quota-track" aria-label="Uso mensual"><span style={{ width: `${quotaPercent}%` }} /></div>
+          <small>{quota ? `${quota.used} de ${quota.limit} productos este mes` : 'Calculando uso…'}</small>
+          <button className="side-upgrade" onClick={() => setTab('settings')}>Ver planes →</button>
+        </div>
+      </aside>
+
+      <section className="workspace" aria-busy={busy}>
+        <div className="workspace-heading">
+          <div><span className="eyebrow">{tabs.find(([id]) => id === tab)?.[1]}</span><h1>{tab === 'dashboard' ? `Hola, ${firstName || 'bienvenido'}` : tabs.find(([id]) => id === tab)?.[1]}</h1></div>
+          {tab !== 'settings' && <button className="btn primary compact-cta" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{quotaBlocked ? 'Límite alcanzado' : 'Nuevo análisis'}</button>}
+        </div>
+        <p className="workspace-subtitle">{tab === 'dashboard' ? 'Prepara tu catálogo europeo, prioriza la información incompleta y conserva una trazabilidad clara.' : tabs.find(([id]) => id === tab)?.[2]}</p>
+
+        <div className="market-rail" aria-label="Cobertura por mercado">
+          {MARKETS_BY_RANK.map(market => {
+            const active = isActiveMarketCode(market.code);
+            return <button key={market.code} type="button" className={`${selectedMarket === market.code ? 'selected' : ''} ${active ? '' : 'upcoming'}`} disabled={!active} onClick={() => setSelectedMarket(market.code)} aria-label={`${market.name}: ${active ? 'disponible' : 'en preparación'}`}>
+              <span className="market-flag" aria-hidden="true">{market.flag}</span><span><strong>{market.shortName}</strong><small>{active ? 'Disponible' : 'Próximamente'}</small></span>
+            </button>;
+          })}
+        </div>
+
+        <div className="notice trust-notice"><strong>Europa activa:</strong> el radar detecta campos básicos incompletos y genera una guía basada en fuentes oficiales. <span>No certifica conformidad ni sustituye una evaluación jurídica o técnica.</span></div>
+        {error && <p role="alert" className="message error">{error}</p>}
+        {notice && <p role="status" className="message success">{notice}</p>}
+        <input ref={input} className="file-input" aria-label="Importar catálogo CSV o Excel" type="file" accept=".csv,.xls,.xlsx" disabled={busy || loading || quotaBlocked} onChange={event => { const file = event.target.files?.[0]; if (file) void load(file); }} />
+
+        {(tab === 'dashboard' || tab === 'products') && <div className="card import-card premium-import" onDragEnter={event => { event.preventDefault(); setDragging(true); }} onDragOver={event => event.preventDefault()} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false); }} onDrop={event => { event.preventDefault(); setDragging(false); const file = event.dataTransfer.files?.[0]; if (file) void load(file); }} data-dragging={dragging}>
+          <div className="import-icon" aria-hidden="true">↑</div>
+          <div className="import-copy"><div className="import-title-row"><h2>{quotaBlocked ? 'Has utilizado tu cuota de este mes' : `Analiza para ${MARKETS[selectedMarket].name}`}</h2><span className="market-live">ACTIVO</span></div><p>Arrastra o sube un CSV, XLS o XLSX de hasta 5 MB. Conservaremos el análisis en tu historial privado.</p><div className="format-chips"><span>CSV</span><span>XLS</span><span>XLSX</span><span>Máx. 5 MB</span></div></div>
+          <div className="import-actions"><button className="btn primary import-cta" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{busy ? 'Analizando…' : quotaBlocked ? 'Disponible el próximo mes' : 'Elegir archivo'}</button><button className="text-button template-link" onClick={downloadTemplate}>Descargar plantilla</button></div>
+          <div className="quota-inline"><span>{quota ? `${quota.remaining} de ${quota.limit} productos disponibles` : 'Calculando cuota…'}</span><div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div></div>
+        </div>}
+        {(tab === 'dashboard' || tab === 'products') && <BrandLogos group="commerce" label="Compatible con exportaciones de" note="Importa CSV o Excel; los campos disponibles dependen de cada exportación y los conectores directos siguen en preparación." compact />}
+
+        {tab === 'dashboard' && <>
+          <div className="onboarding-card card"><div><span className="eyebrow">PUESTA EN MARCHA</span><h2>Tu primera revisión, sin dudas.</h2></div><ol><li className="done"><span>1</span><div><strong>Mercado</strong><small>Europa seleccionada</small></div></li><li className={templateReady ? 'done' : ''}><span>2</span><div><strong>Plantilla</strong><small>{templateReady ? 'Descargada' : 'Lista para descargar'}</small></div></li><li className={current ? 'done' : ''}><span>3</span><div><strong>Análisis</strong><small>{current ? 'Catálogo guardado' : 'Sube tu catálogo'}</small></div></li><li className={reportReady ? 'done' : ''}><span>4</span><div><strong>Informe</strong><small>{reportReady ? 'Exportado' : 'Excel o PDF'}</small></div></li></ol></div>
+          <div className="section-heading"><div><span className="eyebrow">PANORÁMICA</span><h2>{current ? 'Análisis seleccionado' : 'Tu panel está listo'}</h2></div>{current && <button className="text-button" onClick={() => setTab('products')}>Ver productos →</button>}</div>
+          <div className="kpis premium-kpis">
+            <div className="kpi"><span>Productos</span><strong>{results.length || '—'}</strong><small>{current ? 'en el análisis abierto' : 'sin análisis seleccionado'}</small></div>
+            <div className="kpi"><span>Indicador medio</span><strong>{current ? avg : '—'}</strong><small>{current ? 'campos incompletos / 100' : 'aparecerá tras analizar'}</small></div>
+            <div className="kpi"><span>Prioridad alta</span><strong>{current ? highCount : '—'}</strong><small>{current ? 'productos a revisar primero' : 'sin datos todavía'}</small></div>
+            <div className="kpi"><span>Mercado</span><strong className="market-kpi">{current ? currentMarket.flag : '🇪🇺'}</strong><small>{current ? currentMarket.name : 'Europa disponible'}</small></div>
+          </div>
+          {!current ? <div className="card empty-state"><div className="empty-mark">◎</div><h3>Empieza por un catálogo pequeño</h3><p>Con unos pocos productos verás qué información básica falta, qué pedir al proveedor y dónde comprobar las fuentes.</p><button className="btn primary" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>Analizar mi primer catálogo</button><button className="text-button" onClick={downloadTemplate}>Prefiero usar la plantilla</button></div> : <div className="card selected-analysis"><div><span className="eyebrow">SELECCIONADO · {currentMarket.shortName}</span><h3>{current.filename}</h3><p className="muted">{when(current.created_at)} · {results.length} productos</p></div><div className="selected-actions"><button className="btn ghost" onClick={() => setTab('products')}>Ver resultados</button><button className="btn ghost" disabled={busy} onClick={() => exportReport('pdf')}>PDF</button></div></div>}
+        </>}
+
+        {tab === 'products' && <div className="card content-card">
+          <div className="toprow"><div><span className="eyebrow">RESULTADOS · {currentMarket.shortName}</span><h2>{current?.filename ?? 'Sin análisis seleccionado'}</h2>{current && <p className="muted">Guardado {when(current.created_at)} · reglas {current.rule_version}</p>}</div>{current && <div className="report-actions"><button className="btn ghost" disabled={busy} onClick={() => exportReport()}>Excel</button><button className="btn primary" disabled={busy} onClick={() => exportReport('pdf')}>PDF</button></div>}</div>
+          {current ? <div className="results"><table><caption>Indicador de campos incompletos; no equivale a riesgo legal ni a una certificación.</caption><thead><tr><th>PRODUCTO</th><th>INDICADOR</th><th>PRIORIDAD</th><th>CAMPOS POR REVISAR</th></tr></thead><tbody>{results.map((result, index) => <tr key={index}><td><strong>{result.name}</strong></td><td>{result.score}/100</td><td><span className={`pill ${result.priority === 'ALTA' ? 'high' : result.priority === 'MEDIA' ? 'medium' : 'low'}`}>{result.priority}</span></td><td>{result.missing.join(', ') || 'Sin campos básicos vacíos'}</td></tr>)}</tbody></table></div> : <div className="empty-state compact"><div className="empty-mark">↗</div><h3>No hay un análisis abierto</h3><p>Importa un catálogo nuevo o recupera uno de tu historial.</p><button className="btn primary" onClick={() => input.current?.click()}>Importar catálogo</button></div>}
+        </div>}
+
+        {tab === 'history' && <div className="card content-card"><div className="section-heading"><div><span className="eyebrow">ARCHIVO</span><h2>Historial de análisis</h2></div><span className="muted">Página {page + 1}</span></div>{loading ? <div className="empty-state compact"><p role="status">Cargando tus análisis…</p></div> : history.length ? <ul className="history-list premium-history">{history.map(item => { const market = MARKETS[analysisMarket(item)]; return <li key={item.id}><div className="history-file"><span className="file-mark">{market.flag}</span><div><strong>{item.filename}</strong><p>{when(item.created_at)} · {item.product_count} productos · {market.shortName}</p></div></div><button className="btn ghost" disabled={busy} onClick={() => open(item.id)}>Abrir</button></li>; })}</ul> : <div className="empty-state"><div className="empty-mark">□</div><h3>Aquí aparecerá todo lo que analices</h3><p>Los análisis quedan vinculados a tu cuenta para que puedas volver a ellos cuando los necesites.</p><button className="btn primary" disabled={quotaBlocked} onClick={() => input.current?.click()}>Crear primer análisis</button></div>}<div className="history-pagination"><button className="btn ghost" disabled={page === 0 || loading || busy} onClick={() => setPage(value => value - 1)}>← Anterior</button><button className="btn ghost" disabled={!hasMore || loading || busy} onClick={() => setPage(value => value + 1)}>Siguiente →</button></div></div>}
+
+        {tab === 'reports' && <><div className="card content-card"><span className="eyebrow">EXPORTACIÓN · {currentMarket.shortName}</span><h2>Informes listos para trabajar</h2><p className="muted">{current ? `Estás trabajando con ${current.filename}.` : 'Abre un análisis desde el historial para activar las descargas.'}</p><div className="report-grid"><button className="report-option" disabled={!current || busy} onClick={() => exportReport()}><strong>Excel detallado</strong><span>Resumen, productos, datos originales, reglas y guía documental.</span><b>Descargar .xlsx →</b></button><button className="report-option" disabled={!current || busy} onClick={() => exportReport('pdf')}><strong>PDF ejecutivo</strong><span>Resumen, fichas por producto y fuentes oficiales.</span><b>Descargar .pdf →</b></button></div></div>{current && <div className="card content-card documentation-card"><span className="eyebrow">GUÍA DOCUMENTAL · {currentMarket.name}</span><h2>Qué pedir y qué comprobar</h2><p className="muted">{GUIDE_SCOPE}</p>{current.products.map((product, index) => <details key={index}><summary>{product.name}</summary><div className="documentation-body">{documentationFor(product, currentMarketCode).map(action => <section key={action.title}><h3>{action.title}</h3><p><strong>{action.status}</strong> · {action.condition}</p><p><strong>Dónde conseguirlo:</strong> {action.obtain}</p><p><strong>Qué comprobar:</strong> {action.check}</p><a href={action.source} target="_blank" rel="noopener noreferrer">Consultar fuente oficial ↗</a></section>)}</div></details>)}</div>}</>}
+
+        {tab === 'settings' && <div className="settings-grid">
+          <div className="card content-card"><span className="eyebrow">CUENTA</span><h2>Tu perfil</h2><p className="account-email settings-email">{email}</p><Link className="btn ghost" href="/reset-password">Cambiar contraseña</Link></div>
+          <div className="card content-card"><span className="eyebrow">PLAN ACTUAL</span><h2>Gratis</h2><div className="settings-quota"><strong>{quota?.remaining ?? '—'}</strong><span>productos disponibles este mes</span></div><div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div><p className="muted">5 productos al mes. La cuota se reinicia el primer día de cada mes.</p></div>
+          <div className="card content-card plan-interest"><span className="eyebrow">PRÓXIMA APERTURA</span><h2>Reserva el plan que necesitas</h2><div className="mini-plans">{PLANS.map(plan => <button className={plan.featured ? 'featured' : ''} key={plan.id} disabled={busy} onClick={() => reservePlan(plan.id)}><span>{plan.name}{plan.featured ? ' · Recomendado' : ''}</span><strong>{formatPrice('es', plan.monthlyPriceEur)}/mes</strong><small>{landingCopy.es.pricing.upTo} {formatProductCount('es', plan.monthlyProductLimit)}</small></button>)}</div><p className="muted">Registrar interés no activa cobros ni cambia tu plan.</p></div>
+          <div className="card content-card expansion-card"><span className="eyebrow">EXPANSIÓN INTERNACIONAL</span><h2>Un núcleo, cada mercado como módulo.</h2><p>Europa está activa. EE. UU., China, Reino Unido y Japón son los siguientes destinos preparados en la arquitectura.</p><div className="expansion-flags">{MARKETS_BY_RANK.map(market => <span key={market.code} title={market.name}>{market.flag}</span>)}</div></div>
+          <div className="card content-card settings-security"><span className="eyebrow">PRIVACIDAD</span><h2>Tu información permanece separada</h2><p>Los análisis de esta cuenta no son visibles desde otras cuentas.</p><p className="muted">Evita subir datos personales innecesarios o información confidencial que no sea necesaria para analizar tus productos.</p><TrustMark title="EPR Trust Mark" detail="Comprobaciones internas de transparencia" httpsLabel="Conexión HTTPS segura" explanation="Sello interno de Product Radar. No es una certificación externa ni acredita la conformidad de un producto." compact /></div>
+        </div>}
+      </section>
+    </div>
   </main>;
 }
