@@ -8,7 +8,10 @@ export async function GET(request: NextRequest) {
   if (hash && (type === 'email' || type === 'signup' || type === 'recovery')) {
     const supabase = await createClient();
     const { error } = await supabase.auth.verifyOtp({ token_hash: hash, type });
-    if (!error) return NextResponse.redirect(new URL(type === 'recovery' ? '/reset-password' : '/dashboard', origin));
+    if (!error) {
+      const destination = type === 'recovery' ? '/reset-password' : '/dashboard?welcome=registered';
+      return NextResponse.redirect(new URL(destination, origin));
+    }
   }
   return NextResponse.redirect(new URL('/login?message=link_error', origin));
 }
