@@ -1,0 +1,42 @@
+name: Build Wallabid APK
+on:
+  push:
+    branches: [wallabid-apk-build]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: wallabid-build/package-lock.json
+      - name: Unpack Wallabid source
+        run: |
+          mkdir -p wallabid-build
+          unzip -o wallabid-actions-source.zip -d wallabid-build
+      - name: Install dependencies
+        working-directory: wallabid-build
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Typecheck
+        working-directory: wallabid-build
+        run: npm run typecheck
+      - name: Generate native Android project
+        working-directory: wallabid-build
+        run: npx expo prebuild --platform android --no-install --non-interactive
+      - name: Build release APK
+        working-directory: wallabid-build/android
+        run: ./gradlew assembleRelease --no-daemon
+      - name: Collect APK
+        run: |
+          mkdir -p out
+          cp wallabid-build/android/app/build/outputs/apk/release/*.apk out/Wallabid.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Wallabid-APK
+          path: out/Wallabid.apk
+          if-no-files-found: error
