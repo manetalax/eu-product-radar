@@ -43,7 +43,7 @@ export default function AuthForm({ initialMode = 'login', initialMessage = '' }:
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError(''); setNotice('');
-    if ((mode === 'signup' || mode === 'reset') && (password.length < 12 || password !== confirm)) { setError('Usa al menos 12 caracteres y escribe la misma contraseña en los dos campos.'); return; }
+    if ((mode === 'signup' || mode === 'reset') && (password.length < 8 || password !== confirm)) { setError('Usa al menos 8 caracteres y escribe la misma contraseña en los dos campos.'); return; }
     setBusy(true);
     try {
       const supabase = createClient();
@@ -72,8 +72,8 @@ export default function AuthForm({ initialMode = 'login', initialMessage = '' }:
     {(mode === 'login' || mode === 'signup') && <div className="auth-actions"><button type="button" className="btn ghost full" disabled={busy} onClick={signInWithGoogle}>Continuar con Google</button><p className="muted">O utiliza tu correo y contraseña:</p></div>}
     <form onSubmit={submit}>
       {mode !== 'reset' && <label>Correo electrónico<input required type="email" autoComplete="email" maxLength={254} value={email} disabled={busy} onChange={e => setEmail(e.target.value)} /></label>}
-      {mode !== 'forgot' && <label>Contraseña<input required type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={mode === 'login' ? 1 : 12} maxLength={128} value={password} disabled={busy} onChange={e => setPassword(e.target.value)} /></label>}
-      {(mode === 'signup' || mode === 'reset') && <label>Repite la contraseña<input required type="password" autoComplete="new-password" minLength={12} maxLength={128} value={confirm} disabled={busy} onChange={e => setConfirm(e.target.value)} /></label>}
+      {mode !== 'forgot' && <label>Contraseña<input required type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={mode === 'login' ? 1 : 8} maxLength={128} value={password} disabled={busy} onChange={e => setPassword(e.target.value)} /></label>}
+      {(mode === 'signup' || mode === 'reset') && <label>Repite la contraseña<input required type="password" autoComplete="new-password" minLength={8} maxLength={128} value={confirm} disabled={busy} onChange={e => setConfirm(e.target.value)} /></label>}
       {error && <p className="message error" role="alert">{error}</p>}{notice && <p className="message success" role="status">{notice}</p>}
       <button className="btn primary full" disabled={busy}>{busy ? 'Procesando…' : mode === 'forgot' ? 'Enviar enlace' : mode === 'reset' ? 'Guardar contraseña' : titles[mode]}</button>
     </form>
