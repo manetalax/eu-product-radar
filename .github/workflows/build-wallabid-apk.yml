@@ -20,7 +20,9 @@ jobs:
           unzip -o wallabid-actions-source.zip -d wallabid-build
       - name: Install dependencies
         working-directory: wallabid-build
-        run: npm install --legacy-peer-deps --no-audit --no-fund
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npm install expo-linking@~57.0.8 --legacy-peer-deps --no-audit --no-fund
       - name: Typecheck
         working-directory: wallabid-build
         run: npm run typecheck
@@ -29,6 +31,9 @@ jobs:
         run: npx expo prebuild --platform android --no-install
       - name: Build release APK
         working-directory: wallabid-build/android
+        env:
+          NODE_ENV: production
+          GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g
         run: ./gradlew assembleRelease --no-daemon
       - name: Collect APK
         run: |
