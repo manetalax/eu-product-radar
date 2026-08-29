@@ -61,6 +61,20 @@ Antes de abrir el registro a clientes, configura **Custom SMTP**, un remitente v
 
 En **Authentication → Attack Protection**, activa la protección frente a contraseñas filtradas. El asesor de seguridad de Supabase la marca como pendiente; requiere configuración administrativa y no puede activarse mediante una migración SQL.
 
+### Borrado de cuenta y datos
+
+La cuenta puede eliminarse desde **Mi cuenta → Eliminar cuenta y datos**. La aplicación exige el correo exacto y la palabra `BORRAR`, rechaza solicitudes de otro origen y llama a `supabase/functions/delete-account` con el JWT de la sesión verificada.
+
+La Edge Function debe mantenerse con **Verify JWT activado**. Revoca primero todas las sesiones y después elimina de forma definitiva el usuario; las claves foráneas `ON DELETE CASCADE` eliminan sus análisis y su consumo mensual. La `service_role` existe únicamente dentro del entorno de Supabase y nunca se envía a Netlify, al navegador ni al repositorio.
+
+Para volver a desplegarla desde un entorno autorizado:
+
+```bash
+supabase functions deploy delete-account
+```
+
+No añadas `--no-verify-jwt`. Una llamada sin JWT debe responder `401` antes de ejecutar el código.
+
 Para probar el aislamiento con dos usuarios sin enviar invitaciones, el propietario puede crear dos cuentas de prueba en **Authentication → Users → Add user → Create new user**, eligiendo él mismo las contraseñas. Esto no prueba la entrega de correos: registro y recuperación deben probarse por separado.
 
 ## 4. Publicar desde GitHub
@@ -88,6 +102,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 7. Probar un CSV vacío, sin encabezados o con más de 1.000 productos: se muestra un error y no se guarda una importación parcial.
 8. Solicitar recuperación de contraseña, seguir el enlace, cambiarla y entrar con la nueva.
 9. Con una cuenta nueva, guardar un archivo de cinco productos. Un sexto producto, incluso en otro archivo o mediante dos solicitudes simultáneas, debe rechazarse sin guardado parcial. La otra cuenta conserva sus propios cinco productos disponibles.
+10. Con una cuenta desechable, descargar primero cualquier informe necesario, abrir **Mi cuenta**, escribir el correo exacto y `BORRAR`, y confirmar. Debe volver al acceso, la cuenta no debe poder iniciar sesión y sus filas de `analyses` y `monthly_product_usage` deben haber desaparecido. No utilizar para esta prueba una cuenta que se quiera conservar.
 
 No declarar este bloque activado hasta completar estas pruebas en el proyecto real. Las pruebas automatizadas locales no sustituyen la configuración ni los correos reales.
 
@@ -110,8 +125,8 @@ Las pruebas incluyen CSV/XLS/XLSX, validación de límites, redirecciones restri
 - El módulo europeo comprueba la presencia de fabricante, operador responsable en la UE y advertencias. No se evalúa si son correctos, suficientes o exigibles para una categoría.
 - 5 MB de archivo, 1.000 productos por importación, 1.000 caracteres por campo y 2 MB de solicitud JSON. Se analiza únicamente la primera hoja de Excel.
 - El plan gratuito limita a cinco productos por cuenta y mes UTC. Los pagos y las mejoras a planes comerciales todavía no están implementados.
-- No hay aún verificación normativa, alertas regulatorias, conectores a tiendas, borrado de cuenta desde la web, ni traducción completa de los nuevos formularios.
-- Mantener acceso de pruebas hasta configurar correo, controles de abuso/cuotas, política de conservación y proceso de borrado, y verificar la instalación real.
+- No hay aún verificación normativa, alertas regulatorias, conectores directos a tiendas ni traducción completa de los nuevos formularios privados.
+- Mantener acceso de pruebas hasta configurar correo, protección frente a contraseñas filtradas/CAPTCHA, política de conservación y verificar el flujo destructivo con una cuenta desechable.
 
 Referencias: [Supabase SSR](https://supabase.com/docs/guides/auth/server-side/creating-a-client), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [correo](https://supabase.com/docs/guides/auth/auth-smtp), [plantillas](https://supabase.com/docs/guides/auth/auth-email-templates), [SheetJS](https://docs.sheetjs.com/docs/getting-started/installation/nodejs/).
 

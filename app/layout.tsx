@@ -1,6 +1,7 @@
 import './globals.css';
 import './dashboard-polish.css';
 import './premium-global.css';
+import './account-security.css';
 import type { Metadata, Viewport } from 'next';
 import { BRAND_DESCRIPTION, BRAND_NAME } from '@/lib/brand';
 

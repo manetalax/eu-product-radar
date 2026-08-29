@@ -15,6 +15,7 @@ Sigue [SETUP.md](SETUP.md) antes de publicar esta versión: incluye la migració
 - Módulo europeo activo con guía documental, fuentes oficiales e informes Excel y PDF.
 - Arquitectura por mercado: Europa activa; Estados Unidos, China, Reino Unido y Japón preparados como próximos módulos.
 - RLS y permisos explícitos que aíslan los catálogos de cada cuenta.
+- Borrado autoservicio de cuenta y datos con doble confirmación, revocación global de sesiones y eliminación en cascada mediante una Edge Function protegida por JWT.
 - Identidad global centralizada y marca de mercado separada del núcleo del producto.
 - Experiencias responsive diferenciadas para escritorio, tablet/iPad y móvil, con manifiesto PWA y safe areas.
 - Planes, precios, límites e idiomas definidos en módulos TypeScript puros y reutilizables por futuros clientes web o nativos.
@@ -32,7 +33,7 @@ La prueba gratuita conserva 5 productos. Los planes se muestran y formatean ínt
 
 ## Base para aplicaciones
 
-`lib/plans.ts`, `lib/landing-i18n.ts`, `lib/analysis.ts`, `lib/markets.ts` y `lib/import-products.ts` concentran reglas y datos reutilizables sin componentes visuales. `lib/services/` aísla los proveedores web de autenticación y del interés comercial. Las futuras apps Android/iPhone pueden reutilizar el dominio y sustituir únicamente la capa de interfaz y el adaptador de autenticación.
+`lib/plans.ts`, `lib/landing-i18n.ts`, `lib/analysis.ts`, `lib/markets.ts` y `lib/import-products.ts` concentran reglas y datos reutilizables sin componentes visuales. `lib/services/` aísla los proveedores web de autenticación y del interés comercial. `supabase/functions/delete-account` ofrece el mismo borrado seguro a la web y a futuros clientes autorizados. Las futuras apps Android/iPhone pueden reutilizar el dominio y sustituir únicamente la capa de interfaz y el adaptador de autenticación.
 
 ## Ejecutar
 
@@ -47,4 +48,4 @@ npm run dev
 
 ## Alcance
 
-El indicador actual cuenta campos ausentes: no comprueba veracidad, requisitos por categoría ni conformidad normativa. Europa es el único módulo operativo; los demás mercados son una hoja de ruta. Los planes de pago permiten registrar interés, pero no cobran suscripciones. El SMTP para clientes, controles de abuso, proceso de borrado y verificación en el entorno real son necesarios antes de abrir el servicio al público.
+El indicador actual cuenta campos ausentes: no comprueba veracidad, requisitos por categoría ni conformidad normativa. Europa es el único módulo operativo; los demás mercados son una hoja de ruta. Los planes de pago permiten registrar interés, pero no cobran suscripciones. Antes de abrir el servicio al público siguen siendo necesarios SMTP real, protección de contraseñas filtradas/CAPTCHA y la prueba de aceptación destructiva con una cuenta desechable.

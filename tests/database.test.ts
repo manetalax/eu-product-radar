@@ -44,5 +44,10 @@ test('la migración guarda datos y RLS aísla a dos usuarios incluso con acceso 
     const reopened=await db.query<{products:unknown;product_count:number}>('select products,product_count from public.analyses where id=$1',[id]);
     assert.deepEqual(reopened.rows[0].products,JSON.parse(product));
     assert.equal(reopened.rows[0].product_count,1);
+    await db.exec('reset role;');
+    await db.query('delete from auth.users where id=$1',[a]);
+    assert.equal((await db.query('select * from public.analyses where user_id=$1',[a])).rows.length,0);
+    assert.equal((await db.query('select * from public.monthly_product_usage where user_id=$1',[a])).rows.length,0);
+    assert.equal((await db.query('select * from public.analyses where user_id=$1',[b])).rows.length,1);
   } finally { await db.close(); }
 });
