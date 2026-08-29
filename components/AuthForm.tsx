@@ -55,10 +55,10 @@ export default function AuthForm({ initialMode = 'login', initialMessage = '' }:
         const { data, error } = await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${siteUrl}/auth/callback` } });
         if (error) setError(authMessage(error));
         else if (data.session) window.location.assign('/dashboard');
-        else { setNotice('Si el registro puede completarse, recibirás un correo de confirmación. Revisa también spam. Si ya tenías cuenta, utiliza Entrar o Recuperar contraseña.'); setPassword(''); setConfirm(''); }
+        else { setNotice('Te hemos enviado un correo de confirmación. Abre el mensaje y pulsa «Confirmar mi correo» para activar tu cuenta. Revisa también la carpeta de spam.'); setPassword(''); setConfirm(''); }
       } else if (mode === 'forgot') {
         const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${siteUrl}/auth/callback?next=/reset-password` });
-        if (error) setError(authMessage(error)); else setNotice('Si existe una cuenta autorizada con ese correo, recibirás un enlace para cambiar la contraseña.');
+        if (error) setError(authMessage(error)); else setNotice('Si existe una cuenta con ese correo, recibirás un enlace para crear una nueva contraseña. Revisa también la carpeta de spam.');
       } else {
         const { error } = await supabase.auth.updateUser({ password });
         if (error) setError(authMessage(error)); else { await supabase.auth.signOut(); window.location.assign('/login?message=password_updated'); }
