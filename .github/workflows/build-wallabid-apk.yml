@@ -1,13 +1,13 @@
-name: Build Wallabid APK
+name: Build Wallabid APK Fast
 on:
   push:
-    branches: [wallabid-apk-build]
+    branches: [wallabid-apk-fast]
   workflow_dispatch:
 
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -29,18 +29,18 @@ jobs:
       - name: Generate native Android project
         working-directory: wallabid-build
         run: npx expo prebuild --platform android --no-install
-      - name: Build release APK
+      - name: Build ARM64 release APK
         working-directory: wallabid-build/android
         env:
           NODE_ENV: production
           GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
       - name: Collect APK
         run: |
           mkdir -p out
           cp wallabid-build/android/app/build/outputs/apk/release/*.apk out/Wallabid.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Wallabid-APK
+          name: Wallabid-APK-ARM64
           path: out/Wallabid.apk
           if-no-files-found: error
