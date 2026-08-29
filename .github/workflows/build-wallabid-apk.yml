@@ -13,10 +13,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: wallabid-build/package-lock.json
       - name: Unpack Wallabid source
         run: |
+          rm -rf wallabid-build
           mkdir -p wallabid-build
           unzip -o wallabid-actions-source.zip -d wallabid-build
       - name: Install dependencies
@@ -27,7 +26,7 @@ jobs:
         run: npm run typecheck
       - name: Generate native Android project
         working-directory: wallabid-build
-        run: npx expo prebuild --platform android --no-install --non-interactive
+        run: npx expo prebuild --platform android --no-install
       - name: Build release APK
         working-directory: wallabid-build/android
         run: ./gradlew assembleRelease --no-daemon
