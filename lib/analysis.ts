@@ -1,5 +1,6 @@
 import { MarketCode, MARKETS, marketCodeOrEu } from './markets';
-import { assessEuRegulatory, EuRegulatoryAssessment } from './eu-regulatory-engine';
+import { EuRegulatoryAssessment } from './eu-regulatory-engine';
+import { assessEuRegulatoryWithContext } from './eu-regulatory-context';
 
 export const LEGACY_RULE_VERSION = 'missing-fields-v1';
 export const RULE_VERSION = 'market-readiness-v2';
@@ -77,7 +78,7 @@ export function analyze(products: Product[], marketCode: MarketCode = 'EU'): Res
       score,
       priority: score >= 60 ? 'ALTA' : score >= 30 ? 'MEDIA' : 'BAJA',
       missing,
-      regulatory: marketCode === 'EU' ? assessEuRegulatory(p) : undefined,
+      regulatory: marketCode === 'EU' ? assessEuRegulatoryWithContext(p) : undefined,
     };
   });
 }
