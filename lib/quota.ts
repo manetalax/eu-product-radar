@@ -26,5 +26,6 @@ export function productQuota(used: number, now = new Date(), billing: BillingSta
 }
 
 export function quotaExceededMessage(incomingProducts: number, quota: ProductQuota): string {
+  if (quota.billing.planId === 'audit') return `Tu auditoría profesional permite una única carga de hasta ${quota.limit} productos. Este archivo contiene ${incomingProducts}. No se ha guardado ningún producto.`;
   return `Tu plan ${quota.billing.planName} incluye ${quota.limit} productos al mes. Este archivo contiene ${incomingProducts} y te quedan ${quota.remaining}. No se ha guardado ningún producto.`;
 }
