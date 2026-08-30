@@ -65,7 +65,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       legal: 'Herramienta orientativa. No certifica conformidad ni sustituye asesoramiento profesional.',
     },
     preview: {
-      kicker: 'PRODUCT RADAR · EUROPA', file: 'catalogo-ejemplo.xlsx', count: '12 productos', incomplete: 'Campos incompletos',
+      kicker: 'IMPORT RULES VERIFIER · EUROPA', file: 'catalogo-ejemplo.xlsx', count: '12 productos', incomplete: 'Campos incompletos',
       priority: '3 requieren atención prioritaria', summary: 'Fabricante, operador responsable y advertencias concentran los principales huecos.',
       products: ['Auriculares inalámbricos', 'Lámpara LED portátil', 'Botella térmica'], priorities: ['ALTA', 'MEDIA', 'BAJA'],
       next: ['Qué pedir', 'Dónde conseguirlo', 'Fuente oficial'], fictional: 'Ejemplo ilustrativo · datos ficticios', reports: 'Informe Excel + PDF',
@@ -127,7 +127,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       eyebrow: 'PREGUNTAS FRECUENTES', title: 'Antes de subir tu catálogo.',
       items: [
         ['¿Import Rules Verifier certifica que un producto cumple?', 'No. Detecta información básica incompleta, organiza prioridades y señala fuentes oficiales. La conformidad exacta depende del producto y puede exigir una evaluación técnica o jurídica.'],
-        ['¿Qué necesito para empezar?', 'Un CSV o Excel con el nombre del producto. Si incluye fabricante, operador responsable y advertencias, el resultado será más completo; si faltan, el radar los señalará.'],
+        ['¿Qué necesito para empezar?', 'Un CSV o Excel con el nombre del producto. Si incluye fabricante, operador responsable y advertencias, el resultado será más completo; si faltan, el verificador los señalará.'],
         ['¿Qué ocurre con mis catálogos?', 'Cada análisis queda asociado a tu cuenta y separado de otras cuentas. Recomendamos no subir datos personales ni secretos comerciales innecesarios.'],
         ['¿Por qué Europa es el único mercado activo?', 'Porque preferimos una cobertura europea útil y verificable antes de activar otros países. La plataforma ya separa reglas, fuentes e informes por mercado.'],
         ['¿Cuándo estarán disponibles los planes de pago?', 'La apertura será gradual. Puedes registrar tu interés sin activar cobros; te avisaremos antes de cualquier contratación.'],
@@ -148,7 +148,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       legal: 'Guidance tool only. It does not certify compliance or replace professional advice.',
     },
     preview: {
-      kicker: 'PRODUCT RADAR · EUROPE', file: 'sample-catalogue.xlsx', count: '12 products', incomplete: 'Missing fields',
+      kicker: 'IMPORT RULES VERIFIER · EUROPE', file: 'sample-catalogue.xlsx', count: '12 products', incomplete: 'Missing fields',
       priority: '3 need priority attention', summary: 'Manufacturer, responsible operator and warnings account for the main gaps.',
       products: ['Wireless headphones', 'Portable LED lamp', 'Thermal bottle'], priorities: ['HIGH', 'MEDIUM', 'LOW'],
       next: ['What to request', 'Where to obtain it', 'Official source'], fictional: 'Illustrative example · fictional data', reports: 'Excel + PDF report',
@@ -210,7 +210,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       eyebrow: 'FREQUENTLY ASKED QUESTIONS', title: 'Before uploading your catalogue.',
       items: [
         ['Does Import Rules Verifier certify that a product complies?', 'No. It detects missing core information, organises priorities and points to official sources. Exact compliance depends on the product and may require technical or legal assessment.'],
-        ['What do I need to get started?', 'A CSV or Excel file containing the product name. If it includes the manufacturer, responsible operator and warnings, the result will be more complete; if not, the radar will flag them.'],
+        ['What do I need to get started?', 'A CSV or Excel file containing the product name. If it includes the manufacturer, responsible operator and warnings, the result will be more complete; if not, the verifier will flag them.'],
         ['What happens to my catalogues?', 'Each analysis is linked to your account and isolated from other accounts. We recommend avoiding unnecessary personal data or trade secrets.'],
         ['Why is Europe the only live market?', 'We prefer useful, verifiable European coverage before enabling other countries. The platform already separates rules, sources and reports by market.'],
         ['When will paid plans be available?', 'Access will open gradually. You can register interest without enabling billing, and we will notify you before any purchase.'],
@@ -231,7 +231,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       legal: 'Outil indicatif. Il ne certifie pas la conformité et ne remplace pas un conseil professionnel.',
     },
     preview: {
-      kicker: 'PRODUCT RADAR · EUROPE', file: 'catalogue-exemple.xlsx', count: '12 produits', incomplete: 'Champs incomplets',
+      kicker: 'IMPORT RULES VERIFIER · EUROPE', file: 'catalogue-exemple.xlsx', count: '12 produits', incomplete: 'Champs incomplets',
       priority: '3 nécessitent une attention prioritaire', summary: 'Le fabricant, l’opérateur responsable et les avertissements concentrent les principales lacunes.',
       products: ['Écouteurs sans fil', 'Lampe LED portable', 'Bouteille isotherme'], priorities: ['HAUTE', 'MOYENNE', 'BASSE'],
       next: ['Quoi demander', 'Où l’obtenir', 'Source officielle'], fictional: 'Exemple illustratif · données fictives', reports: 'Rapport Excel + PDF',
@@ -293,7 +293,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       eyebrow: 'QUESTIONS FRÉQUENTES', title: 'Avant d’importer votre catalogue.',
       items: [
         ['Import Rules Verifier certifie-t-il la conformité d’un produit ?', 'Non. Il détecte les informations essentielles manquantes, organise les priorités et renvoie vers des sources officielles. La conformité exacte dépend du produit et peut nécessiter une évaluation technique ou juridique.'],
-        ['De quoi ai-je besoin pour commencer ?', 'D’un fichier CSV ou Excel contenant le nom du produit. Avec le fabricant, l’opérateur responsable et les avertissements, le résultat sera plus complet ; sinon, le radar les signalera.'],
+        ['De quoi ai-je besoin pour commencer ?', 'D’un fichier CSV ou Excel contenant le nom du produit. Avec le fabricant, l’opérateur responsable et les avertissements, le résultat sera plus complet ; sinon, le vérificateur les signalera.'],
         ['Que deviennent mes catalogues ?', 'Chaque analyse est liée à votre compte et isolée des autres comptes. Évitez les données personnelles ou secrets commerciaux qui ne sont pas nécessaires.'],
         ['Pourquoi l’Europe est-elle le seul marché actif ?', 'Nous préférons une couverture européenne utile et vérifiable avant d’activer d’autres pays. La plateforme sépare déjà les règles, sources et rapports par marché.'],
         ['Quand les offres payantes seront-elles disponibles ?', 'L’ouverture sera progressive. Vous pouvez manifester votre intérêt sans activer de paiement ; nous vous préviendrons avant tout achat.'],
@@ -314,7 +314,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       legal: 'Orientierungshilfe. Sie zertifiziert keine Konformität und ersetzt keine professionelle Beratung.',
     },
     preview: {
-      kicker: 'PRODUCT RADAR · EUROPA', file: 'beispiel-katalog.xlsx', count: '12 Produkte', incomplete: 'Unvollständige Felder',
+      kicker: 'IMPORT RULES VERIFIER · EUROPA', file: 'beispiel-katalog.xlsx', count: '12 Produkte', incomplete: 'Unvollständige Felder',
       priority: '3 benötigen vorrangige Aufmerksamkeit', summary: 'Hersteller, verantwortlicher Wirtschaftsakteur und Warnhinweise bilden die größten Lücken.',
       products: ['Kabellose Kopfhörer', 'Tragbare LED-Leuchte', 'Thermoflasche'], priorities: ['HOCH', 'MITTEL', 'NIEDRIG'],
       next: ['Was anfordern', 'Woher beziehen', 'Offizielle Quelle'], fictional: 'Beispielansicht · fiktive Daten', reports: 'Excel- + PDF-Bericht',
@@ -376,7 +376,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       eyebrow: 'HÄUFIGE FRAGEN', title: 'Vor dem Hochladen deines Katalogs.',
       items: [
         ['Zertifiziert Import Rules Verifier die Konformität eines Produkts?', 'Nein. Es erkennt fehlende Kernangaben, ordnet Prioritäten und verweist auf offizielle Quellen. Die genaue Konformität hängt vom Produkt ab und kann eine technische oder rechtliche Prüfung erfordern.'],
-        ['Was brauche ich für den Start?', 'Eine CSV- oder Excel-Datei mit dem Produktnamen. Mit Hersteller, verantwortlichem Wirtschaftsakteur und Warnhinweisen wird das Ergebnis vollständiger; fehlende Angaben markiert der Radar.'],
+        ['Was brauche ich für den Start?', 'Eine CSV- oder Excel-Datei mit dem Produktnamen. Mit Hersteller, verantwortlichem Wirtschaftsakteur und Warnhinweisen wird das Ergebnis vollständiger; fehlende Angaben markiert der Prüfer.'],
         ['Was geschieht mit meinen Katalogen?', 'Jede Analyse ist deinem Konto zugeordnet und von anderen Konten getrennt. Lade keine unnötigen personenbezogenen Daten oder Geschäftsgeheimnisse hoch.'],
         ['Warum ist Europa der einzige aktive Markt?', 'Wir wollen zuerst eine nützliche, überprüfbare Europa-Abdeckung bieten. Regeln, Quellen und Berichte sind bereits nach Märkten getrennt.'],
         ['Wann sind die Bezahltarife verfügbar?', 'Die Öffnung erfolgt schrittweise. Du kannst dein Interesse ohne Zahlungsaktivierung hinterlegen; vor einem Abschluss wirst du informiert.'],
@@ -397,7 +397,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       legal: 'Strumento orientativo. Non certifica la conformità e non sostituisce una consulenza professionale.',
     },
     preview: {
-      kicker: 'PRODUCT RADAR · EUROPA', file: 'catalogo-esempio.xlsx', count: '12 prodotti', incomplete: 'Campi incompleti',
+      kicker: 'IMPORT RULES VERIFIER · EUROPA', file: 'catalogo-esempio.xlsx', count: '12 prodotti', incomplete: 'Campi incompleti',
       priority: '3 richiedono attenzione prioritaria', summary: 'Produttore, operatore responsabile e avvertenze concentrano le principali lacune.',
       products: ['Auricolari wireless', 'Lampada LED portatile', 'Borraccia termica'], priorities: ['ALTA', 'MEDIA', 'BASSA'],
       next: ['Cosa richiedere', 'Dove ottenerlo', 'Fonte ufficiale'], fictional: 'Esempio illustrativo · dati fittizi', reports: 'Report Excel + PDF',
@@ -459,7 +459,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       eyebrow: 'DOMANDE FREQUENTI', title: 'Prima di caricare il catalogo.',
       items: [
         ['Import Rules Verifier certifica la conformità di un prodotto?', 'No. Individua informazioni essenziali mancanti, organizza le priorità e rimanda a fonti ufficiali. La conformità esatta dipende dal prodotto e può richiedere una valutazione tecnica o legale.'],
-        ['Cosa serve per iniziare?', 'Un file CSV o Excel con il nome del prodotto. Se contiene produttore, operatore responsabile e avvertenze, il risultato sarà più completo; se mancano, il radar li segnalerà.'],
+        ['Cosa serve per iniziare?', 'Un file CSV o Excel con il nome del prodotto. Se contiene produttore, operatore responsabile e avvertenze, il risultato sarà più completo; se mancano, il verificatore li segnalerà.'],
         ['Cosa succede ai miei cataloghi?', 'Ogni analisi è collegata al tuo account e separata dagli altri account. Evita dati personali o segreti commerciali non necessari.'],
         ['Perché l’Europa è l’unico mercato attivo?', 'Preferiamo una copertura europea utile e verificabile prima di attivare altri paesi. La piattaforma separa già regole, fonti e report per mercato.'],
         ['Quando saranno disponibili i piani a pagamento?', 'L’apertura sarà graduale. Puoi registrare l’interesse senza attivare pagamenti; ti avviseremo prima di qualsiasi acquisto.'],
@@ -480,7 +480,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       legal: 'Ferramenta orientativa. Não certifica a conformidade nem substitui aconselhamento profissional.',
     },
     preview: {
-      kicker: 'PRODUCT RADAR · EUROPA', file: 'catalogo-exemplo.xlsx', count: '12 produtos', incomplete: 'Campos incompletos',
+      kicker: 'IMPORT RULES VERIFIER · EUROPA', file: 'catalogo-exemplo.xlsx', count: '12 produtos', incomplete: 'Campos incompletos',
       priority: '3 requerem atenção prioritária', summary: 'Fabricante, operador responsável e avisos concentram as principais lacunas.',
       products: ['Auscultadores sem fios', 'Candeeiro LED portátil', 'Garrafa térmica'], priorities: ['ALTA', 'MÉDIA', 'BAIXA'],
       next: ['O que pedir', 'Onde obter', 'Fonte oficial'], fictional: 'Exemplo ilustrativo · dados fictícios', reports: 'Relatório Excel + PDF',
@@ -542,7 +542,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       eyebrow: 'PERGUNTAS FREQUENTES', title: 'Antes de carregar o catálogo.',
       items: [
         ['A Import Rules Verifier certifica a conformidade de um produto?', 'Não. Deteta informações essenciais em falta, organiza prioridades e indica fontes oficiais. A conformidade exata depende do produto e pode exigir uma avaliação técnica ou jurídica.'],
-        ['De que preciso para começar?', 'Um ficheiro CSV ou Excel com o nome do produto. Se incluir fabricante, operador responsável e avisos, o resultado será mais completo; se faltarem, o radar irá assinalá-los.'],
+        ['De que preciso para começar?', 'Um ficheiro CSV ou Excel com o nome do produto. Se incluir fabricante, operador responsável e avisos, o resultado será mais completo; se faltarem, o verificador irá assinalá-los.'],
         ['O que acontece aos meus catálogos?', 'Cada análise fica associada à sua conta e separada das outras contas. Evite dados pessoais ou segredos comerciais desnecessários.'],
         ['Porque é que a Europa é o único mercado ativo?', 'Preferimos uma cobertura europeia útil e verificável antes de ativar outros países. A plataforma já separa regras, fontes e relatórios por mercado.'],
         ['Quando estarão disponíveis os planos pagos?', 'A abertura será gradual. Pode registar o interesse sem ativar pagamentos; será avisado antes de qualquer contratação.'],
