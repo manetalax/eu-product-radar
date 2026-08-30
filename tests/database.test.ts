@@ -18,6 +18,8 @@ test('la migración guarda datos y RLS aísla a dos usuarios incluso con acceso 
     await db.exec(readFileSync(new URL('../supabase/migrations/202608290001_free_monthly_quota.sql',import.meta.url),'utf8'));
     await db.exec(readFileSync(new URL('../supabase/migrations/20260829075235_global_market_architecture.sql',import.meta.url),'utf8'));
     await db.exec(readFileSync(new URL('../supabase/migrations/202608300001_stripe_subscriptions.sql',import.meta.url),'utf8'));
+    await db.exec(readFileSync(new URL('../supabase/migrations/202608300003_analysis_evidence_and_safe_reanalysis.sql',import.meta.url),'utf8'));
+    await db.exec(readFileSync(new URL('../supabase/migrations/202608300004_restore_immutable_analyses.sql',import.meta.url),'utf8'));
     await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${a}',false);`);
     assert.equal((await db.query<{product_count:number}>('select product_count from public.monthly_product_usage')).rows[0].product_count,1);
     assert.equal((await db.query('select * from public.analyses')).rows.length,1);
@@ -26,6 +28,7 @@ test('la migración guarda datos y RLS aísla a dos usuarios incluso con acceso 
     await assert.rejects(db.query(`insert into public.analyses(filename,products,market_code) values ('mal.csv',$1::jsonb,'EUROPE')`,[product]),/check constraint/);
     await assert.rejects(db.query('insert into public.analyses(user_id,filename,products) values ($1,$2,$3::jsonb)',[b,'ajeno.csv',product]), /row-level security|quota_identity_mismatch/);
     await assert.rejects(db.query("update public.analyses set filename='cambio'"),/permission denied/);
+    await assert.rejects(db.query('update public.analyses set products=$1::jsonb where id=$2',[fourProducts,id]),/permission denied/);
     await assert.rejects(db.query('insert into public.analyses(filename,products) values ($1,$2::jsonb)',['invalid.csv','[]']),/check constraint/);
     await assert.rejects(db.query('insert into public.analyses(filename,products) values ($1,$2::jsonb)',['invalid.csv','[{"name":"A"}]']),/check constraint/);
     await db.query(`insert into public.analyses(filename,products,market_code) values ('cuatro.csv',$1::jsonb,'EU')`,[fourProducts]);
