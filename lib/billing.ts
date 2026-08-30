@@ -1,7 +1,7 @@
-import { FREE_TRIAL_PRODUCT_LIMIT, isPlanId, PlanId, PLANS_BY_ID } from './plans';
+import { FREE_TRIAL_PRODUCT_LIMIT, isPlanId, ONE_TIME_AUDIT, PlanId, PLANS_BY_ID } from './plans';
 
 export const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'trialing'] as const;
-export type BillingPlanId = 'free' | PlanId;
+export type BillingPlanId = 'free' | 'audit' | PlanId;
 
 export type BillingStatus = {
   planId: BillingPlanId;
@@ -28,6 +28,10 @@ export function billingStatus(record: SubscriptionRecord | null, now = new Date(
   if (!paid || !planId) return { planId: 'free', planName: 'Gratis', status, productLimit: FREE_TRIAL_PRODUCT_LIMIT, currentPeriodEnd: periodEnd, cancelAtPeriodEnd: Boolean(record?.cancel_at_period_end) };
   const plan = PLANS_BY_ID[planId];
   return { planId, planName: plan.name, status, productLimit: plan.monthlyProductLimit, currentPeriodEnd: periodEnd, cancelAtPeriodEnd: Boolean(record?.cancel_at_period_end) };
+}
+
+export function auditBillingStatus(): BillingStatus {
+  return { planId: 'audit', planName: ONE_TIME_AUDIT.name, status: 'paid', productLimit: ONE_TIME_AUDIT.productLimit, currentPeriodEnd: null, cancelAtPeriodEnd: false };
 }
 
 export function stripePriceId(planId: PlanId): string {
