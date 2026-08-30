@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Analysis, analysisMarket, analyze } from '@/lib/analysis';
 import RegulatoryAssessment from './RegulatoryAssessment';
+import ReadinessEvidencePanel from './ReadinessEvidencePanel';
 import styles from './LatestRegulatoryAssessment.module.css';
 
 export default function LatestRegulatoryAssessment() {
@@ -35,6 +36,7 @@ export default function LatestRegulatoryAssessment() {
     <div className={styles.inner}>
       <div className={styles.context}><span>ÚLTIMO ANÁLISIS REGULATORIO</span><strong>{analysis.filename}</strong></div>
       <RegulatoryAssessment results={results} />
+      <ReadinessEvidencePanel analysis={analysis} />
     </div>
   </section>;
 }
