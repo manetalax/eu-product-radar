@@ -1,7 +1,7 @@
 {
-  "name": "Product Radar",
-  "short_name": "Product Radar",
-  "description": "Prepara catálogos de producto para vender en Europa y amplía por mercado desde una sola plataforma.",
+  "name": "Import Rules Verifier",
+  "short_name": "Import Verifier",
+  "description": "Verifica requisitos, documentación pendiente y riesgos regulatorios antes de importar y vender productos en la Unión Europea.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f6f7fb",
