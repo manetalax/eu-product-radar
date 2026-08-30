@@ -8,8 +8,17 @@ import TrustMark from '@/components/TrustMark';
 import { BRAND_NAME } from '@/lib/brand';
 import { formatPrice, formatProductCount, landingCopy, Language, LANGUAGE_OPTIONS } from '@/lib/landing-i18n';
 import { MARKETS_BY_RANK } from '@/lib/markets';
-import { FREE_TRIAL_PRODUCT_LIMIT, PLANS } from '@/lib/plans';
+import { FREE_TRIAL_PRODUCT_LIMIT, ONE_TIME_AUDIT, PLANS } from '@/lib/plans';
 import { useLanguage } from '@/lib/use-language';
+
+const auditCopy: Record<Language, { badge: string; title: string; cadence: string; body: string; cta: string }> = {
+  es: { badge: 'PAGO ÚNICO', title: 'Auditoría profesional', cadence: 'sin suscripción', body: 'Un catálogo de hasta 30 productos con informe PDF y Excel.', cta: 'Auditar mi catálogo' },
+  en: { badge: 'ONE-TIME PAYMENT', title: 'Professional audit', cadence: 'no subscription', body: 'One catalogue of up to 30 products with PDF and Excel reports.', cta: 'Audit my catalogue' },
+  fr: { badge: 'PAIEMENT UNIQUE', title: 'Audit professionnel', cadence: 'sans abonnement', body: 'Un catalogue de 30 produits maximum avec rapports PDF et Excel.', cta: 'Auditer mon catalogue' },
+  de: { badge: 'EINMALZAHLUNG', title: 'Professionelle Prüfung', cadence: 'ohne Abonnement', body: 'Ein Katalog mit bis zu 30 Produkten inklusive PDF- und Excel-Bericht.', cta: 'Katalog prüfen lassen' },
+  it: { badge: 'PAGAMENTO UNICO', title: 'Audit professionale', cadence: 'senza abbonamento', body: 'Un catalogo fino a 30 prodotti con report PDF ed Excel.', cta: 'Verifica il mio catalogo' },
+  pt: { badge: 'PAGAMENTO ÚNICO', title: 'Auditoria profissional', cadence: 'sem subscrição', body: 'Um catálogo até 30 produtos com relatórios PDF e Excel.', cta: 'Auditar o meu catálogo' },
+};
 
 export default function Home() {
   const { language, setLanguage } = useLanguage();
@@ -25,6 +34,7 @@ export default function Home() {
     areaServed: { '@type': 'AdministrativeArea', name: 'European Union' },
     offers: [
       { '@type': 'Offer', name: t.pricing.freeTitle, price: '0', priceCurrency: 'EUR', description: formatProductCount(language, FREE_TRIAL_PRODUCT_LIMIT) },
+      { '@type': 'Offer', name: auditCopy[language].title, price: String(ONE_TIME_AUDIT.priceEur), priceCurrency: 'EUR', description: auditCopy[language].body, availability: 'https://schema.org/InStock' },
       ...PLANS.map(plan => ({
         '@type': 'Offer', name: plan.name, price: String(plan.monthlyPriceEur), priceCurrency: 'EUR',
         description: `${t.pricing.upTo} ${formatProductCount(language, plan.monthlyProductLimit)} ${t.pricing.perMonth}`,
@@ -105,6 +115,10 @@ export default function Home() {
     <section className="section pricing-section" id="planes">
       <div className="toprow pricing-heading"><div><div className="eyebrow">{t.pricing.eyebrow}</div><h2>{t.pricing.title}</h2><p className="muted">{t.pricing.lead}</p></div><div className="availability-note">{t.pricing.availability}</div></div>
       <div className="free-trial-card"><div><span>{t.pricing.freeTitle}</span><strong>{formatProductCount(language, FREE_TRIAL_PRODUCT_LIMIT)}</strong><p>{t.pricing.freeBody}</p></div><Link className="btn ghost" href={`/login?lang=${language}`}>{t.pricing.freeCta}</Link></div>
+      <article className="free-trial-card one-time-audit-card">
+        <div><span>{auditCopy[language].badge}</span><strong>{auditCopy[language].title} · {formatPrice(language, ONE_TIME_AUDIT.priceEur)}</strong><p>{auditCopy[language].body} · {auditCopy[language].cadence}.</p></div>
+        <Link className="btn primary" href={`/login?plan=audit&lang=${language}`}>{auditCopy[language].cta}</Link>
+      </article>
       <div className="plans polished-plans global-plans">{PLANS.map(plan => <article className={`plan ${plan.featured ? 'featured' : ''}`} key={plan.id}>
         {plan.featured && <span className="plan-label">{t.pricing.recommended}</span>}
         <b>{plan.name}</b><div className="price">{formatPrice(language, plan.monthlyPriceEur)}</div><span className="plan-cadence">{t.pricing.perMonth}</span>
