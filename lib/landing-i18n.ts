@@ -61,7 +61,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       title: 'Conoce la normativa que necesita cada producto para venderse en la Unión Europea.',
       lead: 'Detecta requisitos, documentación pendiente y posibles riesgos regulatorios antes de comercializar tus productos en el mercado europeo.',
       primary: 'Analizar 5 productos gratis', secondary: 'Ver cómo funciona',
-      trust: ['Sin tarjeta', 'Plantilla incluida', 'Excel y PDF', 'Historial privado'],
+      trust: ['Sin tarjeta', 'Fotos y documentos', 'Excel y PDF', 'Historial privado'],
       legal: 'Herramienta orientativa. No certifica conformidad ni sustituye asesoramiento profesional.',
     },
     preview: {
@@ -71,7 +71,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       next: ['Qué pedir', 'Dónde conseguirlo', 'Fuente oficial'], fictional: 'Ejemplo ilustrativo · datos ficticios', reports: 'Informe Excel + PDF',
     },
     values: [
-      { title: 'Importa', body: 'CSV, XLS o XLSX' }, { title: 'Prioriza', body: 'Detecta campos incompletos' },
+      { title: 'Importa', body: 'Foto, PDF, Word, texto o Excel' }, { title: 'Prioriza', body: 'Detecta campos incompletos' },
       { title: 'Documenta', body: 'Guía y fuentes oficiales' }, { title: 'Exporta', body: 'Informes trazables' },
     ],
     flow: {
@@ -118,7 +118,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       honesty: 'Los planes son suscripciones mensuales gestionadas por Stripe. Se renuevan automáticamente hasta que las canceles desde tu cuenta.',
     },
     compatibility: {
-      commerceLabel: 'Compatible con exportaciones de', commerceNote: 'Importa CSV o Excel. La disponibilidad de campos depende de cada exportación; los conectores directos aún están en preparación.',
+      commerceLabel: 'Compatible con exportaciones de', commerceNote: 'Sube fotos, PDF, Word, texto, CSV o Excel. La IA identifica los productos y deja vacíos los datos que no puede verificar.',
       paymentLabel: 'Pago seguro gestionado por Stripe', paymentNote: 'Los métodos concretos disponibles dependen del país, la moneda y la configuración de Stripe.',
       infrastructureLabel: 'Tecnología utilizada', infrastructureNote: 'Infraestructura técnica de la aplicación; no implica patrocinio, certificación ni asociación comercial.',
     },
@@ -127,7 +127,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       eyebrow: 'PREGUNTAS FRECUENTES', title: 'Antes de subir tu catálogo.',
       items: [
         ['¿Import Rules Verifier certifica que un producto cumple?', 'No. Detecta información básica incompleta, organiza prioridades y señala fuentes oficiales. La conformidad exacta depende del producto y puede exigir una evaluación técnica o jurídica.'],
-        ['¿Qué necesito para empezar?', 'Un CSV o Excel con el nombre del producto. Si incluye fabricante, operador responsable y advertencias, el resultado será más completo; si faltan, el verificador los señalará.'],
+        ['¿Qué necesito para empezar?', 'Una foto, un documento, texto, CSV o Excel donde aparezcan los productos. La IA intentará identificarlos y dejará señalados los datos que falten.'],
         ['¿Qué ocurre con mis catálogos?', 'Cada análisis queda asociado a tu cuenta y separado de otras cuentas. Recomendamos no subir datos personales ni secretos comerciales innecesarios.'],
         ['¿Por qué Europa es el único mercado activo?', 'Porque preferimos una cobertura europea útil y verificable antes de activar otros países. La plataforma ya separa reglas, fuentes e informes por mercado.'],
         ['¿Cuándo estarán disponibles los planes de pago?', 'La apertura será gradual. Puedes registrar tu interés sin activar cobros; te avisaremos antes de cualquier contratación.'],
@@ -144,7 +144,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       title: 'Know the regulations each product needs to be sold in the European Union.',
       lead: 'Detect requirements, missing documentation and potential regulatory risks before placing your products on the European market.',
       primary: 'Analyse 5 products free', secondary: 'See how it works',
-      trust: ['No card required', 'Template included', 'Excel and PDF', 'Private history'],
+      trust: ['No card required', 'Photos and documents', 'Excel and PDF', 'Private history'],
       legal: 'Guidance tool only. It does not certify compliance or replace professional advice.',
     },
     preview: {
@@ -154,7 +154,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       next: ['What to request', 'Where to obtain it', 'Official source'], fictional: 'Illustrative example · fictional data', reports: 'Excel + PDF report',
     },
     values: [
-      { title: 'Import', body: 'CSV, XLS or XLSX' }, { title: 'Prioritise', body: 'Find missing fields' },
+      { title: 'Import', body: 'Photo, PDF, Word, text or Excel' }, { title: 'Prioritise', body: 'Find missing fields' },
       { title: 'Document', body: 'Guidance and official sources' }, { title: 'Export', body: 'Traceable reports' },
     ],
     flow: {
@@ -201,7 +201,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       honesty: 'Plans are monthly subscriptions managed by Stripe. They renew automatically until you cancel them from your account.',
     },
     compatibility: {
-      commerceLabel: 'Compatible with exports from', commerceNote: 'Import CSV or Excel. Available fields depend on each export; direct connectors are still in preparation.',
+      commerceLabel: 'Compatible with exports from', commerceNote: 'Upload photos, PDF, Word, text, CSV or Excel. AI identifies products and leaves unverifiable fields empty.',
       paymentLabel: 'Secure payment managed by Stripe', paymentNote: 'Available payment methods depend on country, currency and your Stripe configuration.',
       infrastructureLabel: 'Technology in use', infrastructureNote: 'Application infrastructure only; this does not imply sponsorship, certification or a commercial partnership.',
     },
@@ -210,7 +210,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       eyebrow: 'FREQUENTLY ASKED QUESTIONS', title: 'Before uploading your catalogue.',
       items: [
         ['Does Import Rules Verifier certify that a product complies?', 'No. It detects missing core information, organises priorities and points to official sources. Exact compliance depends on the product and may require technical or legal assessment.'],
-        ['What do I need to get started?', 'A CSV or Excel file containing the product name. If it includes the manufacturer, responsible operator and warnings, the result will be more complete; if not, the verifier will flag them.'],
+        ['What do I need to get started?', 'A photo, document, text, CSV or Excel file showing the products. AI will identify them and flag any missing information.'],
         ['What happens to my catalogues?', 'Each analysis is linked to your account and isolated from other accounts. We recommend avoiding unnecessary personal data or trade secrets.'],
         ['Why is Europe the only live market?', 'We prefer useful, verifiable European coverage before enabling other countries. The platform already separates rules, sources and reports by market.'],
         ['When will paid plans be available?', 'Access will open gradually. You can register interest without enabling billing, and we will notify you before any purchase.'],
@@ -227,7 +227,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       title: 'Identifiez la réglementation nécessaire à chaque produit pour être vendu dans l’Union européenne.',
       lead: 'Repérez les exigences, les documents manquants et les risques réglementaires potentiels avant de commercialiser vos produits sur le marché européen.',
       primary: 'Analyser 5 produits gratuitement', secondary: 'Voir le fonctionnement',
-      trust: ['Sans carte', 'Modèle inclus', 'Excel et PDF', 'Historique privé'],
+      trust: ['Sans carte', 'Photos et documents', 'Excel et PDF', 'Historique privé'],
       legal: 'Outil indicatif. Il ne certifie pas la conformité et ne remplace pas un conseil professionnel.',
     },
     preview: {
@@ -237,7 +237,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       next: ['Quoi demander', 'Où l’obtenir', 'Source officielle'], fictional: 'Exemple illustratif · données fictives', reports: 'Rapport Excel + PDF',
     },
     values: [
-      { title: 'Importez', body: 'CSV, XLS ou XLSX' }, { title: 'Priorisez', body: 'Repérez les champs incomplets' },
+      { title: 'Importez', body: 'Photo, PDF, Word, texte ou Excel' }, { title: 'Priorisez', body: 'Repérez les champs incomplets' },
       { title: 'Documentez', body: 'Guide et sources officielles' }, { title: 'Exportez', body: 'Rapports traçables' },
     ],
     flow: {
@@ -284,7 +284,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       honesty: 'Les offres sont des abonnements mensuels gérés par Stripe. Ils sont renouvelés automatiquement jusqu’à leur résiliation depuis votre compte.',
     },
     compatibility: {
-      commerceLabel: 'Compatible avec les exports de', commerceNote: 'Importez un fichier CSV ou Excel. Les champs disponibles dépendent de chaque export ; les connecteurs directs sont encore en préparation.',
+      commerceLabel: 'Compatible avec les exports de', commerceNote: 'Importez des photos, PDF, Word, texte, CSV ou Excel. L’IA identifie les produits et laisse vides les données non vérifiables.',
       paymentLabel: 'Paiement sécurisé géré par Stripe', paymentNote: 'Les moyens disponibles dépendent du pays, de la devise et de la configuration Stripe.',
       infrastructureLabel: 'Technologies utilisées', infrastructureNote: 'Infrastructure technique de l’application uniquement ; cela n’implique ni parrainage, ni certification, ni partenariat commercial.',
     },
@@ -293,7 +293,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       eyebrow: 'QUESTIONS FRÉQUENTES', title: 'Avant d’importer votre catalogue.',
       items: [
         ['Import Rules Verifier certifie-t-il la conformité d’un produit ?', 'Non. Il détecte les informations essentielles manquantes, organise les priorités et renvoie vers des sources officielles. La conformité exacte dépend du produit et peut nécessiter une évaluation technique ou juridique.'],
-        ['De quoi ai-je besoin pour commencer ?', 'D’un fichier CSV ou Excel contenant le nom du produit. Avec le fabricant, l’opérateur responsable et les avertissements, le résultat sera plus complet ; sinon, le vérificateur les signalera.'],
+        ['De quoi ai-je besoin pour commencer ?', 'D’une photo, d’un document, d’un texte, d’un CSV ou d’un fichier Excel montrant les produits. L’IA les identifiera et signalera les informations manquantes.'],
         ['Que deviennent mes catalogues ?', 'Chaque analyse est liée à votre compte et isolée des autres comptes. Évitez les données personnelles ou secrets commerciaux qui ne sont pas nécessaires.'],
         ['Pourquoi l’Europe est-elle le seul marché actif ?', 'Nous préférons une couverture européenne utile et vérifiable avant d’activer d’autres pays. La plateforme sépare déjà les règles, sources et rapports par marché.'],
         ['Quand les offres payantes seront-elles disponibles ?', 'L’ouverture sera progressive. Vous pouvez manifester votre intérêt sans activer de paiement ; nous vous préviendrons avant tout achat.'],
@@ -310,7 +310,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       title: 'Erfahre, welche Vorschriften jedes Produkt für den Verkauf in der Europäischen Union erfüllen muss.',
       lead: 'Erkenne Anforderungen, fehlende Unterlagen und mögliche regulatorische Risiken, bevor du deine Produkte auf dem europäischen Markt anbietest.',
       primary: '5 Produkte kostenlos analysieren', secondary: 'So funktioniert es',
-      trust: ['Keine Karte nötig', 'Vorlage inklusive', 'Excel und PDF', 'Privater Verlauf'],
+      trust: ['Keine Karte nötig', 'Fotos und Dokumente', 'Excel und PDF', 'Privater Verlauf'],
       legal: 'Orientierungshilfe. Sie zertifiziert keine Konformität und ersetzt keine professionelle Beratung.',
     },
     preview: {
@@ -320,7 +320,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       next: ['Was anfordern', 'Woher beziehen', 'Offizielle Quelle'], fictional: 'Beispielansicht · fiktive Daten', reports: 'Excel- + PDF-Bericht',
     },
     values: [
-      { title: 'Importieren', body: 'CSV, XLS oder XLSX' }, { title: 'Priorisieren', body: 'Fehlende Felder erkennen' },
+      { title: 'Importieren', body: 'Foto, PDF, Word, Text oder Excel' }, { title: 'Priorisieren', body: 'Fehlende Felder erkennen' },
       { title: 'Dokumentieren', body: 'Leitfaden und offizielle Quellen' }, { title: 'Exportieren', body: 'Nachvollziehbare Berichte' },
     ],
     flow: {
@@ -367,7 +367,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       honesty: 'Die Tarife sind monatliche, von Stripe verwaltete Abonnements. Sie verlängern sich automatisch, bis du sie in deinem Konto kündigst.',
     },
     compatibility: {
-      commerceLabel: 'Kompatibel mit Exporten von', commerceNote: 'CSV oder Excel importieren. Die verfügbaren Felder hängen vom Export ab; direkte Konnektoren sind noch in Vorbereitung.',
+      commerceLabel: 'Kompatibel mit Exporten von', commerceNote: 'Laden Sie Fotos, PDF, Word, Text, CSV oder Excel hoch. Die KI erkennt Produkte und lässt nicht verifizierbare Daten leer.',
       paymentLabel: 'Sichere Zahlung über Stripe', paymentNote: 'Die verfügbaren Zahlungsarten hängen von Land, Währung und Stripe-Konfiguration ab.',
       infrastructureLabel: 'Eingesetzte Technologie', infrastructureNote: 'Nur technische Anwendungsinfrastruktur; dies bedeutet kein Sponsoring, keine Zertifizierung und keine Geschäftspartnerschaft.',
     },
@@ -376,7 +376,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       eyebrow: 'HÄUFIGE FRAGEN', title: 'Vor dem Hochladen deines Katalogs.',
       items: [
         ['Zertifiziert Import Rules Verifier die Konformität eines Produkts?', 'Nein. Es erkennt fehlende Kernangaben, ordnet Prioritäten und verweist auf offizielle Quellen. Die genaue Konformität hängt vom Produkt ab und kann eine technische oder rechtliche Prüfung erfordern.'],
-        ['Was brauche ich für den Start?', 'Eine CSV- oder Excel-Datei mit dem Produktnamen. Mit Hersteller, verantwortlichem Wirtschaftsakteur und Warnhinweisen wird das Ergebnis vollständiger; fehlende Angaben markiert der Prüfer.'],
+        ['Was brauche ich für den Start?', 'Ein Foto, Dokument, Text, eine CSV- oder Excel-Datei mit den Produkten. Die KI erkennt sie und markiert fehlende Angaben.'],
         ['Was geschieht mit meinen Katalogen?', 'Jede Analyse ist deinem Konto zugeordnet und von anderen Konten getrennt. Lade keine unnötigen personenbezogenen Daten oder Geschäftsgeheimnisse hoch.'],
         ['Warum ist Europa der einzige aktive Markt?', 'Wir wollen zuerst eine nützliche, überprüfbare Europa-Abdeckung bieten. Regeln, Quellen und Berichte sind bereits nach Märkten getrennt.'],
         ['Wann sind die Bezahltarife verfügbar?', 'Die Öffnung erfolgt schrittweise. Du kannst dein Interesse ohne Zahlungsaktivierung hinterlegen; vor einem Abschluss wirst du informiert.'],
@@ -393,7 +393,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       title: 'Scopri la normativa necessaria per vendere ogni prodotto nell’Unione europea.',
       lead: 'Individua requisiti, documentazione mancante e potenziali rischi normativi prima di commercializzare i tuoi prodotti sul mercato europeo.',
       primary: 'Analizza 5 prodotti gratis', secondary: 'Scopri come funziona',
-      trust: ['Nessuna carta', 'Modello incluso', 'Excel e PDF', 'Cronologia privata'],
+      trust: ['Nessuna carta', 'Foto e documenti', 'Excel e PDF', 'Cronologia privata'],
       legal: 'Strumento orientativo. Non certifica la conformità e non sostituisce una consulenza professionale.',
     },
     preview: {
@@ -450,7 +450,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       honesty: 'I piani sono abbonamenti mensili gestiti da Stripe. Si rinnovano automaticamente finché non li annulli dal tuo account.',
     },
     compatibility: {
-      commerceLabel: 'Compatibile con le esportazioni di', commerceNote: 'Importa CSV o Excel. I campi disponibili dipendono da ogni esportazione; i connettori diretti sono ancora in preparazione.',
+      commerceLabel: 'Compatibile con le esportazioni di', commerceNote: 'Carica foto, PDF, Word, testo, CSV o Excel. L’IA identifica i prodotti e lascia vuoti i dati non verificabili.',
       paymentLabel: 'Pagamento sicuro gestito da Stripe', paymentNote: 'I metodi disponibili dipendono dal paese, dalla valuta e dalla configurazione Stripe.',
       infrastructureLabel: 'Tecnologie utilizzate', infrastructureNote: 'Solo infrastruttura tecnica dell’applicazione; non implica sponsorizzazione, certificazione o partnership commerciale.',
     },
@@ -459,7 +459,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       eyebrow: 'DOMANDE FREQUENTI', title: 'Prima di caricare il catalogo.',
       items: [
         ['Import Rules Verifier certifica la conformità di un prodotto?', 'No. Individua informazioni essenziali mancanti, organizza le priorità e rimanda a fonti ufficiali. La conformità esatta dipende dal prodotto e può richiedere una valutazione tecnica o legale.'],
-        ['Cosa serve per iniziare?', 'Un file CSV o Excel con il nome del prodotto. Se contiene produttore, operatore responsabile e avvertenze, il risultato sarà più completo; se mancano, il verificatore li segnalerà.'],
+        ['Cosa serve per iniziare?', 'Una foto, un documento, un testo, un CSV o un file Excel con i prodotti. L’IA li identifica e segnala i dati mancanti.'],
         ['Cosa succede ai miei cataloghi?', 'Ogni analisi è collegata al tuo account e separata dagli altri account. Evita dati personali o segreti commerciali non necessari.'],
         ['Perché l’Europa è l’unico mercato attivo?', 'Preferiamo una copertura europea utile e verificabile prima di attivare altri paesi. La piattaforma separa già regole, fonti e report per mercato.'],
         ['Quando saranno disponibili i piani a pagamento?', 'L’apertura sarà graduale. Puoi registrare l’interesse senza attivare pagamenti; ti avviseremo prima di qualsiasi acquisto.'],
@@ -476,7 +476,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       title: 'Conheça a regulamentação necessária para vender cada produto na União Europeia.',
       lead: 'Detete requisitos, documentação em falta e possíveis riscos regulamentares antes de comercializar os seus produtos no mercado europeu.',
       primary: 'Analisar 5 produtos grátis', secondary: 'Ver como funciona',
-      trust: ['Sem cartão', 'Modelo incluído', 'Excel e PDF', 'Histórico privado'],
+      trust: ['Sem cartão', 'Fotos e documentos', 'Excel e PDF', 'Histórico privado'],
       legal: 'Ferramenta orientativa. Não certifica a conformidade nem substitui aconselhamento profissional.',
     },
     preview: {
@@ -486,7 +486,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       next: ['O que pedir', 'Onde obter', 'Fonte oficial'], fictional: 'Exemplo ilustrativo · dados fictícios', reports: 'Relatório Excel + PDF',
     },
     values: [
-      { title: 'Importe', body: 'CSV, XLS ou XLSX' }, { title: 'Dê prioridade', body: 'Detete campos incompletos' },
+      { title: 'Importe', body: 'Foto, PDF, Word, texto ou Excel' }, { title: 'Dê prioridade', body: 'Detete campos incompletos' },
       { title: 'Documente', body: 'Guia e fontes oficiais' }, { title: 'Exporte', body: 'Relatórios rastreáveis' },
     ],
     flow: {
@@ -533,7 +533,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       honesty: 'Os planos são subscrições mensais geridas pela Stripe. Renovam-se automaticamente até serem cancelados na sua conta.',
     },
     compatibility: {
-      commerceLabel: 'Compatível com exportações de', commerceNote: 'Importe CSV ou Excel. Os campos disponíveis dependem de cada exportação; os conectores diretos ainda estão em preparação.',
+      commerceLabel: 'Compatível com exportações de', commerceNote: 'Carregue fotos, PDF, Word, texto, CSV ou Excel. A IA identifica os produtos e deixa vazios os dados que não consegue verificar.',
       paymentLabel: 'Pagamento seguro gerido pela Stripe', paymentNote: 'Os métodos disponíveis dependem do país, da moeda e da configuração da Stripe.',
       infrastructureLabel: 'Tecnologia utilizada', infrastructureNote: 'Apenas infraestrutura técnica da aplicação; não implica patrocínio, certificação ou parceria comercial.',
     },
@@ -542,7 +542,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
       eyebrow: 'PERGUNTAS FREQUENTES', title: 'Antes de carregar o catálogo.',
       items: [
         ['A Import Rules Verifier certifica a conformidade de um produto?', 'Não. Deteta informações essenciais em falta, organiza prioridades e indica fontes oficiais. A conformidade exata depende do produto e pode exigir uma avaliação técnica ou jurídica.'],
-        ['De que preciso para começar?', 'Um ficheiro CSV ou Excel com o nome do produto. Se incluir fabricante, operador responsável e avisos, o resultado será mais completo; se faltarem, o verificador irá assinalá-los.'],
+        ['De que preciso para começar?', 'Uma foto, documento, texto, CSV ou Excel com os produtos. A IA identifica-os e assinala os dados em falta.'],
         ['O que acontece aos meus catálogos?', 'Cada análise fica associada à sua conta e separada das outras contas. Evite dados pessoais ou segredos comerciais desnecessários.'],
         ['Porque é que a Europa é o único mercado ativo?', 'Preferimos uma cobertura europeia útil e verificável antes de ativar outros países. A plataforma já separa regras, fontes e relatórios por mercado.'],
         ['Quando estarão disponíveis os planos pagos?', 'A abertura será gradual. Pode registar o interesse sem ativar pagamentos; será avisado antes de qualquer contratação.'],
