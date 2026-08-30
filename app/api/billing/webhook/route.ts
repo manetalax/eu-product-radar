@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
-import { isPlanId, PLANS_BY_ID } from '@/lib/plans';
+import { isPlanId, ONE_TIME_AUDIT, PLANS_BY_ID } from '@/lib/plans';
 import { planIdForStripePrice } from '@/lib/billing';
 import { stripeClient } from '@/lib/stripe/server';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -39,6 +39,24 @@ async function syncSubscription(subscription: Stripe.Subscription) {
   if (error) throw error;
 }
 
+
+async function syncAudit(session: Stripe.Checkout.Session) {
+  const userId = session.metadata?.user_id || session.client_reference_id;
+  if (!userId || session.metadata?.purchase_type !== 'audit') throw new Error('El pago único no contiene una cuenta reconocible.');
+  if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') return;
+  const admin = createAdminClient();
+  const paymentIntentId = id(session.payment_intent);
+  const { error } = await admin.from('one_time_audits').upsert({
+    user_id: userId,
+    stripe_checkout_session_id: session.id,
+    stripe_payment_intent_id: paymentIntentId,
+    status: 'paid',
+    product_limit: ONE_TIME_AUDIT.productLimit,
+    purchased_at: new Date().toISOString(),
+  }, { onConflict: 'stripe_checkout_session_id' });
+  if (error) throw error;
+}
+
 export async function POST(request: Request) {
   const signature = request.headers.get('stripe-signature');
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -56,10 +74,14 @@ export async function POST(request: Request) {
   if (eventError) return NextResponse.json({ error: 'No se ha podido registrar el evento.' }, { status: 503 });
 
   try {
-    if (event.type === 'checkout.session.completed') {
+    if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
       const session = event.data.object as Stripe.Checkout.Session;
-      const subscriptionId = id(session.subscription);
-      if (subscriptionId) await syncSubscription(await stripeClient().subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] }));
+      if (session.metadata?.purchase_type === 'audit') {
+        await syncAudit(session);
+      } else {
+        const subscriptionId = id(session.subscription);
+        if (subscriptionId) await syncSubscription(await stripeClient().subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] }));
+      }
     } else if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
       await syncSubscription(event.data.object as Stripe.Subscription);
     }
