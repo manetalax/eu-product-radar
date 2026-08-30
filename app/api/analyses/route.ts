@@ -76,7 +76,7 @@ export async function POST(request: Request) {
   if (existing.data) return json({ analysis: existing.data, quota });
   if (products.length > quota.remaining) return json({ error: quotaExceededMessage(products.length, quota), quota }, 429);
   const { data, error } = await supabase.from('analyses').insert({ id: requestId, user_id: user.id, filename, products, market_code: marketCode, rule_version: RULE_VERSION }).select('id,filename,created_at,rule_version,market_code,products').single();
-  if (error?.message?.includes('monthly_product_limit_exceeded') || error?.message?.includes('free_monthly_product_limit_exceeded')) {
+  if (error?.message?.includes('monthly_product_limit_exceeded') || error?.message?.includes('free_monthly_product_limit_exceeded') || error?.message?.includes('one_time_audit_product_limit_exceeded') || error?.message?.includes('one_time_audit_already_consumed')) {
     const latestQuota = await readQuota(supabase, user.id).catch(() => quota);
     return json({ error: quotaExceededMessage(products.length, latestQuota), quota: latestQuota }, 429);
   }
