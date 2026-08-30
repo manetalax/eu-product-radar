@@ -1,4 +1,5 @@
 import Dashboard from '@/components/Dashboard';
+import LatestRegulatoryAssessment from '@/components/LatestRegulatoryAssessment';
 import WelcomeFlash from '@/components/WelcomeFlash';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
@@ -8,5 +9,5 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) redirect('/login');
   const params = await searchParams;
-  return <><WelcomeFlash show={params.welcome === 'registered'} /><Dashboard email={user.email ?? ''} /></>;
+  return <><WelcomeFlash show={params.welcome === 'registered'} /><Dashboard email={user.email ?? ''} /><LatestRegulatoryAssessment /></>;
 }
