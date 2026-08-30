@@ -34,7 +34,7 @@ export type LandingCopy = {
   trust: { title: string; detail: string; https: string; explanation: string };
   faq: { eyebrow: string; title: string; items: [string, string][] };
   final: { eyebrow: string; title: string; body: string; cta: string };
-  footer: { sources: string; privacy: string; guidance: string };
+  footer: { sources: string; privacy: string; terms: string; support: string; guidance: string };
 };
 
 export function isLanguage(value: unknown): value is Language {
@@ -108,7 +108,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
     },
     pricing: {
       eyebrow: 'PRECIOS CLAROS', title: 'Elige el volumen que realmente necesitas.',
-      lead: 'Prueba el flujo con 5 productos gratis. Los planes comerciales se abrirán de forma gradual y siempre con aviso previo.',
+      lead: 'Prueba el flujo completo con 5 productos gratis. Las auditorías de pago único y los planes mensuales ya están disponibles con precios claros antes de confirmar.',
       availability: 'Pago seguro y cancelación flexible', recommended: 'RECOMENDADO', perMonth: 'al mes', upTo: 'Hasta', products: 'productos',
       descriptions: {
         starter: 'Para empezar con un catálogo pequeño y revisiones periódicas.', growth: 'Para vendedores que amplían referencias y frecuencia.',
@@ -130,11 +130,11 @@ export const landingCopy: Record<Language, LandingCopy> = {
         ['¿Qué necesito para empezar?', 'Una foto, un documento, texto, CSV o Excel donde aparezcan los productos. La IA intentará identificarlos y dejará señalados los datos que falten.'],
         ['¿Qué ocurre con mis catálogos?', 'Cada análisis queda asociado a tu cuenta y separado de otras cuentas. Recomendamos no subir datos personales ni secretos comerciales innecesarios.'],
         ['¿Por qué Europa es el único mercado activo?', 'Porque preferimos una cobertura europea útil y verificable antes de activar otros países. La plataforma ya separa reglas, fuentes e informes por mercado.'],
-        ['¿Cuándo estarán disponibles los planes de pago?', 'La apertura será gradual. Puedes registrar tu interés sin activar cobros; te avisaremos antes de cualquier contratación.'],
+        ['¿Están disponibles los planes de pago?', 'Sí. Puedes contratar una auditoría de pago único o un plan mensual. Stripe muestra el importe y las condiciones antes de confirmar; no se realiza ningún cargo sin tu acción expresa.'],
       ],
     },
     final: { eyebrow: 'EMPIEZA CON CINCO PRODUCTOS', title: 'La mejor prueba es tu propio catálogo.', body: 'Sin tarjeta. Con plantilla, historial e informes desde el primer análisis.', cta: 'Crear cuenta gratis' },
-    footer: { sources: 'Fuentes oficiales', privacy: 'Privacidad por cuenta', guidance: 'Información orientativa · 2026' },
+    footer: { sources: 'Fuentes oficiales', privacy: 'Privacidad', terms: 'Términos', support: 'Soporte', guidance: 'Información orientativa · 2026' },
   },
 
   en: {
@@ -191,7 +191,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
     },
     pricing: {
       eyebrow: 'CLEAR PRICING', title: 'Choose the volume you genuinely need.',
-      lead: 'Try the complete workflow with 5 products free. Commercial plans will open gradually and always with prior notice.',
+      lead: 'Try the full workflow with 5 free products. One-time audits and monthly plans are now available, with clear pricing before you confirm.',
       availability: 'Secure payment and flexible cancellation', recommended: 'RECOMMENDED', perMonth: 'per month', upTo: 'Up to', products: 'products',
       descriptions: {
         starter: 'For getting started with a small catalogue and regular reviews.', growth: 'For sellers expanding their range and review frequency.',
@@ -213,11 +213,11 @@ export const landingCopy: Record<Language, LandingCopy> = {
         ['What do I need to get started?', 'A photo, document, text, CSV or Excel file showing the products. AI will identify them and flag any missing information.'],
         ['What happens to my catalogues?', 'Each analysis is linked to your account and isolated from other accounts. We recommend avoiding unnecessary personal data or trade secrets.'],
         ['Why is Europe the only live market?', 'We prefer useful, verifiable European coverage before enabling other countries. The platform already separates rules, sources and reports by market.'],
-        ['When will paid plans be available?', 'Access will open gradually. You can register interest without enabling billing, and we will notify you before any purchase.'],
+        ['Are paid plans available?', 'Yes. You can purchase a one-time audit or a monthly plan. Stripe shows the amount and terms before confirmation; no charge is made without your explicit action.'],
       ],
     },
     final: { eyebrow: 'START WITH FIVE PRODUCTS', title: 'Your own catalogue is the best test.', body: 'No card required. Template, history and reports from your first analysis.', cta: 'Create a free account' },
-    footer: { sources: 'Official sources', privacy: 'Account-level privacy', guidance: 'Guidance information · 2026' },
+    footer: { sources: 'Official sources', privacy: 'Privacy', terms: 'Terms', support: 'Support', guidance: 'Guidance only · 2026' },
   },
 
   fr: {
@@ -274,7 +274,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
     },
     pricing: {
       eyebrow: 'TARIFS CLAIRS', title: 'Choisissez le volume dont vous avez vraiment besoin.',
-      lead: 'Testez le flux complet avec 5 produits gratuits. Les offres commerciales seront ouvertes progressivement et toujours avec un préavis.',
+      lead: 'Testez le parcours complet avec 5 produits gratuits. Les audits ponctuels et les forfaits mensuels sont disponibles, avec un prix clair avant confirmation.',
       availability: 'Paiement sécurisé et résiliation flexible', recommended: 'RECOMMANDÉ', perMonth: 'par mois', upTo: 'Jusqu’à', products: 'produits',
       descriptions: {
         starter: 'Pour démarrer avec un petit catalogue et des contrôles réguliers.', growth: 'Pour les vendeurs qui élargissent leur gamme et leurs contrôles.',
@@ -296,11 +296,11 @@ export const landingCopy: Record<Language, LandingCopy> = {
         ['De quoi ai-je besoin pour commencer ?', 'D’une photo, d’un document, d’un texte, d’un CSV ou d’un fichier Excel montrant les produits. L’IA les identifiera et signalera les informations manquantes.'],
         ['Que deviennent mes catalogues ?', 'Chaque analyse est liée à votre compte et isolée des autres comptes. Évitez les données personnelles ou secrets commerciaux qui ne sont pas nécessaires.'],
         ['Pourquoi l’Europe est-elle le seul marché actif ?', 'Nous préférons une couverture européenne utile et vérifiable avant d’activer d’autres pays. La plateforme sépare déjà les règles, sources et rapports par marché.'],
-        ['Quand les offres payantes seront-elles disponibles ?', 'L’ouverture sera progressive. Vous pouvez manifester votre intérêt sans activer de paiement ; nous vous préviendrons avant tout achat.'],
+        ['Les offres payantes sont-elles disponibles ?', 'Oui. Vous pouvez acheter un audit ponctuel ou un forfait mensuel. Stripe affiche le montant et les conditions avant confirmation ; aucun débit n’est effectué sans votre action explicite.'],
       ],
     },
     final: { eyebrow: 'COMMENCEZ AVEC CINQ PRODUITS', title: 'Votre propre catalogue est le meilleur test.', body: 'Sans carte. Modèle, historique et rapports dès la première analyse.', cta: 'Créer un compte gratuit' },
-    footer: { sources: 'Sources officielles', privacy: 'Confidentialité par compte', guidance: 'Informations indicatives · 2026' },
+    footer: { sources: 'Sources officielles', privacy: 'Confidentialité', terms: 'Conditions', support: 'Assistance', guidance: 'Informations indicatives · 2026' },
   },
 
   de: {
@@ -357,7 +357,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
     },
     pricing: {
       eyebrow: 'KLARE PREISE', title: 'Wähle das Volumen, das du wirklich brauchst.',
-      lead: 'Teste den vollständigen Ablauf kostenlos mit 5 Produkten. Die kommerziellen Tarife werden schrittweise und immer mit Vorankündigung geöffnet.',
+      lead: 'Testen Sie den vollständigen Ablauf mit 5 kostenlosen Produkten. Einmalprüfungen und Monatspläne sind verfügbar; der Preis wird vor der Bestätigung klar angezeigt.',
       availability: 'Sichere Zahlung und flexible Kündigung', recommended: 'EMPFOHLEN', perMonth: 'pro Monat', upTo: 'Bis zu', products: 'Produkte',
       descriptions: {
         starter: 'Für den Einstieg mit einem kleinen Katalog und regelmäßigen Prüfungen.', growth: 'Für Verkäufer mit wachsendem Sortiment und häufigeren Prüfungen.',
@@ -379,11 +379,11 @@ export const landingCopy: Record<Language, LandingCopy> = {
         ['Was brauche ich für den Start?', 'Ein Foto, Dokument, Text, eine CSV- oder Excel-Datei mit den Produkten. Die KI erkennt sie und markiert fehlende Angaben.'],
         ['Was geschieht mit meinen Katalogen?', 'Jede Analyse ist deinem Konto zugeordnet und von anderen Konten getrennt. Lade keine unnötigen personenbezogenen Daten oder Geschäftsgeheimnisse hoch.'],
         ['Warum ist Europa der einzige aktive Markt?', 'Wir wollen zuerst eine nützliche, überprüfbare Europa-Abdeckung bieten. Regeln, Quellen und Berichte sind bereits nach Märkten getrennt.'],
-        ['Wann sind die Bezahltarife verfügbar?', 'Die Öffnung erfolgt schrittweise. Du kannst dein Interesse ohne Zahlungsaktivierung hinterlegen; vor einem Abschluss wirst du informiert.'],
+        ['Sind kostenpflichtige Pläne verfügbar?', 'Ja. Sie können eine einmalige Prüfung oder einen Monatsplan buchen. Stripe zeigt Betrag und Bedingungen vor der Bestätigung; ohne Ihre ausdrückliche Aktion erfolgt keine Belastung.'],
       ],
     },
     final: { eyebrow: 'STARTE MIT FÜNF PRODUKTEN', title: 'Der beste Test ist dein eigener Katalog.', body: 'Keine Karte nötig. Vorlage, Verlauf und Berichte ab der ersten Analyse.', cta: 'Kostenloses Konto erstellen' },
-    footer: { sources: 'Offizielle Quellen', privacy: 'Datenschutz je Konto', guidance: 'Orientierende Informationen · 2026' },
+    footer: { sources: 'Offizielle Quellen', privacy: 'Datenschutz', terms: 'Bedingungen', support: 'Support', guidance: 'Nur Orientierung · 2026' },
   },
 
   it: {
@@ -440,7 +440,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
     },
     pricing: {
       eyebrow: 'PREZZI CHIARI', title: 'Scegli il volume di cui hai davvero bisogno.',
-      lead: 'Prova il flusso completo con 5 prodotti gratis. I piani commerciali apriranno gradualmente e sempre con preavviso.',
+      lead: 'Prova il flusso completo con 5 prodotti gratis. Gli audit una tantum e i piani mensili sono disponibili, con prezzi chiari prima della conferma.',
       availability: 'Pagamento sicuro e cancellazione flessibile', recommended: 'CONSIGLIATO', perMonth: 'al mese', upTo: 'Fino a', products: 'prodotti',
       descriptions: {
         starter: 'Per iniziare con un piccolo catalogo e controlli periodici.', growth: 'Per venditori che ampliano assortimento e frequenza dei controlli.',
@@ -462,11 +462,11 @@ export const landingCopy: Record<Language, LandingCopy> = {
         ['Cosa serve per iniziare?', 'Una foto, un documento, un testo, un CSV o un file Excel con i prodotti. L’IA li identifica e segnala i dati mancanti.'],
         ['Cosa succede ai miei cataloghi?', 'Ogni analisi è collegata al tuo account e separata dagli altri account. Evita dati personali o segreti commerciali non necessari.'],
         ['Perché l’Europa è l’unico mercato attivo?', 'Preferiamo una copertura europea utile e verificabile prima di attivare altri paesi. La piattaforma separa già regole, fonti e report per mercato.'],
-        ['Quando saranno disponibili i piani a pagamento?', 'L’apertura sarà graduale. Puoi registrare l’interesse senza attivare pagamenti; ti avviseremo prima di qualsiasi acquisto.'],
+        ['I piani a pagamento sono disponibili?', 'Sì. Puoi acquistare un audit una tantum o un piano mensile. Stripe mostra importo e condizioni prima della conferma; non viene effettuato alcun addebito senza una tua azione esplicita.'],
       ],
     },
     final: { eyebrow: 'INIZIA CON CINQUE PRODOTTI', title: 'Il test migliore è il tuo catalogo.', body: 'Nessuna carta. Modello, cronologia e report fin dalla prima analisi.', cta: 'Crea un account gratuito' },
-    footer: { sources: 'Fonti ufficiali', privacy: 'Privacy per account', guidance: 'Informazioni orientative · 2026' },
+    footer: { sources: 'Fonti ufficiali', privacy: 'Privacy', terms: 'Termini', support: 'Assistenza', guidance: 'Informazioni orientative · 2026' },
   },
 
   pt: {
@@ -523,7 +523,7 @@ export const landingCopy: Record<Language, LandingCopy> = {
     },
     pricing: {
       eyebrow: 'PREÇOS CLAROS', title: 'Escolha o volume de que realmente precisa.',
-      lead: 'Experimente o fluxo completo com 5 produtos grátis. Os planos comerciais serão abertos gradualmente e sempre com aviso prévio.',
+      lead: 'Experimente o fluxo completo com 5 produtos grátis. As auditorias pontuais e os planos mensais estão disponíveis, com preços claros antes da confirmação.',
       availability: 'Pagamento seguro e cancelamento flexível', recommended: 'RECOMENDADO', perMonth: 'por mês', upTo: 'Até', products: 'produtos',
       descriptions: {
         starter: 'Para começar com um catálogo pequeno e revisões periódicas.', growth: 'Para vendedores que ampliam referências e frequência de revisão.',
@@ -545,10 +545,10 @@ export const landingCopy: Record<Language, LandingCopy> = {
         ['De que preciso para começar?', 'Uma foto, documento, texto, CSV ou Excel com os produtos. A IA identifica-os e assinala os dados em falta.'],
         ['O que acontece aos meus catálogos?', 'Cada análise fica associada à sua conta e separada das outras contas. Evite dados pessoais ou segredos comerciais desnecessários.'],
         ['Porque é que a Europa é o único mercado ativo?', 'Preferimos uma cobertura europeia útil e verificável antes de ativar outros países. A plataforma já separa regras, fontes e relatórios por mercado.'],
-        ['Quando estarão disponíveis os planos pagos?', 'A abertura será gradual. Pode registar o interesse sem ativar pagamentos; será avisado antes de qualquer contratação.'],
+        ['Os planos pagos estão disponíveis?', 'Sim. Pode adquirir uma auditoria pontual ou um plano mensal. A Stripe apresenta o montante e as condições antes da confirmação; não é efetuada qualquer cobrança sem a sua ação expressa.'],
       ],
     },
     final: { eyebrow: 'COMECE COM CINCO PRODUTOS', title: 'O melhor teste é o seu próprio catálogo.', body: 'Sem cartão. Modelo, histórico e relatórios desde a primeira análise.', cta: 'Criar conta grátis' },
-    footer: { sources: 'Fontes oficiais', privacy: 'Privacidade por conta', guidance: 'Informação orientativa · 2026' },
+    footer: { sources: 'Fontes oficiais', privacy: 'Privacidade', terms: 'Termos', support: 'Suporte', guidance: 'Informação orientativa · 2026' },
   },
 };

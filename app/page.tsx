@@ -138,6 +138,6 @@ export default function Home() {
 
     <BrandLogos group="infrastructure" label={t.compatibility.infrastructureLabel} note={t.compatibility.infrastructureNote} compact />
 
-    <footer className="landing-footer"><Brand market="EU" asLink={false} /><div><a href={`https://eur-lex.europa.eu/eli/reg/2023/988/oj?locale=${language}`} target="_blank" rel="noopener noreferrer">{t.footer.sources}</a><span>{t.footer.privacy}</span><span>{t.footer.guidance}</span></div></footer>
+    <footer className="landing-footer"><Brand market="EU" asLink={false} /><div><a href={`https://eur-lex.europa.eu/eli/reg/2023/988/oj?locale=${language}`} target="_blank" rel="noopener noreferrer">{t.footer.sources}</a><Link href="/privacy">{t.footer.privacy}</Link><Link href="/terms">{t.footer.terms}</Link><a href="mailto:importverifier@gmail.com">{t.footer.support}</a><span>{t.footer.guidance}</span></div></footer>
   </main>;
 }
