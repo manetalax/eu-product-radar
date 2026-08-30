@@ -6,7 +6,7 @@ import Brand from '@/components/Brand';
 import TrustMark from '@/components/TrustMark';
 import { authCopy, authErrorKey, AuthErrorKey, AuthMode, AuthNoticeKey, LoginNoticeKey } from '@/lib/auth-i18n';
 import { landingCopy, Language, LANGUAGE_OPTIONS } from '@/lib/landing-i18n';
-import { PlanId, PLANS_BY_ID } from '@/lib/plans';
+import { PurchaseId, purchaseName } from '@/lib/plans';
 import { authService } from '@/lib/services/auth-client';
 import { planInterestMetadata, savePlanIntent } from '@/lib/services/plan-interest';
 import { useLanguage } from '@/lib/use-language';
@@ -30,7 +30,7 @@ function EyeIcon({ hidden }: { hidden: boolean }) {
   );
 }
 
-export default function AuthForm({ initialMode = 'login', initialMessageKey, requestedPlan }: { initialMode?: AuthMode; initialMessageKey?: LoginNoticeKey; requestedPlan?: PlanId }) {
+export default function AuthForm({ initialMode = 'login', initialMessageKey, requestedPlan }: { initialMode?: AuthMode; initialMessageKey?: LoginNoticeKey; requestedPlan?: PurchaseId }) {
   const { language, setLanguage } = useLanguage();
   const t = authCopy[language];
   const trust = landingCopy[language].trust;
@@ -130,7 +130,7 @@ export default function AuthForm({ initialMode = 'login', initialMessageKey, req
       </label>
     </div>
     <h1>{t.titles[mode]}</h1>
-    {requestedPlan && (mode === 'login' || mode === 'signup') && <p className="plan-intent-note"><strong>{t.selectedPlan(PLANS_BY_ID[requestedPlan].name)}</strong> {t.selectedPlanHelp}</p>}
+    {requestedPlan && (mode === 'login' || mode === 'signup') && <p className="plan-intent-note"><strong>{t.selectedPlan(purchaseName(requestedPlan))}</strong> {t.selectedPlanHelp}</p>}
     <p className="muted">{t.intro}</p>
 
     {(mode === 'login' || mode === 'signup') && <div className="auth-actions oauth-section">
