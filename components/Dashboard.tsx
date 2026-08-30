@@ -319,7 +319,7 @@ export default function Dashboard({ email }: { email: string }) {
           })}
         </div>
 
-        <div className="notice trust-notice"><strong>Europa activa:</strong> el radar detecta campos básicos incompletos y genera una guía basada en fuentes oficiales. <span>No certifica conformidad ni sustituye una evaluación jurídica o técnica.</span></div>
+        <div className="notice trust-notice"><strong>Europa activa:</strong> el verificador detecta campos básicos incompletos y genera una guía basada en fuentes oficiales. <span>No certifica conformidad ni sustituye una evaluación jurídica o técnica.</span></div>
         {error && <p role="alert" className="message error">{error}</p>}
         {notice && <p role="status" className="message success">{notice}</p>}
         <input ref={input} className="file-input" aria-label="Importar catálogo CSV o Excel" type="file" accept=".csv,.xls,.xlsx" disabled={busy || loading || quotaBlocked} onChange={event => { const file = event.target.files?.[0]; if (file) void load(file); }} />
