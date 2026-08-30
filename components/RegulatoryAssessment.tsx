@@ -8,6 +8,7 @@ const confidenceLabel = { high: 'Alta', medium: 'Media', low: 'Baja' } as const;
 export default function RegulatoryAssessment({ results }: { results: Result[] }) {
   const regulatoryResults = results.filter(result => result.regulatory);
   if (!regulatoryResults.length) return null;
+  const engineVersion = regulatoryResults[0].regulatory!.engineVersion;
 
   return <section className={styles.assessment} aria-labelledby="regulatory-title">
     <div className={styles.heading}>
@@ -16,7 +17,7 @@ export default function RegulatoryAssessment({ results }: { results: Result[] })
         <h2 id="regulatory-title">Obligaciones candidatas y evidencia necesaria</h2>
         <p className="muted">La clasificación es automatizada y conservadora. Confirma la categoría, características y uso previsto antes de concluir qué legislación aplica.</p>
       </div>
-      <span className={styles.badge}>Motor UE · v3</span>
+      <span className={styles.badge}>{engineVersion}</span>
     </div>
 
     <div className={styles.list}>
