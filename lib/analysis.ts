@@ -1,4 +1,5 @@
 import { MarketCode, MARKETS, marketCodeOrEu } from './markets';
+import { assessEuRegulatory, EuRegulatoryAssessment } from './eu-regulatory-engine';
 
 export const LEGACY_RULE_VERSION = 'missing-fields-v1';
 export const RULE_VERSION = 'market-readiness-v2';
@@ -6,7 +7,13 @@ export const SUPPORTED_RULE_VERSIONS = [LEGACY_RULE_VERSION, RULE_VERSION] as co
 export const MAX_PRODUCTS = 1000;
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
 export type Product = { name: string; manufacturer: string; responsible: string; warning: string };
-export type Result = { name: string; score: number; priority: 'ALTA' | 'MEDIA' | 'BAJA'; missing: string[] };
+export type Result = {
+  name: string;
+  score: number;
+  priority: 'ALTA' | 'MEDIA' | 'BAJA';
+  missing: string[];
+  regulatory?: EuRegulatoryAssessment;
+};
 export type Analysis = { id: string; filename: string; created_at: string; rule_version: string; market_code?: MarketCode; products: Product[] };
 export type AnalysisSummary = Omit<Analysis, 'products'> & { product_count: number };
 
@@ -41,6 +48,12 @@ export function analyze(products: Product[], marketCode: MarketCode = 'EU'): Res
     if (!p.responsible.trim()) missing.push(operatorLabel);
     if (!p.warning.trim()) missing.push('Seguridad/advertencias');
     const score = 8 + missing.length * 28;
-    return { name: p.name, score, priority: score >= 60 ? 'ALTA' : score >= 30 ? 'MEDIA' : 'BAJA', missing };
+    return {
+      name: p.name,
+      score,
+      priority: score >= 60 ? 'ALTA' : score >= 30 ? 'MEDIA' : 'BAJA',
+      missing,
+      regulatory: marketCode === 'EU' ? assessEuRegulatory(p) : undefined,
+    };
   });
 }
