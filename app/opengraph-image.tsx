@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 
-export const alt = 'EU Product Radar · Inteligencia regulatoria europea independiente';
+export const alt = 'Import Rules Verifier · Inteligencia regulatoria europea independiente';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -15,12 +15,12 @@ export default function OpenGraphImage() {
           <path d="M80 23a50 50 0 0 1 45 45" fill="none" stroke="#4f46e5" strokeWidth="10" strokeLinecap="round" />
           <circle cx="72" cy="77" r="9" fill="#4f46e5" />
         </svg>
-        <div style={{ display: 'flex', fontSize: 46, fontWeight: 800, letterSpacing: -2 }}>Product&nbsp;<span style={{ color: '#4f46e5' }}>Radar</span></div>
+        <div style={{ display: 'flex', fontSize: 42, fontWeight: 800, letterSpacing: -2 }}>Import Rules&nbsp;<span style={{ color: '#4f46e5' }}>Verifier</span></div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 62, height: 44, borderRadius: 12, color: '#ffd54a', background: '#12358b', fontSize: 20, fontWeight: 900, letterSpacing: 1 }}>EU</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 940 }}>
-        <div style={{ display: 'flex', marginBottom: 22, color: '#4f46e5', fontSize: 22, fontWeight: 800, letterSpacing: 2 }}>EU REGULATORY INTELLIGENCE · ANÁLISIS INDEPENDIENTE</div>
-        <div style={{ display: 'flex', fontSize: 62, lineHeight: 1.03, fontWeight: 800, letterSpacing: -3 }}>Conoce la normativa que necesita cada producto para venderse en la Unión Europea.</div>
+        <div style={{ display: 'flex', marginBottom: 22, color: '#4f46e5', fontSize: 22, fontWeight: 800, letterSpacing: 2 }}>EU IMPORT RULES · ANÁLISIS INDEPENDIENTE</div>
+        <div style={{ display: 'flex', fontSize: 62, lineHeight: 1.03, fontWeight: 800, letterSpacing: -3 }}>Conoce la normativa que necesita cada producto antes de importarlo y venderlo en la Unión Europea.</div>
       </div>
       <div style={{ display: 'flex', gap: 16, color: '#475467', fontSize: 22 }}><span>CSV y Excel</span><span>·</span><span>Fuentes oficiales</span><span>·</span><span>Informes trazables</span></div>
     </div>,
