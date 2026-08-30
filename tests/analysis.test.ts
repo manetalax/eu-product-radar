@@ -18,8 +18,8 @@ test('el informe exportado conserva datos, resumen y formato después de abrir e
   const source = reportFixture();
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(await reportBytes(source) as unknown as ExcelJS.Buffer);
-  assert.deepEqual(wb.worksheets.map(s => s.name), ['Resumen', 'Productos', 'Datos técnicos', 'Guía documental']);
-  const summary = wb.getWorksheet('Resumen')!, products = wb.getWorksheet('Productos')!, technical = wb.getWorksheet('Datos técnicos')!;
+  assert.deepEqual(wb.worksheets.map(s => s.name), ['Resumen', 'Productos', 'Datos técnicos', 'Guía documental', 'Evaluación regulatoria']);
+  const summary = wb.getWorksheet('Resumen')!, products = wb.getWorksheet('Productos')!, technical = wb.getWorksheet('Datos técnicos')!, regulatory = wb.getWorksheet('Evaluación regulatoria')!;
   assert.deepEqual([8,9,10,11,13].map(row => summary.getCell(row, 2).result), [5,2,2,1,47]);
   assert.deepEqual([5,6,7,8,9].map(row => products.getCell(row, 2).value), [92,64,36,36,8]);
   source.products.forEach((p, i) => assert.deepEqual([1,2,3,4].map(col => technical.getCell(i + 13, col).value ?? ''), [p.name,p.manufacturer,p.responsible,p.warning]));
@@ -29,6 +29,7 @@ test('el informe exportado conserva datos, resumen y formato después de abrir e
   assert.ok(products.getRow(5).height! >= 60);
   assert.equal(products.views[0].state, 'frozen');
   assert.equal(summary.getCell('B5').type, ExcelJS.ValueType.Date);
+  assert.match(String(regulatory.getCell('A1').value), /REGULATORIA/);
 });
 test('el informe mantiene los textos con apariencia de fórmulas como datos y rechaza reglas desconocidas', async () => {
   const source = reportFixture();
