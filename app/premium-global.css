@@ -225,3 +225,38 @@
   .btn,.nav-link-button,.text-button,.language-picker select{min-height:44px;touch-action:manipulation}
   .report-option{min-height:132px}
 }
+
+/* Own European regulatory identity: recognisably EU-focused without presenting it as an official emblem. */
+.eu-regulatory-identity{display:inline-flex;align-items:center;gap:12px;max-width:100%;padding:9px 13px 9px 9px;border:1px solid #d7dcf7;border-radius:16px;background:linear-gradient(135deg,#fff,#f5f7ff);box-shadow:0 8px 28px #1018280a}
+.eu-signal{display:grid;place-items:center;width:48px;height:48px;flex:0 0 48px;color:#12358b}
+.eu-signal svg{display:block;width:100%;height:100%}
+.eu-star-dot{fill:#ffd54a}
+.eu-radar-ring{fill:none;stroke:#fff;stroke-width:3;opacity:.92}
+.eu-radar-line{fill:none;stroke:#fff;stroke-width:4;stroke-linecap:round}
+.eu-radar-core{fill:#fff}
+.eu-regulatory-copy{display:grid;gap:3px;min-width:0}
+.eu-regulatory-copy strong{color:#243b80;font-size:10px;font-weight:950;letter-spacing:.105em;line-height:1.2}
+.eu-regulatory-copy small{color:#667085;font-size:9px;line-height:1.35}
+.landing-hero h1{font-size:clamp(42px,5.35vw,68px);margin-top:19px}
+
+.auth-card.login{max-width:460px}
+.auth-brand-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:26px}
+.auth-brand-row .brand{min-width:0}
+.auth-language-picker{flex:0 0 auto}
+.auth-language-picker select{max-width:132px;padding:9px 28px 9px 10px;font-size:11px;font-weight:800}
+.auth-card .brand-market{display:inline-flex}
+
+@media(max-width:767px){
+  .eu-regulatory-identity{gap:10px;padding:7px 10px 7px 7px;border-radius:14px}
+  .eu-signal{width:42px;height:42px;flex-basis:42px}
+  .eu-regulatory-copy strong{font-size:9px;letter-spacing:.075em}
+  .eu-regulatory-copy small{font-size:8px}
+  .landing-hero{padding-top:26px}
+  .landing-hero h1{font-size:clamp(38px,11vw,48px);line-height:1.01;margin-top:17px}
+}
+
+@media(max-width:420px){
+  .auth-brand-row{align-items:flex-start}
+  .auth-language-picker select{max-width:108px}
+  .auth-brand-row .brand-wordmark{font-size:17px}
+}

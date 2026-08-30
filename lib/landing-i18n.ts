@@ -17,7 +17,7 @@ const LOCALE_BY_LANGUAGE = Object.fromEntries(LANGUAGE_OPTIONS.map(option => [op
 
 export type LandingCopy = {
   nav: { how: string; markets: string; pricing: string; login: string; language: string };
-  hero: { eyebrow: string; title: string; lead: string; primary: string; secondary: string; trust: string[]; legal: string };
+  hero: { eyebrow: string; independent: string; title: string; lead: string; primary: string; secondary: string; trust: string[]; legal: string };
   preview: { kicker: string; file: string; count: string; incomplete: string; priority: string; summary: string; products: string[]; priorities: string[]; next: string[]; fictional: string; reports: string };
   values: { title: string; body: string }[];
   flow: { eyebrow: string; title: string; lead: string; items: { title: string; body: string }[] };
@@ -57,8 +57,9 @@ export const landingCopy: Record<Language, LandingCopy> = {
   es: {
     nav: { how: 'Cómo funciona', markets: 'Mercados', pricing: 'Precios', login: 'Entrar', language: 'Idioma' },
     hero: {
-      eyebrow: 'EUROPA ACTIVA · PLATAFORMA GLOBAL', title: 'Tu catálogo europeo, preparado antes de vender.',
-      lead: 'Encuentra información incompleta, convierte cada alerta en una tarea y conserva la evidencia en informes claros. Un flujo diseñado para importadores que no quieren improvisar.',
+      eyebrow: 'EU REGULATORY INTELLIGENCE', independent: 'Análisis independiente · Sin vinculación institucional con la UE',
+      title: 'Conoce la normativa que necesita cada producto para venderse en la Unión Europea.',
+      lead: 'Detecta requisitos, documentación pendiente y posibles riesgos regulatorios antes de comercializar tus productos en el mercado europeo.',
       primary: 'Analizar 5 productos gratis', secondary: 'Ver cómo funciona',
       trust: ['Sin tarjeta', 'Plantilla incluida', 'Excel y PDF', 'Historial privado'],
       legal: 'Herramienta orientativa. No certifica conformidad ni sustituye asesoramiento profesional.',
@@ -139,8 +140,9 @@ export const landingCopy: Record<Language, LandingCopy> = {
   en: {
     nav: { how: 'How it works', markets: 'Markets', pricing: 'Pricing', login: 'Sign in', language: 'Language' },
     hero: {
-      eyebrow: 'EUROPE LIVE · GLOBAL PLATFORM', title: 'Prepare your European catalogue before you sell.',
-      lead: 'Find missing information, turn every alert into an action and retain the evidence in clear reports. A workflow for importers who do not want to improvise.',
+      eyebrow: 'EU REGULATORY INTELLIGENCE', independent: 'Independent analysis · No institutional affiliation with the EU',
+      title: 'Know the regulations each product needs to be sold in the European Union.',
+      lead: 'Detect requirements, missing documentation and potential regulatory risks before placing your products on the European market.',
       primary: 'Analyse 5 products free', secondary: 'See how it works',
       trust: ['No card required', 'Template included', 'Excel and PDF', 'Private history'],
       legal: 'Guidance tool only. It does not certify compliance or replace professional advice.',
@@ -221,8 +223,9 @@ export const landingCopy: Record<Language, LandingCopy> = {
   fr: {
     nav: { how: 'Fonctionnement', markets: 'Marchés', pricing: 'Tarifs', login: 'Connexion', language: 'Langue' },
     hero: {
-      eyebrow: 'EUROPE ACTIVE · PLATEFORME MONDIALE', title: 'Préparez votre catalogue européen avant de vendre.',
-      lead: 'Repérez les informations manquantes, transformez chaque alerte en action et conservez les preuves dans des rapports clairs. Un flux conçu pour les importateurs qui refusent d’improviser.',
+      eyebrow: 'VEILLE RÉGLEMENTAIRE UE', independent: 'Analyse indépendante · Sans lien institutionnel avec l’UE',
+      title: 'Identifiez la réglementation nécessaire à chaque produit pour être vendu dans l’Union européenne.',
+      lead: 'Repérez les exigences, les documents manquants et les risques réglementaires potentiels avant de commercialiser vos produits sur le marché européen.',
       primary: 'Analyser 5 produits gratuitement', secondary: 'Voir le fonctionnement',
       trust: ['Sans carte', 'Modèle inclus', 'Excel et PDF', 'Historique privé'],
       legal: 'Outil indicatif. Il ne certifie pas la conformité et ne remplace pas un conseil professionnel.',
@@ -303,8 +306,9 @@ export const landingCopy: Record<Language, LandingCopy> = {
   de: {
     nav: { how: 'So funktioniert es', markets: 'Märkte', pricing: 'Preise', login: 'Anmelden', language: 'Sprache' },
     hero: {
-      eyebrow: 'EUROPA AKTIV · GLOBALE PLATTFORM', title: 'Bereite deinen Europa-Katalog vor dem Verkauf vor.',
-      lead: 'Finde fehlende Angaben, verwandle jeden Hinweis in eine Aufgabe und sichere die Nachweise in klaren Berichten. Ein Ablauf für Importeure, die nichts dem Zufall überlassen.',
+      eyebrow: 'EU REGULATORY INTELLIGENCE', independent: 'Unabhängige Analyse · Keine institutionelle Verbindung zur EU',
+      title: 'Erfahre, welche Vorschriften jedes Produkt für den Verkauf in der Europäischen Union erfüllen muss.',
+      lead: 'Erkenne Anforderungen, fehlende Unterlagen und mögliche regulatorische Risiken, bevor du deine Produkte auf dem europäischen Markt anbietest.',
       primary: '5 Produkte kostenlos analysieren', secondary: 'So funktioniert es',
       trust: ['Keine Karte nötig', 'Vorlage inklusive', 'Excel und PDF', 'Privater Verlauf'],
       legal: 'Orientierungshilfe. Sie zertifiziert keine Konformität und ersetzt keine professionelle Beratung.',
@@ -385,8 +389,9 @@ export const landingCopy: Record<Language, LandingCopy> = {
   it: {
     nav: { how: 'Come funziona', markets: 'Mercati', pricing: 'Prezzi', login: 'Accedi', language: 'Lingua' },
     hero: {
-      eyebrow: 'EUROPA ATTIVA · PIATTAFORMA GLOBALE', title: 'Prepara il catalogo europeo prima di vendere.',
-      lead: 'Individua le informazioni mancanti, trasforma ogni avviso in un’attività e conserva le prove in report chiari. Un flusso per importatori che non vogliono improvvisare.',
+      eyebrow: 'INTELLIGENCE NORMATIVA UE', independent: 'Analisi indipendente · Nessun legame istituzionale con l’UE',
+      title: 'Scopri la normativa necessaria per vendere ogni prodotto nell’Unione europea.',
+      lead: 'Individua requisiti, documentazione mancante e potenziali rischi normativi prima di commercializzare i tuoi prodotti sul mercato europeo.',
       primary: 'Analizza 5 prodotti gratis', secondary: 'Scopri come funziona',
       trust: ['Nessuna carta', 'Modello incluso', 'Excel e PDF', 'Cronologia privata'],
       legal: 'Strumento orientativo. Non certifica la conformità e non sostituisce una consulenza professionale.',
@@ -467,8 +472,9 @@ export const landingCopy: Record<Language, LandingCopy> = {
   pt: {
     nav: { how: 'Como funciona', markets: 'Mercados', pricing: 'Preços', login: 'Entrar', language: 'Idioma' },
     hero: {
-      eyebrow: 'EUROPA ATIVA · PLATAFORMA GLOBAL', title: 'Prepare o seu catálogo europeu antes de vender.',
-      lead: 'Encontre informações em falta, transforme cada alerta numa tarefa e guarde as evidências em relatórios claros. Um fluxo criado para importadores que não querem improvisar.',
+      eyebrow: 'INTELIGÊNCIA REGULAMENTAR DA UE', independent: 'Análise independente · Sem ligação institucional à UE',
+      title: 'Conheça a regulamentação necessária para vender cada produto na União Europeia.',
+      lead: 'Detete requisitos, documentação em falta e possíveis riscos regulamentares antes de comercializar os seus produtos no mercado europeu.',
       primary: 'Analisar 5 produtos grátis', secondary: 'Ver como funciona',
       trust: ['Sem cartão', 'Modelo incluído', 'Excel e PDF', 'Histórico privado'],
       legal: 'Ferramenta orientativa. Não certifica a conformidade nem substitui aconselhamento profissional.',

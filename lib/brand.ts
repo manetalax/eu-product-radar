@@ -1,4 +1,3 @@
 export const BRAND_NAME = 'Product Radar';
 export const BRAND_TAGLINE = 'Un catálogo. Cinco mercados. Decisiones claras.';
-export const BRAND_DESCRIPTION = 'Prepara catálogos de producto para vender en la Unión Europea, Estados Unidos, China, Reino Unido y Japón.';
-
+export const BRAND_DESCRIPTION = 'Detecta requisitos, documentación pendiente y posibles riesgos regulatorios antes de vender tus productos en la Unión Europea.';

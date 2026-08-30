@@ -13,8 +13,7 @@ function Mark() {
 }
 
 export default function Brand({ market, inverse = false, asLink = true }: { market?: MarketCode; inverse?: boolean; asLink?: boolean }) {
-  const content = <><Mark /><span className="brand-wordmark">Product <b>Radar</b></span>{market && <span className="brand-market">{MARKETS[market].shortName}</span>}</>;
+  const content = <><Mark /><span className="brand-wordmark">Product <b>Radar</b></span>{market && <span className="brand-market">{MARKETS[market].code}</span>}</>;
   const className = `brand brand-system${inverse ? ' inverse' : ''}`;
   return asLink ? <Link className={className} href="/" aria-label={`${BRAND_NAME}, inicio`}>{content}</Link> : <span className={className}>{content}</span>;
 }
-

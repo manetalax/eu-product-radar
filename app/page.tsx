@@ -1,32 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Brand from '@/components/Brand';
 import BrandLogos from '@/components/BrandLogos';
+import EURegulatoryIdentity from '@/components/EURegulatoryIdentity';
 import TrustMark from '@/components/TrustMark';
-import { formatPrice, formatProductCount, isLanguage, landingCopy, Language, LANGUAGE_OPTIONS } from '@/lib/landing-i18n';
+import { formatPrice, formatProductCount, landingCopy, Language, LANGUAGE_OPTIONS } from '@/lib/landing-i18n';
 import { MARKETS_BY_RANK } from '@/lib/markets';
 import { FREE_TRIAL_PRODUCT_LIMIT, PLANS } from '@/lib/plans';
-
-const LANGUAGE_STORAGE_KEY = 'product-radar-language';
+import { useLanguage } from '@/lib/use-language';
 
 export default function Home() {
-  const [language, setLanguage] = useState<Language>('es');
+  const { language, setLanguage } = useLanguage();
   const t = landingCopy[language];
-
-  useEffect(() => {
-    const urlLanguage = new URLSearchParams(window.location.search).get('lang');
-    const storedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    const browserLanguage = navigator.language.slice(0, 2);
-    const preferred = [urlLanguage, storedLanguage, browserLanguage].find(isLanguage);
-    if (preferred) setLanguage(preferred);
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.lang = language;
-    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
-  }, [language]);
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -51,7 +37,7 @@ export default function Home() {
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }} />
 
     <nav className="nav landing-nav" aria-label="Product Radar">
-      <Brand />
+      <Brand market="EU" />
       <div className="navlinks">
         <button className="nav-link-button" onClick={() => document.getElementById('como-funciona')?.scrollIntoView({ behavior: 'smooth' })}>{t.nav.how}</button>
         <button className="nav-link-button" onClick={() => document.getElementById('mercados')?.scrollIntoView({ behavior: 'smooth' })}>{t.nav.markets}</button>
@@ -62,13 +48,13 @@ export default function Home() {
             {LANGUAGE_OPTIONS.map(option => <option key={option.code} value={option.code}>{option.shortLabel}</option>)}
           </select>
         </label>
-        <Link className="btn primary nav-cta" href="/login">{t.nav.login}</Link>
+        <Link className="btn primary nav-cta" href={`/login?lang=${language}`}>{t.nav.login}</Link>
       </div>
     </nav>
 
     <section className="hero landing-hero">
       <div className="hero-copy">
-        <div className="eyebrow hero-eyebrow"><span className="status-dot" />{t.hero.eyebrow}</div>
+        <EURegulatoryIdentity label={t.hero.eyebrow} detail={t.hero.independent} />
         <h1>{t.hero.title}</h1>
         <p className="lead">{t.hero.lead}</p>
         <div className="hero-actions">
@@ -117,12 +103,12 @@ export default function Home() {
 
     <section className="section pricing-section" id="planes">
       <div className="toprow pricing-heading"><div><div className="eyebrow">{t.pricing.eyebrow}</div><h2>{t.pricing.title}</h2><p className="muted">{t.pricing.lead}</p></div><div className="availability-note">{t.pricing.availability}</div></div>
-      <div className="free-trial-card"><div><span>{t.pricing.freeTitle}</span><strong>{formatProductCount(language, FREE_TRIAL_PRODUCT_LIMIT)}</strong><p>{t.pricing.freeBody}</p></div><Link className="btn ghost" href="/login">{t.pricing.freeCta}</Link></div>
+      <div className="free-trial-card"><div><span>{t.pricing.freeTitle}</span><strong>{formatProductCount(language, FREE_TRIAL_PRODUCT_LIMIT)}</strong><p>{t.pricing.freeBody}</p></div><Link className="btn ghost" href={`/login?lang=${language}`}>{t.pricing.freeCta}</Link></div>
       <div className="plans polished-plans global-plans">{PLANS.map(plan => <article className={`plan ${plan.featured ? 'featured' : ''}`} key={plan.id}>
         {plan.featured && <span className="plan-label">{t.pricing.recommended}</span>}
         <b>{plan.name}</b><div className="price">{formatPrice(language, plan.monthlyPriceEur)}</div><span className="plan-cadence">{t.pricing.perMonth}</span>
         <p className="plan-limit">{t.pricing.upTo} {formatProductCount(language, plan.monthlyProductLimit)}</p><p className="muted">{t.pricing.descriptions[plan.id]}</p>
-        <Link className={plan.featured ? 'btn primary plan-button' : 'btn ghost plan-button'} href={`/login?plan=${plan.id}`}>{t.pricing.reserve} {plan.name}</Link>
+        <Link className={plan.featured ? 'btn primary plan-button' : 'btn ghost plan-button'} href={`/login?plan=${plan.id}&lang=${language}`}>{t.pricing.reserve} {plan.name}</Link>
       </article>)}</div>
       <p className="pricing-honesty">{t.pricing.honesty}</p>
       <div className="pricing-trust-grid">
@@ -133,10 +119,10 @@ export default function Home() {
 
     <section className="section faq-section"><div className="faq-heading"><div className="eyebrow">{t.faq.eyebrow}</div><h2>{t.faq.title}</h2></div><div className="faq-list">{t.faq.items.map(([question, answer]) => <details key={question}><summary>{question}</summary><p>{answer}</p></details>)}</div></section>
 
-    <section className="final-cta"><div><div className="eyebrow">{t.final.eyebrow}</div><h2>{t.final.title}</h2><p>{t.final.body}</p></div><Link className="btn primary" href="/login">{t.final.cta}</Link></section>
+    <section className="final-cta"><div><div className="eyebrow">{t.final.eyebrow}</div><h2>{t.final.title}</h2><p>{t.final.body}</p></div><Link className="btn primary" href={`/login?lang=${language}`}>{t.final.cta}</Link></section>
 
     <BrandLogos group="infrastructure" label={t.compatibility.infrastructureLabel} note={t.compatibility.infrastructureNote} compact />
 
-    <footer className="landing-footer"><Brand asLink={false} /><div><a href={`https://eur-lex.europa.eu/eli/reg/2023/988/oj?locale=${language}`} target="_blank" rel="noopener noreferrer">{t.footer.sources}</a><span>{t.footer.privacy}</span><span>{t.footer.guidance}</span></div></footer>
+    <footer className="landing-footer"><Brand market="EU" asLink={false} /><div><a href={`https://eur-lex.europa.eu/eli/reg/2023/988/oj?locale=${language}`} target="_blank" rel="noopener noreferrer">{t.footer.sources}</a><span>{t.footer.privacy}</span><span>{t.footer.guidance}</span></div></footer>
   </main>;
 }

@@ -5,7 +5,8 @@ import Link from 'next/link';
 import Brand from '@/components/Brand';
 import BrandLogos from '@/components/BrandLogos';
 import TrustMark from '@/components/TrustMark';
-import { DELETE_ACCOUNT_CONFIRMATION } from '@/lib/account';
+import { AccountDeletionErrorCode, DELETE_ACCOUNT_CONFIRMATION } from '@/lib/account';
+import { accountCopy } from '@/lib/account-i18n';
 import { Analysis, AnalysisSummary, analysisMarket, analyze, MAX_FILE_BYTES, supportsRuleVersion } from '@/lib/analysis';
 import { ProductQuota } from '@/lib/quota';
 import { documentationFor, GUIDE_SCOPE } from '@/lib/documentation';
@@ -14,6 +15,7 @@ import { formatPrice, formatProductCount, landingCopy } from '@/lib/landing-i18n
 import { PlanId, PLANS, PLANS_BY_ID } from '@/lib/plans';
 import { authService } from '@/lib/services/auth-client';
 import { clearPlanIntent, readPlanIntent, registerPlanInterest } from '@/lib/services/plan-interest';
+import { useLanguage } from '@/lib/use-language';
 
 type Tab = 'dashboard' | 'products' | 'history' | 'reports' | 'settings';
 const tabs: [Tab, string, string][] = [
@@ -26,6 +28,8 @@ const tabs: [Tab, string, string][] = [
 const when = (value: string) => new Date(value).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
 
 export default function Dashboard({ email }: { email: string }) {
+  const { language } = useLanguage();
+  const accountT = accountCopy[language];
   const [tab, setTab] = useState<Tab>('dashboard');
   const [selectedMarket, setSelectedMarket] = useState<MarketCode>('EU');
   const [current, setCurrent] = useState<Analysis | null>(null);
@@ -59,13 +63,16 @@ export default function Dashboard({ email }: { email: string }) {
 
   async function api(url: string, options?: RequestInit) {
     const response = await fetch(url, { ...options, cache: 'no-store' });
-    if (response.status === 401) {
-      window.location.replace('/login');
-      throw new Error('Tu sesión ha caducado.');
-    }
     const body = await response.json();
+    if (response.status === 401) {
+      window.location.replace(`/login?lang=${language}`);
+    }
     if (body.quota) setQuota(body.quota);
-    if (!response.ok) throw new Error(body.error || 'No se ha podido completar la operación.');
+    if (!response.ok) {
+      const apiError = new Error(body.error || body.errorCode || 'No se ha podido completar la operación.') as Error & { code?: AccountDeletionErrorCode };
+      if (body.errorCode) apiError.code = body.errorCode as AccountDeletionErrorCode;
+      throw apiError;
+    }
     return body;
   }
 
@@ -246,7 +253,8 @@ export default function Dashboard({ email }: { email: string }) {
     setError('');
     setNotice('');
     if (!canDeleteAccount) {
-      setError(`Escribe el correo exacto de tu cuenta y ${DELETE_ACCOUNT_CONFIRMATION} para confirmar.`);
+      const emailMatches = deleteEmail.trim().toLocaleLowerCase('en-US') === email.trim().toLocaleLowerCase('en-US');
+      setError(emailMatches ? accountT.errors.confirmation_mismatch : accountT.errors.email_mismatch);
       return;
     }
     setBusy(true);
@@ -256,9 +264,10 @@ export default function Dashboard({ email }: { email: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: deleteEmail.trim(), confirmation: deleteConfirmation }),
       });
-      window.location.replace('/login?message=account_deleted');
+      window.location.replace(`/login?message=account_deleted&lang=${language}`);
     } catch (deletionError) {
-      setError(deletionError instanceof Error ? deletionError.message : 'No se ha podido eliminar la cuenta.');
+      const code = deletionError instanceof Error ? (deletionError as Error & { code?: AccountDeletionErrorCode }).code : undefined;
+      setError(code ? accountT.errors[code] : accountT.errors.delete_failed);
       setBusy(false);
     }
   }
@@ -340,13 +349,13 @@ export default function Dashboard({ email }: { email: string }) {
           <div className="card content-card expansion-card"><span className="eyebrow">EXPANSIÓN INTERNACIONAL</span><h2>Un núcleo, cada mercado como módulo.</h2><p>Europa está activa. EE. UU., China, Reino Unido y Japón son los siguientes destinos preparados en la arquitectura.</p><div className="expansion-flags">{MARKETS_BY_RANK.map(market => <span key={market.code} title={market.name}>{market.flag}</span>)}</div></div>
           <div className="card content-card settings-security"><span className="eyebrow">PRIVACIDAD</span><h2>Tu información permanece separada</h2><p>Los análisis de esta cuenta no son visibles desde otras cuentas.</p><p className="muted">Evita subir datos personales innecesarios o información confidencial que no sea necesaria para analizar tus productos.</p><TrustMark title="EPR Trust Mark" detail="Comprobaciones internas de transparencia" httpsLabel="Conexión HTTPS segura" explanation="Sello interno de Product Radar. No es una certificación externa ni acredita la conformidad de un producto." compact /></div>
           <div className="card content-card account-danger-zone">
-            <div className="danger-zone-heading"><div><span className="eyebrow">CONTROL DE TUS DATOS</span><h2>Eliminar cuenta y datos</h2></div>{!deleteAccountOpen && <button className="btn danger-outline" disabled={busy} onClick={() => { setDeleteAccountOpen(true); setError(''); setNotice(''); }}>Eliminar mi cuenta</button>}</div>
-            <p className="muted">Elimina definitivamente tu acceso, tus análisis, tu historial y el consumo asociado. Esta operación no se puede deshacer.</p>
+            <div className="danger-zone-heading"><div><span className="eyebrow">{accountT.eyebrow}</span><h2>{accountT.title}</h2></div>{!deleteAccountOpen && <button className="btn danger-outline" disabled={busy} onClick={() => { setDeleteAccountOpen(true); setError(''); setNotice(''); }}>{accountT.open}</button>}</div>
+            <p className="muted">{accountT.description}</p>
             {deleteAccountOpen && <form className="account-delete-confirmation" onSubmit={deleteAccount}>
-              <div className="delete-warning"><strong>Comprueba antes de continuar</strong><span>Descarga primero cualquier informe que quieras conservar. Cerraremos las sesiones abiertas en todos tus dispositivos.</span></div>
-              <label>Correo de la cuenta<input type="email" required autoComplete="off" disabled={busy} value={deleteEmail} onChange={event => setDeleteEmail(event.target.value)} placeholder={email} /></label>
-              <label>Escribe <strong>{DELETE_ACCOUNT_CONFIRMATION}</strong><input type="text" required autoComplete="off" spellCheck={false} disabled={busy} value={deleteConfirmation} onChange={event => setDeleteConfirmation(event.target.value)} /></label>
-              <div className="delete-actions"><button type="button" className="btn ghost" disabled={busy} onClick={closeDeleteAccount}>Cancelar</button><button type="submit" className="btn danger-solid" disabled={busy || !canDeleteAccount}>{busy ? 'Eliminando de forma segura…' : 'Eliminar cuenta definitivamente'}</button></div>
+              <div className="delete-warning"><strong>{accountT.warningTitle}</strong><span>{accountT.warningBody}</span></div>
+              <label>{accountT.email}<input type="email" required autoComplete="off" disabled={busy} value={deleteEmail} onChange={event => setDeleteEmail(event.target.value)} placeholder={email} /></label>
+              <label>{accountT.confirmation(DELETE_ACCOUNT_CONFIRMATION)}<input type="text" required autoComplete="off" spellCheck={false} disabled={busy} value={deleteConfirmation} onChange={event => setDeleteConfirmation(event.target.value)} /></label>
+              <div className="delete-actions"><button type="button" className="btn ghost" disabled={busy} onClick={closeDeleteAccount}>{accountT.cancel}</button><button type="submit" className="btn danger-solid" disabled={busy || !canDeleteAccount}>{busy ? accountT.deleting : accountT.deleteForever}</button></div>
             </form>}
           </div>
         </div>}

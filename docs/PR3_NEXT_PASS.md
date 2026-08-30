@@ -2,6 +2,19 @@
 
 Este documento deja preparado el siguiente bloque de trabajo sobre `feat/account-deletion-security` para aplicarlo sin perder contexto ni rehacer decisiones ya tomadas.
 
+## Estado de implementación
+
+Aplicado sobre el estado actual del PR #3:
+
+- Identidad regulatoria europea propia, visible y sin apariencia de certificación oficial.
+- Hero y mensajes regulatorios localizados en seis idiomas.
+- Autenticación completa localizada, incluido Google OAuth, recuperación y mensajes de retorno.
+- Borrado de cuenta localizado con códigos de error estables en servidor.
+- Selector de idioma compartido y persistente entre portada y autenticación.
+- Validación automatizada: 20 pruebas, typecheck, build de producción y auditoría sin vulnerabilidades.
+
+Queda como aceptación externa verificar que Netlify despliega el SHA final, revisar la preview en los tres tamaños y ejecutar el borrado completo únicamente con una cuenta desechable.
+
 ## Objetivo
 
 Convertir el estado actual del PR #3 en una versión visual y funcionalmente coherente con un producto premium centrado en análisis regulatorio europeo, manteniendo intacto el borrado seguro de cuenta ya implementado.

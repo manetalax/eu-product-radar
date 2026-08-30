@@ -125,7 +125,7 @@ Las pruebas incluyen CSV/XLS/XLSX, validación de límites, redirecciones restri
 - El módulo europeo comprueba la presencia de fabricante, operador responsable en la UE y advertencias. No se evalúa si son correctos, suficientes o exigibles para una categoría.
 - 5 MB de archivo, 1.000 productos por importación, 1.000 caracteres por campo y 2 MB de solicitud JSON. Se analiza únicamente la primera hoja de Excel.
 - El plan gratuito limita a cinco productos por cuenta y mes UTC. Los pagos y las mejoras a planes comerciales todavía no están implementados.
-- No hay aún verificación normativa, alertas regulatorias, conectores directos a tiendas ni traducción completa de los nuevos formularios privados.
+- No hay aún verificación normativa, alertas regulatorias ni conectores directos a tiendas. La autenticación y el borrado de cuenta sí están traducidos a seis idiomas; el resto del panel operativo y los informes continúan en español en esta fase.
 - Mantener acceso de pruebas hasta configurar correo, protección frente a contraseñas filtradas/CAPTCHA, política de conservación y verificar el flujo destructivo con una cuenta desechable.
 
 Referencias: [Supabase SSR](https://supabase.com/docs/guides/auth/server-side/creating-a-client), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [correo](https://supabase.com/docs/guides/auth/auth-smtp), [plantillas](https://supabase.com/docs/guides/auth/auth-email-templates), [SheetJS](https://docs.sheetjs.com/docs/getting-started/installation/nodejs/).

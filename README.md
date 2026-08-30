@@ -17,8 +17,10 @@ Sigue [SETUP.md](SETUP.md) antes de publicar esta versión: incluye la migració
 - RLS y permisos explícitos que aíslan los catálogos de cada cuenta.
 - Borrado autoservicio de cuenta y datos con doble confirmación, revocación global de sesiones y eliminación en cascada mediante una Edge Function protegida por JWT.
 - Identidad global centralizada y marca de mercado separada del núcleo del producto.
+- Identidad regulatoria europea propia en portada, con señal visual UE y aviso explícito de análisis independiente sin afiliación institucional.
 - Experiencias responsive diferenciadas para escritorio, tablet/iPad y móvil, con manifiesto PWA y safe areas.
 - Planes, precios, límites e idiomas definidos en módulos TypeScript puros y reutilizables por futuros clientes web o nativos.
+- Portada, autenticación y controles de borrado traducidos a español, inglés, francés, alemán, italiano y portugués; la API de cuenta devuelve códigos estables, no mensajes fijados a un idioma.
 - Autenticación y registro de interés comercial encapsulados en servicios cliente, sin acoplar la interfaz directamente a Supabase.
 - Pruebas automatizadas de importación, reglas y seguridad de base de datos.
 

@@ -9,20 +9,20 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://euproductradar.netl
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: { default: `${BRAND_NAME} · Catálogos preparados para Europa`, template: `%s · ${BRAND_NAME}` },
+  title: { default: `EU ${BRAND_NAME} · Inteligencia regulatoria europea`, template: `%s · EU ${BRAND_NAME}` },
   description: BRAND_DESCRIPTION,
   applicationName: BRAND_NAME,
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: BRAND_NAME },
   alternates: { canonical: '/' },
   openGraph: {
-    title: `${BRAND_NAME} · Europa activa`,
+    title: `EU ${BRAND_NAME} · Inteligencia regulatoria europea`,
     description: BRAND_DESCRIPTION,
     type: 'website',
     locale: 'es_ES',
     siteName: BRAND_NAME,
   },
-  twitter: { card: 'summary_large_image', title: `${BRAND_NAME} · Europa activa`, description: BRAND_DESCRIPTION },
+  twitter: { card: 'summary_large_image', title: `EU ${BRAND_NAME} · Inteligencia regulatoria europea`, description: BRAND_DESCRIPTION },
   robots: process.env.CONTEXT === 'deploy-preview' || process.env.CONTEXT === 'branch-deploy' ? { index: false, follow: false } : { index: true, follow: true },
 };
 
