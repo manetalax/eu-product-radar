@@ -62,7 +62,7 @@ export async function buildReport(analysis: Analysis): Promise<ExcelJS.Workbook>
   const summary = sheet(wb, 'Resumen', [38, 24, 24, 24]);
   const details = sheet(wb, 'Productos', [46, 17, 16, 48], 4);
   const technical = sheet(wb, 'Datos técnicos', [46, 32, 38, 64], 12);
-  band(summary, 1, 'PRODUCT RADAR', 4, true);
+  band(summary, 1, 'IMPORT RULES VERIFIER', 4, true);
   band(summary, 2, `INFORME DEL CATÁLOGO · Mercado: ${market.name}`, 4);
   body(summary, 4, ['Archivo', analysis.filename]); summary.mergeCells('B4:D4'); summary.getRow(4).height = 42;
   body(summary, 5, ['Fecha del análisis (UTC)', new Date(analysis.created_at)]); summary.getCell('B5').numFmt = 'dd/mm/yyyy hh:mm';
