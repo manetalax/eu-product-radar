@@ -3,10 +3,11 @@ import { documentationFor, GUIDE_SCOPE, GUIDE_VERSION } from './documentation';
 import { Analysis, analysisMarket, analyze, supportsRuleVersion, validateProducts } from './analysis';
 import { BRAND_NAME } from './brand';
 import { MARKETS } from './markets';
+import { addRegulatoryWorksheet } from './export-regulatory';
 
 const C = { navy: 'FF111827', purple: 'FF4F46E5', muted: 'FF64748B', pale: 'FFF1F5F9', white: 'FFFFFFFF', line: 'FFE2E8F0' };
 const priorityColors = { ALTA: ['FFFEE2E2', 'FF991B1B'], MEDIA: ['FFFEF3C7', 'FF92400E'], BAJA: ['FFDCFCE7', 'FF166534'] };
-const scope = 'Este informe comprueba campos presentes. No verifica su veracidad, no determina obligaciones por categoría y no certifica conformidad normativa.';
+const scope = 'Este informe combina un indicador de campos incompletos con una evaluación regulatoria automatizada y conservadora. No certifica conformidad normativa ni sustituye una evaluación jurídica o técnica.';
 
 function sheet(wb: ExcelJS.Workbook, name: string, widths: number[], frozen = 0) {
   const ws = wb.addWorksheet(name, { views: [{ state: frozen ? 'frozen' : 'normal', ySplit: frozen, showGridLines: false }], properties: { defaultRowHeight: 24 } });
@@ -41,7 +42,6 @@ function body(ws: ExcelJS.Worksheet, row: number, values: (string | number | Dat
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: row % 2 ? C.pale : C.white } };
     cell.border = { bottom: { style: 'hair', color: { argb: C.line } } };
     if (typeof value === 'string') {
-      // Conservative estimate accommodates wrapped text in Excel and Numbers.
       const chars = Math.max(8, (ws.getColumn(i + 1).width! - 2) * .8);
       lines = Math.max(lines, value.split('\n').reduce((n, s) => n + Math.max(1, Math.ceil(s.length / chars)), 0));
     }
@@ -80,7 +80,7 @@ export async function buildReport(analysis: Analysis): Promise<ExcelJS.Workbook>
   }
   body(summary, 13, ['Indicador medio / 100', { formula: `ROUND(AVERAGE('Productos'!B5:B${end}),0)`, result: Math.round(results.reduce((n, r) => n + r.score, 0) / results.length) }]);
   band(summary, 15, scope, 4); summary.getRow(15).height = 58;
-  band(summary, 17, 'Productos: prioridades y campos por revisar. Datos técnicos: reglas, trazabilidad y valores originales. Este archivo es una instantánea del análisis guardado.', 4); summary.getRow(17).height = 58;
+  band(summary, 17, marketCode === 'EU' ? 'Productos: prioridades y campos. Evaluación regulatoria: categoría candidata, normativa, evidencias, incertidumbres y fuentes. Datos técnicos y guía documental completan la trazabilidad.' : 'Productos: prioridades y campos por revisar. Datos técnicos: reglas, trazabilidad y valores originales. Este archivo es una instantánea del análisis guardado.', 4); summary.getRow(17).height = 66;
   band(details, 1, 'PRODUCTOS · Revisión del catálogo', 4, true);
   band(details, 2, 'Indicador de campos incompletos / 100. La prioridad no equivale a riesgo legal. Se conserva el orden del archivo original.', 4);
   header(details, 4, ['Producto', 'Indicador / 100', 'Prioridad', 'Campos por revisar']);
@@ -121,8 +121,9 @@ export async function buildReport(analysis: Analysis): Promise<ExcelJS.Workbook>
   guide.autoFilter = `A4:G${guideRow - 1}`;
   guide.pageSetup.printArea = `A1:G${guideRow - 1}`;
   guide.pageSetup.printTitlesRow = '1:4';
-  summary.getCell('A17').value = 'Productos: prioridades y campos. Datos técnicos: reglas y originales. Guía documental: qué solicitar, a quién y fuentes. Instantánea guardada; guía orientativa actual, no validación documental.';
-  summary.getRow(17).height = 58;
+  addRegulatoryWorksheet(wb, results);
+  summary.getCell('A17').value = marketCode === 'EU' ? 'Incluye una hoja de evaluación regulatoria con categoría candidata, normativa, obligaciones, evidencias, confirmaciones y fuentes oficiales. Es asistencia automatizada, no certificación.' : 'Productos: prioridades y campos. Datos técnicos: reglas y originales. Guía documental: qué solicitar, a quién y fuentes. Instantánea guardada; guía orientativa actual, no validación documental.';
+  summary.getRow(17).height = 66;
   summary.pageSetup.fitToHeight = 1;
   return wb;
 }
