@@ -7,6 +7,13 @@ export type ExtractedProduct = {
   manufacturer?: unknown;
   responsible?: unknown;
   warning?: unknown;
+  description?: unknown;
+  materials?: unknown;
+  intendedUse?: unknown;
+  audience?: unknown;
+  power?: unknown;
+  connectivity?: unknown;
+  composition?: unknown;
 };
 
 export type ProductIngestionPayload = {
@@ -22,20 +29,19 @@ function asText(value: unknown): string {
   return '';
 }
 
-/**
- * Normalizes product candidates extracted from any supported input surface
- * into the single Product contract consumed by the regulatory pipeline.
- *
- * Spreadsheet parsing can keep using parseProducts directly. Future text,
- * document and image adapters should only be responsible for extraction and
- * should pass their candidates through this function before analysis/storage.
- */
 export function normalizeExtractedProducts(payload: ProductIngestionPayload): Product[] {
   const normalized = payload.products.map(product => ({
     name: asText(product.name),
     manufacturer: asText(product.manufacturer),
     responsible: asText(product.responsible),
     warning: asText(product.warning),
+    description: asText(product.description),
+    materials: asText(product.materials),
+    intendedUse: asText(product.intendedUse),
+    audience: asText(product.audience),
+    power: asText(product.power),
+    connectivity: asText(product.connectivity),
+    composition: asText(product.composition),
   }));
 
   return validateProducts(normalized);
