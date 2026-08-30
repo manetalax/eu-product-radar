@@ -1,0 +1,7 @@
+# Reference configuration for the parallel Import Rules Verifier site.
+# Netlify UI/environment settings remain the source of secrets.
+[build]
+  command = "npm run build"
+
+[build.environment]
+  NEXT_PUBLIC_SITE_URL = "https://importrulesverifier.netlify.app"
