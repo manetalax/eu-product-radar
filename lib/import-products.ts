@@ -6,6 +6,13 @@ const aliases: Record<keyof Product, string[]> = {
   manufacturer: ['manufacturer', 'fabricante', 'vendor', 'brand', 'brands', 'marca', 'productbrand'],
   responsible: ['responsible', 'responsable', 'responsableue', 'responsibleeu', 'responsibleperson', 'euresponsibleperson', 'euoperator', 'economicoperator', 'operadormercado', 'operadoreconomico', 'importador', 'importer', 'importername', 'euimporter', 'localoperator', 'marketoperator'],
   warning: ['warning', 'warnings', 'advertencia', 'advertencias', 'seguridad', 'safety', 'safetywarning', 'safetywarnings', 'productwarning', 'caution', 'advertenciasseguridad'],
+  description: ['description', 'descripcion', 'descripción', 'productdescription', 'bodyhtml', 'details', 'detalle'],
+  materials: ['materials', 'material', 'materiales', 'fabric', 'tejido', 'componentmaterials'],
+  intendedUse: ['intendeduse', 'uso', 'usoprevisto', 'finalidad', 'purpose', 'intendedpurpose'],
+  audience: ['audience', 'publico', 'público', 'edad', 'age', 'agegroup', 'targetaudience', 'usuario'],
+  power: ['power', 'alimentacion', 'alimentación', 'voltage', 'voltaje', 'battery', 'bateria', 'batería', 'powersupply'],
+  connectivity: ['connectivity', 'conectividad', 'wireless', 'radio', 'bluetooth', 'wifi', 'network'],
+  composition: ['composition', 'composicion', 'composición', 'ingredients', 'ingredientes', 'formula', 'formulacion', 'formulación'],
 };
 const normalize = (value: unknown) => String(value ?? '').replace(/^\uFEFF/, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[\s_-]/g, '');
 
@@ -31,7 +38,7 @@ export function parseProducts(bytes: ArrayBuffer, filename: string): Product[] {
   const indexes = {} as Record<keyof Product, number>;
   for (const key of Object.keys(aliases) as (keyof Product)[]) {
     const matches = headers.map((header, index) => aliases[key].includes(normalize(header)) ? index : -1).filter(index => index >= 0);
-    if (matches.length > 1 || (key === 'name' && matches.length !== 1)) throw new Error('Incluye una sola columna para el nombre del producto y evita encabezados duplicados. Recomendados: nombre, fabricante, operador_mercado y advertencias_seguridad. También reconocemos campos habituales de exportaciones de comercio electrónico.');
+    if (matches.length > 1 || (key === 'name' && matches.length !== 1)) throw new Error('Incluye una sola columna para el nombre del producto y evita encabezados duplicados. Recomendados: nombre, fabricante, operador_mercado, advertencias_seguridad y, cuando existan, descripción, materiales, uso_previsto, público, alimentación, conectividad y composición.');
     indexes[key] = matches[0] ?? -1;
   }
   return validateProducts(matrix.map(row => Object.fromEntries(Object.entries(indexes).map(([key, index]) => [key, index >= 0 ? String(row[index] ?? '') : '']))));
