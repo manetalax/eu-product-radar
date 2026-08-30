@@ -43,7 +43,7 @@ export async function pdfBytes(analysis: Analysis): Promise<Uint8Array<ArrayBuff
     if (line) emit();
     y -= 7;
   }
-  lineBlock('PRODUCT RADAR', 24, true);
+  lineBlock('IMPORT RULES VERIFIER', 24, true);
   lineBlock(`Informe del catálogo · ${market.name}`, 16, true);
   lineBlock('Archivo: ' + analysis.filename);
   lineBlock('Análisis (UTC): ' + new Date(analysis.created_at).toISOString());
