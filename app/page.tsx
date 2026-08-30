@@ -28,7 +28,7 @@ export default function Home() {
       ...PLANS.map(plan => ({
         '@type': 'Offer', name: plan.name, price: String(plan.monthlyPriceEur), priceCurrency: 'EUR',
         description: `${t.pricing.upTo} ${formatProductCount(language, plan.monthlyProductLimit)} ${t.pricing.perMonth}`,
-        availability: 'https://schema.org/PreOrder',
+        availability: 'https://schema.org/InStock',
       })),
     ],
     featureList: t.values.map(value => `${value.title}: ${value.body}`),

@@ -7,10 +7,11 @@ export async function proxy(request: NextRequest) {
   const { url, key } = supabaseConfig();
   const supabase = createServerClient(url, key, { cookies: {
     getAll: () => request.cookies.getAll(),
-    setAll(items) {
+    setAll(items, headers) {
       items.forEach(({ name, value }) => request.cookies.set(name, value));
       response = NextResponse.next({ request });
       items.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+      Object.entries(headers).forEach(([name, value]) => response.headers.set(name, value));
     },
   } });
   // Las páginas y la API verifican la identidad; el proxy solo refresca cookies.
@@ -19,4 +20,4 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-export const config = { matcher: ['/dashboard/:path*', '/api/analyses/:path*', '/api/account/:path*', '/reset-password'] };
+export const config = { matcher: ['/dashboard/:path*', '/api/analyses/:path*', '/api/account/:path*', '/api/billing/checkout', '/api/billing/portal', '/reset-password'] };

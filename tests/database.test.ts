@@ -17,6 +17,7 @@ test('la migración guarda datos y RLS aísla a dos usuarios incluso con acceso 
     await db.exec('reset role;');
     await db.exec(readFileSync(new URL('../supabase/migrations/202608290001_free_monthly_quota.sql',import.meta.url),'utf8'));
     await db.exec(readFileSync(new URL('../supabase/migrations/20260829075235_global_market_architecture.sql',import.meta.url),'utf8'));
+    await db.exec(readFileSync(new URL('../supabase/migrations/202608300001_stripe_subscriptions.sql',import.meta.url),'utf8'));
     await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${a}',false);`);
     assert.equal((await db.query<{product_count:number}>('select product_count from public.monthly_product_usage')).rows[0].product_count,1);
     assert.equal((await db.query('select * from public.analyses')).rows.length,1);
@@ -28,8 +29,13 @@ test('la migración guarda datos y RLS aísla a dos usuarios incluso con acceso 
     await assert.rejects(db.query('insert into public.analyses(filename,products) values ($1,$2::jsonb)',['invalid.csv','[]']),/check constraint/);
     await assert.rejects(db.query('insert into public.analyses(filename,products) values ($1,$2::jsonb)',['invalid.csv','[{"name":"A"}]']),/check constraint/);
     await db.query(`insert into public.analyses(filename,products,market_code) values ('cuatro.csv',$1::jsonb,'EU')`,[fourProducts]);
-    await assert.rejects(db.query(`insert into public.analyses(filename,products) values ('sexto.csv',$1::jsonb)`,[product]),/free_monthly_product_limit_exceeded/);
+    await assert.rejects(db.query(`insert into public.analyses(filename,products) values ('sexto.csv',$1::jsonb)`,[product]),/monthly_product_limit_exceeded/);
     assert.equal((await db.query<{product_count:number}>('select product_count from public.monthly_product_usage')).rows[0].product_count,5);
+    await db.exec('reset role;');
+    await db.query(`insert into public.subscriptions(user_id,plan_id,status,product_limit,current_period_end) values ($1,'starter','active',50,now()+interval '1 month')`,[a]);
+    await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${a}',false);`);
+    await db.query(`insert into public.analyses(filename,products) values ('septimo.csv',$1::jsonb)`,[product]);
+    assert.equal((await db.query<{product_count:number}>('select product_count from public.monthly_product_usage')).rows[0].product_count,6);
     await db.exec(`select set_config('request.jwt.claim.sub','${b}',false);`);
     assert.equal((await db.query('select * from public.analyses where id=$1',[id])).rows.length,0);
     await db.query(`insert into public.analyses(filename,products) values ('segundo.csv',$1::jsonb)`,[product]);
@@ -39,6 +45,7 @@ test('la migración guarda datos y RLS aísla a dos usuarios incluso con acceso 
     await db.exec(`reset role; set role anon; select set_config('request.jwt.claim.sub','',false);`);
     await assert.rejects(db.query('select * from public.analyses'),/permission denied/);
     await assert.rejects(db.query('select * from public.monthly_product_usage'),/permission denied/);
+    await assert.rejects(db.query('select * from public.stripe_webhook_events'),/permission denied/);
     await assert.rejects(db.query(`insert into public.analyses(filename,products) values ('anon.csv',$1::jsonb)`,[product]),/permission denied/);
     await db.exec(`reset role; set role authenticated; select set_config('request.jwt.claim.sub','${a}',false);`);
     const reopened=await db.query<{products:unknown;product_count:number}>('select products,product_count from public.analyses where id=$1',[id]);

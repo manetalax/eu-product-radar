@@ -9,6 +9,6 @@
 # Solo configuración pública. NUNCA añadir secret keys, service_role ni contraseñas.
 [build.environment]
   NODE_VERSION = "22"
-  NEXT_PUBLIC_SITE_URL = "https://euproductradar.netlify.app"
+  NEXT_PUBLIC_SITE_URL = "https://importverifier.netlify.app"
   NEXT_PUBLIC_SUPABASE_URL = "https://hfuwwjdcyudflamwwnon.supabase.co"
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_v-MjugChJ8sS8t1O1mQ4bQ_D15ZfUl9"

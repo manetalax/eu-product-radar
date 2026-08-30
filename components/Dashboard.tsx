@@ -14,7 +14,7 @@ import { isActiveMarketCode, MarketCode, MARKETS, MARKETS_BY_RANK } from '@/lib/
 import { formatPrice, formatProductCount, landingCopy } from '@/lib/landing-i18n';
 import { PlanId, PLANS, PLANS_BY_ID } from '@/lib/plans';
 import { authService } from '@/lib/services/auth-client';
-import { clearPlanIntent, readPlanIntent, registerPlanInterest } from '@/lib/services/plan-interest';
+import { clearPlanIntent, readPlanIntent } from '@/lib/services/plan-interest';
 import { useLanguage } from '@/lib/use-language';
 
 type Tab = 'dashboard' | 'products' | 'history' | 'reports' | 'settings';
@@ -107,14 +107,10 @@ export default function Dashboard({ email }: { email: string }) {
 
   useEffect(() => {
     const planId = readPlanIntent();
-    if (!planId) return;
-    const plan = PLANS_BY_ID[planId];
-    registerPlanInterest(planId).then(({ error: planError }) => {
-      if (!planError) {
-        clearPlanIntent();
-        setNotice(`Interés en ${plan.name} registrado. No se ha activado ningún cobro.`);
-      }
-    });
+    const checkout = new URLSearchParams(window.location.search).get('checkout');
+    if (checkout === 'success') setNotice('Pago recibido. Stripe está confirmando tu plan; la cuota se actualizará automáticamente.');
+    if (checkout === 'cancelled') setNotice('No se ha realizado ningún cobro. Puedes elegir un plan cuando quieras.');
+    if (planId) void startCheckout(planId);
   }, []);
 
   async function load(file: File) {
@@ -190,7 +186,7 @@ export default function Dashboard({ email }: { email: string }) {
       const url = URL.createObjectURL(new Blob([bytes], { type: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
       const link = document.createElement('a');
       link.href = url;
-      link.download = `product-radar-${analysisMarket(current).toLowerCase()}-${current.created_at.slice(0, 10)}-${current.id.slice(0, 8)}.${format}`;
+      link.download = `import-rules-verifier-${analysisMarket(current).toLowerCase()}-${current.created_at.slice(0, 10)}-${current.id.slice(0, 8)}.${format}`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -209,7 +205,7 @@ export default function Dashboard({ email }: { email: string }) {
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'plantilla-product-radar-europa.csv';
+    link.download = 'plantilla-import-rules-verifier-europa.csv';
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -218,15 +214,30 @@ export default function Dashboard({ email }: { email: string }) {
     setNotice('Plantilla de Europa descargada. Sustituye el ejemplo por tus productos y conserva los cuatro encabezados.');
   }
 
-  async function reservePlan(planId: PlanId) {
-    const plan = PLANS_BY_ID[planId];
+  async function startCheckout(planId: PlanId) {
     setBusy(true);
     setError('');
     setNotice('');
-    const { error: updateError } = await registerPlanInterest(planId);
-    if (updateError) setError('No se ha podido registrar tu solicitud. Vuelve a intentarlo.');
-    else setNotice(`Interés en ${plan.name} registrado. Te avisaremos antes de activar cualquier cobro.`);
-    setBusy(false);
+    try {
+      const { url } = await api('/api/billing/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ planId }) });
+      clearPlanIntent();
+      window.location.assign(url);
+    } catch (checkoutError) {
+      setError(checkoutError instanceof Error ? checkoutError.message : 'No se ha podido abrir el pago.');
+      setBusy(false);
+    }
+  }
+
+  async function manageSubscription() {
+    setBusy(true);
+    setError('');
+    try {
+      const { url } = await api('/api/billing/portal', { method: 'POST' });
+      window.location.assign(url);
+    } catch (portalError) {
+      setError(portalError instanceof Error ? portalError.message : 'No se ha podido abrir la gestión del plan.');
+      setBusy(false);
+    }
   }
 
   async function signOut() {
@@ -285,7 +296,7 @@ export default function Dashboard({ email }: { email: string }) {
           {tabs.map(([id, label, description]) => <button key={id} aria-current={tab === id ? 'page' : undefined} className={tab === id ? 'active' : ''} onClick={() => { setTab(id); setNotice(''); }}><strong>{label}</strong><span>{description}</span></button>)}
         </nav>
         <div className="side-quota">
-          <div className="toprow"><span>Plan gratuito</span><strong>{quota ? `${quota.remaining} libres` : '—'}</strong></div>
+          <div className="toprow"><span>Plan {quota?.billing.planName ?? '—'}</span><strong>{quota ? `${quota.remaining} libres` : '—'}</strong></div>
           <div className="quota-track" aria-label="Uso mensual"><span style={{ width: `${quotaPercent}%` }} /></div>
           <small>{quota ? `${quota.used} de ${quota.limit} productos este mes` : 'Calculando uso…'}</small>
           <button className="side-upgrade" onClick={() => setTab('settings')}>Ver planes →</button>
@@ -344,10 +355,10 @@ export default function Dashboard({ email }: { email: string }) {
 
         {tab === 'settings' && <div className="settings-grid">
           <div className="card content-card"><span className="eyebrow">CUENTA</span><h2>Tu perfil</h2><p className="account-email settings-email">{email}</p><Link className="btn ghost" href="/reset-password">Cambiar contraseña</Link></div>
-          <div className="card content-card"><span className="eyebrow">PLAN ACTUAL</span><h2>Gratis</h2><div className="settings-quota"><strong>{quota?.remaining ?? '—'}</strong><span>productos disponibles este mes</span></div><div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div><p className="muted">5 productos al mes. La cuota se reinicia el primer día de cada mes.</p></div>
-          <div className="card content-card plan-interest"><span className="eyebrow">PRÓXIMA APERTURA</span><h2>Reserva el plan que necesitas</h2><div className="mini-plans">{PLANS.map(plan => <button className={plan.featured ? 'featured' : ''} key={plan.id} disabled={busy} onClick={() => reservePlan(plan.id)}><span>{plan.name}{plan.featured ? ' · Recomendado' : ''}</span><strong>{formatPrice('es', plan.monthlyPriceEur)}/mes</strong><small>{landingCopy.es.pricing.upTo} {formatProductCount('es', plan.monthlyProductLimit)}</small></button>)}</div><p className="muted">Registrar interés no activa cobros ni cambia tu plan.</p></div>
+          <div className="card content-card"><span className="eyebrow">PLAN ACTUAL</span><h2>{quota?.billing.planName ?? 'Cargando…'}</h2><div className="settings-quota"><strong>{quota?.remaining ?? '—'}</strong><span>productos disponibles este mes</span></div><div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div><p className="muted">{quota ? `${quota.limit} productos al mes. La cuota se reinicia el primer día de cada mes.` : 'Consultando tu suscripción…'}</p>{quota?.billing.planId !== 'free' && <button className="btn ghost" disabled={busy} onClick={manageSubscription}>Gestionar suscripción</button>}</div>
+          <div className="card content-card plan-interest"><span className="eyebrow">SUSCRIPCIONES</span><h2>Elige el plan que necesitas</h2><div className="mini-plans">{PLANS.map(plan => <button className={plan.featured ? 'featured' : ''} key={plan.id} disabled={busy || quota?.billing.planId === plan.id} onClick={() => startCheckout(plan.id)}><span>{plan.name}{plan.featured ? ' · Recomendado' : ''}</span><strong>{formatPrice('es', plan.monthlyPriceEur)}/mes</strong><small>{quota?.billing.planId === plan.id ? 'Plan actual' : `${landingCopy.es.pricing.upTo} ${formatProductCount('es', plan.monthlyProductLimit)}`}</small></button>)}</div><p className="muted">Pago seguro con Stripe. Puedes consultar facturas, cambiar el método de pago o cancelar desde el portal de cliente.</p></div>
           <div className="card content-card expansion-card"><span className="eyebrow">EXPANSIÓN INTERNACIONAL</span><h2>Un núcleo, cada mercado como módulo.</h2><p>Europa está activa. EE. UU., China, Reino Unido y Japón son los siguientes destinos preparados en la arquitectura.</p><div className="expansion-flags">{MARKETS_BY_RANK.map(market => <span key={market.code} title={market.name}>{market.flag}</span>)}</div></div>
-          <div className="card content-card settings-security"><span className="eyebrow">PRIVACIDAD</span><h2>Tu información permanece separada</h2><p>Los análisis de esta cuenta no son visibles desde otras cuentas.</p><p className="muted">Evita subir datos personales innecesarios o información confidencial que no sea necesaria para analizar tus productos.</p><TrustMark title="EPR Trust Mark" detail="Comprobaciones internas de transparencia" httpsLabel="Conexión HTTPS segura" explanation="Sello interno de Product Radar. No es una certificación externa ni acredita la conformidad de un producto." compact /></div>
+          <div className="card content-card settings-security"><span className="eyebrow">PRIVACIDAD</span><h2>Tu información permanece separada</h2><p>Los análisis de esta cuenta no son visibles desde otras cuentas.</p><p className="muted">Evita subir datos personales innecesarios o información confidencial que no sea necesaria para analizar tus productos.</p><TrustMark title="IRV Trust Mark" detail="Comprobaciones internas de transparencia" httpsLabel="Conexión HTTPS segura" explanation="Sello interno de Import Rules Verifier. No es una certificación externa ni acredita la conformidad de un producto." compact /></div>
           <div className="card content-card account-danger-zone">
             <div className="danger-zone-heading"><div><span className="eyebrow">{accountT.eyebrow}</span><h2>{accountT.title}</h2></div>{!deleteAccountOpen && <button className="btn danger-outline" disabled={busy} onClick={() => { setDeleteAccountOpen(true); setError(''); setNotice(''); }}>{accountT.open}</button>}</div>
             <p className="muted">{accountT.description}</p>

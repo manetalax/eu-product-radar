@@ -1,4 +1,4 @@
-# Product Radar
+# Import Rules Verifier
 
 Next.js 16.3.3 + TypeScript. Implementación de cuentas reales y catálogos privados con Supabase.
 
@@ -21,7 +21,7 @@ Sigue [SETUP.md](SETUP.md) antes de publicar esta versión: incluye la migració
 - Experiencias responsive diferenciadas para escritorio, tablet/iPad y móvil, con manifiesto PWA y safe areas.
 - Planes, precios, límites e idiomas definidos en módulos TypeScript puros y reutilizables por futuros clientes web o nativos.
 - Portada, autenticación y controles de borrado traducidos a español, inglés, francés, alemán, italiano y portugués; la API de cuenta devuelve códigos estables, no mensajes fijados a un idioma.
-- Autenticación y registro de interés comercial encapsulados en servicios cliente, sin acoplar la interfaz directamente a Supabase.
+- Autenticación con Supabase y suscripciones mensuales con Stripe Checkout, portal de cliente y webhooks firmados.
 - Pruebas automatizadas de importación, reglas y seguridad de base de datos.
 
 ## Planes preparados
@@ -31,18 +31,18 @@ Sigue [SETUP.md](SETUP.md) antes de publicar esta versión: incluye la migració
 - Pro: 49 €/mes, hasta 500 productos; opción recomendada.
 - Business: 149 €/mes, hasta 2.000 productos.
 
-La prueba gratuita conserva 5 productos. Los planes se muestran y formatean íntegramente en español, inglés, francés, alemán, italiano y portugués. La reserva registra interés: no existe todavía checkout ni cargo.
+La prueba gratuita conserva 5 productos. Los planes se muestran y formatean íntegramente en español, inglés, francés, alemán, italiano y portugués. Stripe activa y revoca las cuotas automáticamente según el estado real de la suscripción.
 
 ## Base para aplicaciones
 
-`lib/plans.ts`, `lib/landing-i18n.ts`, `lib/analysis.ts`, `lib/markets.ts` y `lib/import-products.ts` concentran reglas y datos reutilizables sin componentes visuales. `lib/services/` aísla los proveedores web de autenticación y del interés comercial. `supabase/functions/delete-account` ofrece el mismo borrado seguro a la web y a futuros clientes autorizados. Las futuras apps Android/iPhone pueden reutilizar el dominio y sustituir únicamente la capa de interfaz y el adaptador de autenticación.
+`lib/plans.ts`, `lib/billing.ts`, `lib/landing-i18n.ts`, `lib/analysis.ts`, `lib/markets.ts` y `lib/import-products.ts` concentran reglas y datos reutilizables sin componentes visuales. `supabase/functions/delete-account` ofrece el mismo borrado seguro a la web y a futuros clientes autorizados. Las futuras apps Android/iPhone pueden reutilizar el dominio y sustituir únicamente la capa de interfaz y el adaptador de autenticación.
 
 ## Ejecutar
 
 ```bash
 npm ci
 cp .env.example .env.local
-# Configurar las tres variables públicas.
+# Configurar las variables públicas y los secretos indicados en .env.example.
 npm test
 npm run build
 npm run dev
@@ -50,4 +50,4 @@ npm run dev
 
 ## Alcance
 
-El indicador actual cuenta campos ausentes: no comprueba veracidad, requisitos por categoría ni conformidad normativa. Europa es el único módulo operativo; los demás mercados son una hoja de ruta. Los planes de pago permiten registrar interés, pero no cobran suscripciones. Antes de abrir el servicio al público siguen siendo necesarios SMTP real, protección de contraseñas filtradas/CAPTCHA y la prueba de aceptación destructiva con una cuenta desechable.
+El indicador actual cuenta campos ausentes: no comprueba veracidad, requisitos por categoría ni conformidad normativa. Europa es el único módulo operativo; los demás mercados son una hoja de ruta. Antes de abrir el servicio al público deben completarse la configuración de Stripe y OAuth, SMTP real, protección de contraseñas filtradas/CAPTCHA y la prueba de aceptación con cuentas y tarjetas de prueba.

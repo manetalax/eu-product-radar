@@ -4,6 +4,7 @@ import { RULE_VERSION, validateProducts } from '@/lib/analysis';
 import { PRIVATE_HEADERS, readJsonBody, sameOrigin } from '@/lib/http';
 import { currentUtcMonthStart, productQuota, quotaExceededMessage } from '@/lib/quota';
 import { isActiveMarketCode, MarketCode } from '@/lib/markets';
+import { billingStatus } from '@/lib/billing';
 
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
@@ -11,9 +12,13 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 async function readQuota(supabase: SupabaseClient, userId: string) {
   const periodStart = currentUtcMonthStart();
-  const { data, error } = await supabase.from('monthly_product_usage').select('product_count').eq('user_id', userId).eq('period_start', periodStart).maybeSingle();
+  const [{ data, error }, subscription] = await Promise.all([
+    supabase.from('monthly_product_usage').select('product_count').eq('user_id', userId).eq('period_start', periodStart).maybeSingle(),
+    supabase.from('subscriptions').select('plan_id,status,current_period_end,cancel_at_period_end').eq('user_id', userId).maybeSingle(),
+  ]);
   if (error) throw new Error('La cuota no está disponible. Ejecuta la migración mensual en Supabase.');
-  return productQuota(Number(data?.product_count ?? 0));
+  if (subscription.error?.code && subscription.error.code !== 'PGRST116') throw new Error('La suscripción no está disponible. Ejecuta la migración de pagos en Supabase.');
+  return productQuota(Number(data?.product_count ?? 0), new Date(), billingStatus(subscription.data));
 }
 
 export async function GET(request: Request) {
@@ -67,7 +72,7 @@ export async function POST(request: Request) {
   if (existing.data) return json({ analysis: existing.data, quota });
   if (products.length > quota.remaining) return json({ error: quotaExceededMessage(products.length, quota), quota }, 429);
   const { data, error } = await supabase.from('analyses').insert({ id: requestId, user_id: user.id, filename, products, market_code: marketCode, rule_version: RULE_VERSION }).select('id,filename,created_at,rule_version,market_code,products').single();
-  if (error?.message?.includes('free_monthly_product_limit_exceeded')) {
+  if (error?.message?.includes('monthly_product_limit_exceeded') || error?.message?.includes('free_monthly_product_limit_exceeded')) {
     const latestQuota = await readQuota(supabase, user.id).catch(() => quota);
     return json({ error: quotaExceededMessage(products.length, latestQuota), quota: latestQuota }, 429);
   }

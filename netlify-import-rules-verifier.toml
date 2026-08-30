@@ -4,4 +4,4 @@
   command = "npm run build"
 
 [build.environment]
-  NEXT_PUBLIC_SITE_URL = "https://importrulesverifier.netlify.app"
+  NEXT_PUBLIC_SITE_URL = "https://importverifier.netlify.app"

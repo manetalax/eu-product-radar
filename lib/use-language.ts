@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { isLanguage, Language } from './landing-i18n';
 
-export const LANGUAGE_STORAGE_KEY = 'product-radar-language';
+export const LANGUAGE_STORAGE_KEY = 'import-rules-verifier-language';
 
 export function useLanguage() {
   const [language, setLanguageState] = useState<Language>('es');

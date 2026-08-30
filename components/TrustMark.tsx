@@ -1,6 +1,6 @@
 export default function TrustMark({ title, detail, httpsLabel, explanation, compact = false }: { title: string; detail: string; httpsLabel: string; explanation: string; compact?: boolean }) {
   const brandTitle = title === 'EPR Trust Mark' ? 'IRV Trust Mark' : title.replace(/EPR/g, 'IRV');
-  const brandExplanation = explanation.replace(/Product Radar/g, 'Import Rules Verifier');
+  const brandExplanation = explanation;
 
   return <div className={`trust-cluster ${compact ? 'compact' : ''}`}>
     <div className="epr-trust-mark" title={brandExplanation}>

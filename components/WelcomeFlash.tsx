@@ -56,7 +56,7 @@ export default function WelcomeFlash({ show }: { show: boolean }) {
       <div style={{ flex: 1 }}>
         <strong style={{ display: 'block', marginBottom: 3 }}>Cuenta creada correctamente</strong>
         <span style={{ color: '#475467', lineHeight: 1.45 }}>
-          Tu correo ha sido confirmado. Ya puedes utilizar Product Radar.
+          Tu correo ha sido confirmado. Ya puedes utilizar Import Rules Verifier.
         </span>
       </div>
       <button

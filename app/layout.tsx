@@ -5,7 +5,7 @@ import './account-security.css';
 import type { Metadata, Viewport } from 'next';
 import { BRAND_DESCRIPTION, BRAND_NAME } from '@/lib/brand';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://importrulesverifier.netlify.app';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://importverifier.netlify.app';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

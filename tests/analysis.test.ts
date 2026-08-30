@@ -109,7 +109,7 @@ test('el indicador solo evalúa presencia, no cumplimiento', () => {
 });
 test('la cuota gratuita cuenta cinco productos por mes UTC y nunca queda negativa', () => {
   const quota = productQuota(3, new Date('2026-08-29T23:30:00Z'));
-  assert.deepEqual(quota, { limit: 5, used: 3, remaining: 2, periodStart: '2026-08-01' });
+  assert.deepEqual(quota, { limit: 5, used: 3, remaining: 2, periodStart: '2026-08-01', billing: { planId: 'free', planName: 'Gratis', status: null, productLimit: 5, currentPeriodEnd: null, cancelAtPeriodEnd: false } });
   assert.equal(productQuota(8).remaining, 0);
   assert.match(quotaExceededMessage(4, quota), /contiene 4.*te quedan 2/);
 });
@@ -119,10 +119,10 @@ test('redirecciones de autenticación limitadas a destinos internos concretos', 
 });
 test('las mutaciones requieren el origen configurado y JSON de tamaño acotado', async () => {
   const old=process.env.NEXT_PUBLIC_SITE_URL;
-  process.env.NEXT_PUBLIC_SITE_URL='https://euproductradar.netlify.app';
+  process.env.NEXT_PUBLIC_SITE_URL='https://importverifier.netlify.app';
   try {
-    assert.equal(sameOrigin(new Request('https://euproductradar.netlify.app/api/analyses',{headers:{origin:'https://evil.example'}})),false);
-    assert.equal(sameOrigin(new Request('https://euproductradar.netlify.app/api/analyses',{headers:{origin:process.env.NEXT_PUBLIC_SITE_URL}})),true);
+    assert.equal(sameOrigin(new Request('https://importverifier.netlify.app/api/analyses',{headers:{origin:'https://evil.example'}})),false);
+    assert.equal(sameOrigin(new Request('https://importverifier.netlify.app/api/analyses',{headers:{origin:process.env.NEXT_PUBLIC_SITE_URL}})),true);
     assert.deepEqual(await readJsonBody(new Request('http://local',{method:'POST',body:'{"products":[]}'})),{products:[]});
     await assert.rejects(readJsonBody(new Request('http://local',{method:'POST',body:'x'})),/válido/);
     await assert.rejects(readJsonBody(new Request('http://local',{method:'POST',body:'a'.repeat(MAX_BODY_BYTES+1)})),/2 MB/);
