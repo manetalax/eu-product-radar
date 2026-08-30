@@ -123,7 +123,23 @@ export default function Dashboard({ email }: { email: string }) {
       if (file.size > MAX_FILE_BYTES) throw new Error('El archivo supera el límite de 5 MB.');
       if (file.name.length > 120) throw new Error('Acorta el nombre del archivo a 120 caracteres como máximo.');
       const bytes = await file.arrayBuffer();
-      const products = (await import('@/lib/import-products')).parseProducts(bytes, file.name);
+      let products;
+      if (/\.(csv|xls|xlsx)$/i.test(file.name)) {
+        products = (await import('@/lib/import-products')).parseProducts(bytes, file.name);
+      } else {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('No se ha podido leer el archivo.'));
+          reader.onerror = () => reject(new Error('No se ha podido leer el archivo.'));
+          reader.readAsDataURL(file);
+        });
+        const extracted = await api('/api/product-extraction', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: file.name, mimeType: file.type || 'application/octet-stream', dataUrl }),
+        });
+        products = extracted.products;
+      }
       const hash = await crypto.subtle.digest('SHA-256', bytes);
       const fingerprint = `${selectedMarket}:${file.name}:` + Array.from(new Uint8Array(hash)).map(byte => byte.toString(16).padStart(2, '0')).join('');
       const previous = pendingImport.current;
@@ -322,15 +338,15 @@ export default function Dashboard({ email }: { email: string }) {
         <div className="notice trust-notice"><strong>Europa activa:</strong> el verificador detecta campos básicos incompletos y genera una guía basada en fuentes oficiales. <span>No certifica conformidad ni sustituye una evaluación jurídica o técnica.</span></div>
         {error && <p role="alert" className="message error">{error}</p>}
         {notice && <p role="status" className="message success">{notice}</p>}
-        <input ref={input} className="file-input" aria-label="Importar catálogo CSV o Excel" type="file" accept=".csv,.xls,.xlsx" disabled={busy || loading || quotaBlocked} onChange={event => { const file = event.target.files?.[0]; if (file) void load(file); }} />
+        <input ref={input} className="file-input" aria-label="Importar productos desde foto, documento, texto, CSV o Excel" type="file" accept=".csv,.xls,.xlsx,.pdf,.doc,.docx,.rtf,.odt,.txt,.md,.json,.png,.jpg,.jpeg,.webp,.heic,image/*" disabled={busy || loading || quotaBlocked} onChange={event => { const file = event.target.files?.[0]; if (file) void load(file); }} />
 
         {(tab === 'dashboard' || tab === 'products') && <div className="card import-card premium-import" onDragEnter={event => { event.preventDefault(); setDragging(true); }} onDragOver={event => event.preventDefault()} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false); }} onDrop={event => { event.preventDefault(); setDragging(false); const file = event.dataTransfer.files?.[0]; if (file) void load(file); }} data-dragging={dragging}>
           <div className="import-icon" aria-hidden="true">↑</div>
-          <div className="import-copy"><div className="import-title-row"><h2>{quotaBlocked ? 'Has utilizado tu cuota de este mes' : `Analiza para ${MARKETS[selectedMarket].name}`}</h2><span className="market-live">ACTIVO</span></div><p>Arrastra o sube un CSV, XLS o XLSX de hasta 5 MB. Conservaremos el análisis en tu historial privado.</p><div className="format-chips"><span>CSV</span><span>XLS</span><span>XLSX</span><span>Máx. 5 MB</span></div></div>
+          <div className="import-copy"><div className="import-title-row"><h2>{quotaBlocked ? 'Has utilizado tu cuota de este mes' : `Analiza para ${MARKETS[selectedMarket].name}`}</h2><span className="market-live">ACTIVO</span></div><p>Arrastra una foto, PDF, Word, texto, CSV o Excel de hasta 5 MB. Identificaremos los productos y conservaremos el análisis en tu historial privado.</p><div className="format-chips"><span>FOTO</span><span>PDF/WORD</span><span>TEXTO</span><span>CSV/EXCEL</span><span>Máx. 5 MB</span></div></div>
           <div className="import-actions"><button className="btn primary import-cta" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{busy ? 'Analizando…' : quotaBlocked ? 'Disponible el próximo mes' : 'Elegir archivo'}</button><button className="text-button template-link" onClick={downloadTemplate}>Descargar plantilla</button></div>
           <div className="quota-inline"><span>{quota ? `${quota.remaining} de ${quota.limit} productos disponibles` : 'Calculando cuota…'}</span><div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div></div>
         </div>}
-        {(tab === 'dashboard' || tab === 'products') && <BrandLogos group="commerce" label="Compatible con exportaciones de" note="Importa CSV o Excel; los campos disponibles dependen de cada exportación y los conectores directos siguen en preparación." compact />}
+        {(tab === 'dashboard' || tab === 'products') && <BrandLogos group="commerce" label="Compatible con exportaciones de" note="Sube fotos, documentos, texto, CSV o Excel. La extracción inteligente identifica los productos y marca como vacíos los datos que no puede verificar." compact />}
 
         {tab === 'dashboard' && <>
           <div className="onboarding-card card"><div><span className="eyebrow">PUESTA EN MARCHA</span><h2>Tu primera revisión, sin dudas.</h2></div><ol><li className="done"><span>1</span><div><strong>Mercado</strong><small>Europa seleccionada</small></div></li><li className={templateReady ? 'done' : ''}><span>2</span><div><strong>Plantilla</strong><small>{templateReady ? 'Descargada' : 'Lista para descargar'}</small></div></li><li className={current ? 'done' : ''}><span>3</span><div><strong>Análisis</strong><small>{current ? 'Catálogo guardado' : 'Sube tu catálogo'}</small></div></li><li className={reportReady ? 'done' : ''}><span>4</span><div><strong>Informe</strong><small>{reportReady ? 'Exportado' : 'Excel o PDF'}</small></div></li></ol></div>
