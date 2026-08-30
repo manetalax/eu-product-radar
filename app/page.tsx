@@ -5,6 +5,7 @@ import Brand from '@/components/Brand';
 import BrandLogos from '@/components/BrandLogos';
 import EURegulatoryIdentity from '@/components/EURegulatoryIdentity';
 import TrustMark from '@/components/TrustMark';
+import { BRAND_NAME } from '@/lib/brand';
 import { formatPrice, formatProductCount, landingCopy, Language, LANGUAGE_OPTIONS } from '@/lib/landing-i18n';
 import { MARKETS_BY_RANK } from '@/lib/markets';
 import { FREE_TRIAL_PRODUCT_LIMIT, PLANS } from '@/lib/plans';
@@ -17,7 +18,7 @@ export default function Home() {
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
-    name: 'Product Radar',
+    name: BRAND_NAME,
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
     description: t.hero.lead,
@@ -36,7 +37,7 @@ export default function Home() {
   return <main className="shell landing-shell">
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }} />
 
-    <nav className="nav landing-nav" aria-label="Product Radar">
+    <nav className="nav landing-nav" aria-label={BRAND_NAME}>
       <Brand market="EU" />
       <div className="navlinks">
         <button className="nav-link-button" onClick={() => document.getElementById('como-funciona')?.scrollIntoView({ behavior: 'smooth' })}>{t.nav.how}</button>
