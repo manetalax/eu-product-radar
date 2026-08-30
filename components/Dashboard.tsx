@@ -12,7 +12,7 @@ import { ProductQuota } from '@/lib/quota';
 import { documentationFor, GUIDE_SCOPE } from '@/lib/documentation';
 import { isActiveMarketCode, MarketCode, MARKETS, MARKETS_BY_RANK } from '@/lib/markets';
 import { formatPrice, formatProductCount, landingCopy } from '@/lib/landing-i18n';
-import { PlanId, PLANS, PLANS_BY_ID } from '@/lib/plans';
+import { ONE_TIME_AUDIT, PLANS, PLANS_BY_ID, PurchaseId } from '@/lib/plans';
 import { authService } from '@/lib/services/auth-client';
 import { clearPlanIntent, readPlanIntent } from '@/lib/services/plan-interest';
 import { useLanguage } from '@/lib/use-language';
@@ -109,6 +109,7 @@ export default function Dashboard({ email }: { email: string }) {
     const planId = readPlanIntent();
     const checkout = new URLSearchParams(window.location.search).get('checkout');
     if (checkout === 'success') setNotice('Pago recibido. Stripe está confirmando tu plan; la cuota se actualizará automáticamente.');
+    if (checkout === 'audit-success') setNotice('Pago recibido. Stripe está activando tu auditoría profesional para un catálogo de hasta 30 productos.');
     if (checkout === 'cancelled') setNotice('No se ha realizado ningún cobro. Puedes elegir un plan cuando quieras.');
     if (planId) void startCheckout(planId);
   }, []);
@@ -230,12 +231,12 @@ export default function Dashboard({ email }: { email: string }) {
     setNotice('Plantilla de Europa descargada. Sustituye el ejemplo por tus productos y conserva los cuatro encabezados.');
   }
 
-  async function startCheckout(planId: PlanId) {
+  async function startCheckout(planId: PurchaseId) {
     setBusy(true);
     setError('');
     setNotice('');
     try {
-      const { url } = await api('/api/billing/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ planId }) });
+      const { url } = await api('/api/billing/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ purchaseId: planId }) });
       clearPlanIntent();
       window.location.assign(url);
     } catch (checkoutError) {
@@ -314,7 +315,7 @@ export default function Dashboard({ email }: { email: string }) {
         <div className="side-quota">
           <div className="toprow"><span>Plan {quota?.billing.planName ?? '—'}</span><strong>{quota ? `${quota.remaining} libres` : '—'}</strong></div>
           <div className="quota-track" aria-label="Uso mensual"><span style={{ width: `${quotaPercent}%` }} /></div>
-          <small>{quota ? `${quota.used} de ${quota.limit} productos este mes` : 'Calculando uso…'}</small>
+          <small>{quota ? quota.billing.planId === 'audit' ? `${quota.remaining} de ${quota.limit} productos disponibles para una carga` : `${quota.used} de ${quota.limit} productos este mes` : 'Calculando uso…'}</small>
           <button className="side-upgrade" onClick={() => setTab('settings')}>Ver planes →</button>
         </div>
       </aside>
@@ -371,7 +372,8 @@ export default function Dashboard({ email }: { email: string }) {
 
         {tab === 'settings' && <div className="settings-grid">
           <div className="card content-card"><span className="eyebrow">CUENTA</span><h2>Tu perfil</h2><p className="account-email settings-email">{email}</p><Link className="btn ghost" href="/reset-password">Cambiar contraseña</Link></div>
-          <div className="card content-card"><span className="eyebrow">PLAN ACTUAL</span><h2>{quota?.billing.planName ?? 'Cargando…'}</h2><div className="settings-quota"><strong>{quota?.remaining ?? '—'}</strong><span>productos disponibles este mes</span></div><div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div><p className="muted">{quota ? `${quota.limit} productos al mes. La cuota se reinicia el primer día de cada mes.` : 'Consultando tu suscripción…'}</p>{quota?.billing.planId !== 'free' && <button className="btn ghost" disabled={busy} onClick={manageSubscription}>Gestionar suscripción</button>}</div>
+          <div className="card content-card"><span className="eyebrow">PLAN ACTUAL</span><h2>{quota?.billing.planName ?? 'Cargando…'}</h2><div className="settings-quota"><strong>{quota?.remaining ?? '—'}</strong><span>{quota?.billing.planId === 'audit' ? 'productos disponibles para una carga' : 'productos disponibles este mes'}</span></div><div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div><p className="muted">{quota ? quota.billing.planId === 'audit' ? `Auditoría de pago único para un catálogo de hasta ${quota.limit} productos.` : `${quota.limit} productos al mes. La cuota se reinicia el primer día de cada mes.` : 'Consultando tu acceso…'}</p>{quota?.billing.planId !== 'free' && quota?.billing.planId !== 'audit' && <button className="btn ghost" disabled={busy} onClick={manageSubscription}>Gestionar suscripción</button>}</div>
+          <div className="card content-card plan-interest"><span className="eyebrow">PAGO ÚNICO</span><h2>{ONE_TIME_AUDIT.name}</h2><p>Analiza un catálogo de hasta 30 productos y recibe los informes PDF y Excel, sin suscripción ni renovación.</p><button className="btn primary" disabled={busy || quota?.billing.planId === 'audit'} onClick={() => startCheckout('audit')}>{quota?.billing.planId === 'audit' ? 'Auditoría activa' : `Contratar por ${formatPrice('es', ONE_TIME_AUDIT.priceEur)}`}</button></div>
           <div className="card content-card plan-interest"><span className="eyebrow">SUSCRIPCIONES</span><h2>Elige el plan que necesitas</h2><div className="mini-plans">{PLANS.map(plan => <button className={plan.featured ? 'featured' : ''} key={plan.id} disabled={busy || quota?.billing.planId === plan.id} onClick={() => startCheckout(plan.id)}><span>{plan.name}{plan.featured ? ' · Recomendado' : ''}</span><strong>{formatPrice('es', plan.monthlyPriceEur)}/mes</strong><small>{quota?.billing.planId === plan.id ? 'Plan actual' : `${landingCopy.es.pricing.upTo} ${formatProductCount('es', plan.monthlyProductLimit)}`}</small></button>)}</div><p className="muted">Pago seguro con Stripe. Puedes consultar facturas, cambiar el método de pago o cancelar desde el portal de cliente.</p></div>
           <div className="card content-card expansion-card"><span className="eyebrow">EXPANSIÓN INTERNACIONAL</span><h2>Un núcleo, cada mercado como módulo.</h2><p>Europa está activa. EE. UU., China, Reino Unido y Japón son los siguientes destinos preparados en la arquitectura.</p><div className="expansion-flags">{MARKETS_BY_RANK.map(market => <span key={market.code} title={market.name}>{market.flag}</span>)}</div></div>
           <div className="card content-card settings-security"><span className="eyebrow">PRIVACIDAD</span><h2>Tu información permanece separada</h2><p>Los análisis de esta cuenta no son visibles desde otras cuentas.</p><p className="muted">Evita subir datos personales innecesarios o información confidencial que no sea necesaria para analizar tus productos.</p><TrustMark title="IRV Trust Mark" detail="Comprobaciones internas de transparencia" httpsLabel="Conexión HTTPS segura" explanation="Sello interno de Import Rules Verifier. No es una certificación externa ni acredita la conformidad de un producto." compact /></div>
