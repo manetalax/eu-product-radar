@@ -4,7 +4,7 @@ import { RULE_VERSION, validateProducts } from '@/lib/analysis';
 import { PRIVATE_HEADERS, readJsonBody, sameOrigin } from '@/lib/http';
 import { currentUtcMonthStart, productQuota, quotaExceededMessage } from '@/lib/quota';
 import { isActiveMarketCode, MarketCode } from '@/lib/markets';
-import { billingStatus } from '@/lib/billing';
+import { auditBillingStatus, billingStatus } from '@/lib/billing';
 
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
@@ -12,13 +12,17 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 async function readQuota(supabase: SupabaseClient, userId: string) {
   const periodStart = currentUtcMonthStart();
-  const [{ data, error }, subscription] = await Promise.all([
+  const [{ data, error }, subscription, audit] = await Promise.all([
     supabase.from('monthly_product_usage').select('product_count').eq('user_id', userId).eq('period_start', periodStart).maybeSingle(),
     supabase.from('subscriptions').select('plan_id,status,current_period_end,cancel_at_period_end').eq('user_id', userId).maybeSingle(),
+    supabase.from('one_time_audits').select('id,product_limit').eq('user_id', userId).eq('status', 'paid').is('consumed_at', null).order('purchased_at', { ascending: true }).limit(1).maybeSingle(),
   ]);
   if (error) throw new Error('La cuota no está disponible. Ejecuta la migración mensual en Supabase.');
   if (subscription.error?.code && subscription.error.code !== 'PGRST116') throw new Error('La suscripción no está disponible. Ejecuta la migración de pagos en Supabase.');
-  return productQuota(Number(data?.product_count ?? 0), new Date(), billingStatus(subscription.data));
+  if (audit.error?.code && audit.error.code !== 'PGRST116') throw new Error('La auditoría de pago único no está disponible. Ejecuta la migración de auditorías en Supabase.');
+  const subscriptionBilling = billingStatus(subscription.data);
+  const billing = subscriptionBilling.planId === 'free' && audit.data ? auditBillingStatus() : subscriptionBilling;
+  return productQuota(billing.planId === 'audit' ? 0 : Number(data?.product_count ?? 0), new Date(), billing);
 }
 
 export async function GET(request: Request) {
