@@ -62,13 +62,15 @@
 - **Intelligence Suite client API boundary hardened 2026-08-31:** history, detail, Evidence, Radar and ImportVerifier AI responses are parsed as defensive JSON objects; failed history/detail HTTP states no longer continue as trusted data; malformed/non-object JSON degrades safely; AI responses require a non-empty string answer; raw server/provider `body.error` values are never rendered to customers. Regression coverage prevents reintroducing parser/provider error leakage.
 - **Trial/Unlimited client quota boundary hardened 2026-08-31:** `FreeTrialUpgradePrompt` and `UnlimitedExperience` no longer infer plan state from optional-chain access on arbitrary 2xx JSON. Both require a successful non-array JSON object and reuse `productQuotaFromUnknown` before showing exhausted-trial or Unlimited state. Malformed/failing responses fail closed; the trial CTA retains its existing trusted Stripe Checkout navigation boundary. Regression coverage locks these properties.
 - PDF/Excel reports include localized regulatory narrative, evidence and source traceability; spreadsheet formula injection is avoided by writing user strings as strings.
+- **Premium PDF v1 completed 2026-08-31:** the generated PDF now uses a dark institutional-style cover, ImportVerifier issuer identity/monogram, localized regulatory document classification, executive metric cards, stronger section hierarchy, branded page chrome, repeated localized EU regulatory-context footer and page numbering. Existing evidence/document/page/URL traceability, official-source references, independence notice and regulatory disclaimers remain intact. Regression coverage now checks the visual structure and traceability behavior rather than brittle historical pixel coordinates; the initial stale-test regression was repaired and exact functional release check #1173 is green.
 - Public/developer docs no longer point to the obsolete production domain, monthly free reset or legacy public pricing tiers.
 - `ACTIVE_MARKET_CODES` remains EU-only; US/CN/GB/JP are structurally isolated and inactive.
 
 ## CI / HEAD last verified 2026-08-31
-- Functional head `44719b899ce3cd3cce81f417619821137565405f` contains dedicated camera capture, trial/Unlimited response validation and PWA service-worker update failure containment plus regression coverage.
-- GitHub `ImportVerifier release check` **#1155 SUCCESS** on that exact functional head completed `npm ci`, tests, `npm run typecheck` and `npm run build` successfully.
-- Earlier integrated head `e4d15f73445eb5b7a09464a7b5ba48f85fd43663` passed `ImportVerifier release check` **#1149 SUCCESS**.
+- Functional head `c8ca42c1d503e5444365089dd6a1c1de45c04c21` contains dedicated camera capture, trial/Unlimited response validation, PWA service-worker lifecycle hardening, premium PDF v1 and the regression-test repair.
+- GitHub `ImportVerifier release check` **#1173 SUCCESS** on that exact functional head completed `npm ci`, **278 tests**, `npm run typecheck` and `npm run build` successfully.
+- The premium PDF integration initially exposed stale coordinate/label assertions in release checks; these were corrected to test current structural/traceability behavior rather than historical coordinates.
+- Netlify bot is processing Deploy Preview for exact functional head `c8ca42c1d503e5444365089dd6a1c1de45c04c21` on the correct `importverifier` project.
 - This continuity update creates a newer documentation-only HEAD; reconfirm exact newest HEAD CI and Netlify Deploy Preview at the start of the next execution.
 - PR #4 remains **open** and **not merged**.
 
@@ -84,13 +86,15 @@
 
 ## IN PROGRESS / NEXT — execute without asking
 1. Reconfirm exact newest HEAD GitHub CI and Netlify Deploy Preview after this continuity commit; repair any regression immediately.
-2. Implement the queued premium PDF redesign in `REPORT-PREMIUM-TODO.md`: reproduce the existing ImportVerifier geometric brand mark in PDF-native vector form, strengthen cover/header hierarchy, add repeated localized footer/context treatment and regression coverage while preserving evidence traceability and export correctness.
-3. Continue static mobile/iPhone/iPad/PWA QA around camera return/cancel edge states, drag/drop edge states and save-to-Files; real-device validation remains external.
-4. Continue the remaining customer-facing client API response-shape sweep, prioritizing any authenticated surface discovered later that still places arbitrary 2xx JSON directly into state; Dashboard/Intelligence/Evidence/latest-assessment/review-gate/trial/Unlimited are already hardened and should not be duplicated.
-5. Continue security sweep of remaining customer-facing external links without duplicating already-protected market/evidence/Radar/Stripe/Supabase-OAuth URL work.
-6. Recheck production Auth logs after Supabase/Netlify domain wiring is corrected; canonical Google login must never return to the old domain.
-7. Use `/importverifier-sample-5-products.csv` for final new-account acceptance once canonical Auth works; prove history/PDF/XLSX end-to-end from that account.
-8. Keep EU as the only active market; do not remove historical plan IDs/monthly schema merely for naming cleanliness.
+2. Refine premium PDF v2: replace the interim `IV` monogram with a PDF-native reconstruction of the actual ImportVerifier geometric mark, review the cover seal wording so it conveys issuer review/traceability without changing the regulatory result, and add country/commerce-authority contextual footer treatment only where the authority and permitted asset usage can be determined reliably.
+3. Continue the queued conversion-marketing pass in `REPORT-PREMIUM-TODO.md`, prioritizing high-intent upgrade moments after delivered value while preserving truthful five-product lifetime and €9.95/month claims.
+4. Continue static mobile/iPhone/iPad/PWA QA around camera return/cancel edge states, drag/drop edge states and save-to-Files; real-device validation remains external.
+5. Continue the remaining customer-facing client API response-shape sweep, prioritizing any authenticated surface discovered later that still places arbitrary 2xx JSON directly into state; Dashboard/Intelligence/Evidence/latest-assessment/review-gate/trial/Unlimited are already hardened and should not be duplicated.
+6. Continue security sweep of remaining customer-facing external links without duplicating already-protected market/evidence/Radar/Stripe/Supabase-OAuth URL work.
+7. Investigate and improve Deploy Preview Lighthouse performance after release-critical correctness fronts; latest observed preview performance was materially below the desired premium bar while accessibility remained strong.
+8. Recheck production Auth logs after Supabase/Netlify domain wiring is corrected; canonical Google login must never return to the old domain.
+9. Use `/importverifier-sample-5-products.csv` for final new-account acceptance once canonical Auth works; prove history/PDF/XLSX end-to-end from that account.
+10. Keep EU as the only active market; do not remove historical plan IDs/monthly schema merely for naming cleanliness.
 
 ## BLOCKED EXTERNAL / browser or service-console work
 - Supabase Auth: set Site URL to `https://importverifier.netlify.app` and canonical callbacks; retest Google login and Auth logs.
