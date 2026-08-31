@@ -36,6 +36,15 @@ const KEYWORD_RULES: Array<[RegExp, string]> = [
   [/labelling|labeling|traceability/i, 'labelling traceability'],
 ];
 
+function isOfficialEurLexUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname === 'eur-lex.europa.eu' && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
 function decodeXml(value: string): string {
   return value
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
@@ -108,10 +117,8 @@ export function parseEurLexRss(xml: string, sourceName: string): RawRegulatoryEv
     const block = item[1];
     const title = tag(block, 'title');
     const link = tag(block, 'link');
-    if (!title || !link) continue;
-    let url: URL;
-    try { url = new URL(link); } catch { continue; }
-    if (url.protocol !== 'https:' || url.hostname !== 'eur-lex.europa.eu') continue;
+    if (!title || !link || !isOfficialEurLexUrl(link)) continue;
+    const url = new URL(link);
     const description = tag(block, 'description');
     const guid = tag(block, 'guid');
     const published = tag(block, 'pubDate') || tag(block, 'dc:date');
@@ -139,6 +146,7 @@ export async function fetchEurLexEvents(fetchImpl: typeof fetch = fetch): Promis
       signal: AbortSignal.timeout(15_000),
       cache: 'no-store',
     });
+    if (response.url && !isOfficialEurLexUrl(response.url)) throw new Error(`EUR-Lex RSS ${source.id} terminó fuera del dominio oficial.`);
     if (!response.ok) throw new Error(`EUR-Lex RSS ${source.id} respondió ${response.status}.`);
     const text = await boundedResponseText(response);
     return parseEurLexRss(text, source.name);
