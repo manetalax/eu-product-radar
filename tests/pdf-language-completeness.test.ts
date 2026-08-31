@@ -21,7 +21,9 @@ test('PDF keeps a premium consulting-style cover, executive metrics and section 
   assert.match(pdf, /function sectionTitle\(text: string\)/);
   assert.match(pdf, /function metricCard\(label: string, value: string/);
   assert.match(pdf, /page\.drawRectangle\(\{ x: 0, y: PAGE_HEIGHT - \d+, width: PAGE_WIDTH, height: \d+, color: navy \}\)/);
-  assert.match(pdf, /drawMonogram\(page/);
+  assert.match(pdf, /function drawBrandMark/);
+  assert.match(pdf, /drawBrandMark\(page/);
+  assert.match(pdf, /drawVerifiedSeal\(\)/);
   assert.match(pdf, /page\.drawText\(pdfText\(reportClass\)/);
   assert.match(pdf, /metricCard\(t\.products/);
   assert.match(pdf, /sectionTitle\(t\.regulatoryAssessment\)/);
