@@ -8,10 +8,14 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
 
-function authorized(request: Request): boolean {
-  const secret = process.env.REGULATORY_INGEST_SECRET;
+function configuredSecret(): string | null {
+  const secret = process.env.REGULATORY_INGEST_SECRET?.trim() ?? '';
+  return secret.length >= 32 ? secret : null;
+}
+
+function authorized(request: Request, secret: string): boolean {
   const header = request.headers.get('authorization');
-  if (!secret || !header?.startsWith('Bearer ')) return false;
+  if (!header?.startsWith('Bearer ')) return false;
   const supplied = header.slice(7);
   const expectedBuffer = Buffer.from(secret);
   const suppliedBuffer = Buffer.from(supplied);
@@ -19,8 +23,9 @@ function authorized(request: Request): boolean {
 }
 
 export async function POST(request: Request) {
-  if (!process.env.REGULATORY_INGEST_SECRET) return json({ error: 'Ingesta regulatoria no configurada.' }, 503);
-  if (!authorized(request)) return json({ error: 'No autorizado.' }, 401);
+  const secret = configuredSecret();
+  if (!secret) return json({ error: 'Ingesta regulatoria no configurada.' }, 503);
+  if (!authorized(request, secret)) return json({ error: 'No autorizado.' }, 401);
 
   try {
     const body = await readJsonBody(request) as { events?: RawRegulatoryEvent[] } | null;
