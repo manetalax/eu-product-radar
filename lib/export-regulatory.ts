@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import type { Result } from './analysis';
 import { BRAND_DOCUMENT_FOOTER, BRAND_NAME } from './brand';
+import { localizeEuRegulatoryAssessment } from './eu-regulatory-i18n';
 import type { Language } from './landing-i18n';
 import { reportLabels } from './report-i18n';
 
@@ -60,7 +61,7 @@ export function addRegulatoryWorksheet(workbook: ExcelJS.Workbook, results: Resu
 
   let row = 5;
   for (const result of regulatory) {
-    const assessment = result.regulatory!;
+    const assessment = localizeEuRegulatoryAssessment(result.regulatory!, language);
     const acts = assessment.applicableActs.map(act => `${act.title} (${act.reference})`).join('\n');
     const reasons = assessment.applicableActs.map(act => `${act.reference}: ${act.reason}`).join('\n');
     const actions = assessment.obligations.map(obligation => `${obligation.title}\n${t.evidence}: ${obligation.evidence.join('; ')}`).join('\n\n');
