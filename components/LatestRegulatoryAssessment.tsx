@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Analysis, analysisMarket, analyze } from '@/lib/analysis';
+import { analysisFromUnknown, analysisSummariesFromUnknown } from '@/lib/dashboard-api-shapes';
 import { useLanguage } from '@/lib/use-language';
 import RegulatoryAssessment from './RegulatoryAssessment';
 import ReadinessEvidencePanel from './ReadinessEvidencePanel';
@@ -16,6 +17,19 @@ const copy = {
   pt: { aria:'Última avaliação regulamentar', eyebrow:'ÚLTIMA ANÁLISE REGULAMENTAR' },
 } as const;
 
+function jsonRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+async function trustedJsonObject(response: Response): Promise<Record<string, unknown> | null> {
+  if (!response.ok) return null;
+  try {
+    return jsonRecord(await response.json());
+  } catch {
+    return null;
+  }
+}
+
 export default function LatestRegulatoryAssessment() {
   const { language } = useLanguage();
   const t = copy[language];
@@ -26,14 +40,17 @@ export default function LatestRegulatoryAssessment() {
     (async () => {
       try {
         const historyResponse = await fetch('/api/analyses?page=0', { cache: 'no-store', signal: controller.signal });
-        if (!historyResponse.ok) return;
-        const history = await historyResponse.json();
-        const latest = history.analyses?.[0];
+        const historyBody = await trustedJsonObject(historyResponse);
+        if (!historyBody) return;
+        const summaries = analysisSummariesFromUnknown(historyBody.analyses);
+        const latest = summaries?.[0];
         if (!latest?.id || analysisMarket(latest) !== 'EU') return;
+
         const response = await fetch(`/api/analyses?id=${encodeURIComponent(latest.id)}`, { cache: 'no-store', signal: controller.signal });
-        if (!response.ok) return;
-        const body = await response.json();
-        if (!controller.signal.aborted) setAnalysis(body.analysis ?? null);
+        const body = await trustedJsonObject(response);
+        const validated = body ? analysisFromUnknown(body.analysis) : null;
+        if (!validated || analysisMarket(validated) !== 'EU') return;
+        if (!controller.signal.aborted) setAnalysis(validated);
       } catch {
         // The main dashboard owns user-facing API errors. This enhancement stays silent.
       }
