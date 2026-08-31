@@ -12,7 +12,7 @@ test('el manifest conserva identidad e instalación standalone en todos los idio
     const manifest = manifestFor(language);
     assert.equal(manifest.name, 'Import Rules Verifier');
     assert.equal(manifest.short_name, 'ImportVerifier');
-    assert.equal(manifest.start_url, '/');
+    assert.equal(manifest.start_url, `/?lang=${language}`);
     assert.equal(manifest.scope, '/');
     assert.equal(manifest.display, 'standalone');
     assert.equal(manifest.lang, language);
@@ -30,12 +30,13 @@ test('el manifest localiza descripción y accesos directos sin cambiar rutas', (
   }
 });
 
-test('la PWA nunca incluye páginas privadas ni el manifest localizado en el shell offline', () => {
+test('la PWA precarga solo variantes públicas de landing y nunca páginas privadas o sensibles', () => {
   const shellMatch = sw.match(/const SHELL = \[([^\]]+)\]/);
   assert.ok(shellMatch);
   const shell = shellMatch[1];
-  for (const privatePath of ['/dashboard', '/api/', '/auth/', '/reset-password', '/manifest.webmanifest']) {
-    assert.equal(shell.includes(`'${privatePath}'`), false);
+  for (const language of LANGUAGES) assert.ok(shell.includes(`'/${language}'`));
+  for (const excludedPath of ['/login', '/privacy', '/terms', '/dashboard', '/api/', '/auth/', '/reset-password', '/manifest.webmanifest']) {
+    assert.equal(shell.includes(`'${excludedPath}'`), false);
   }
   assert.match(sw, /url\.pathname === '\/manifest\.webmanifest'/);
 });
