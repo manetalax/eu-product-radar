@@ -1,8 +1,10 @@
 import Link from 'next/link';
+import { legalConfig } from '@/lib/legal-config';
 
 const SUPPORT_EMAIL = 'importverifier@gmail.com';
 
 export default function TermsPage() {
+  const legal = legalConfig();
   return <main className="shell legal-page">
     <h1>Términos de uso</h1>
     <p><strong>Última actualización:</strong> 31 de agosto de 2026.</p>
@@ -11,9 +13,10 @@ export default function TermsPage() {
     <h2>Responsabilidad del usuario</h2><p>El usuario debe revisar los datos detectados, confirmar la categoría y comprobar la documentación y fuentes oficiales antes de comercializar un producto. No debe introducir información ilícita ni datos personales innecesarios.</p>
     <h2>Suscripción Unlimited</h2><p>La oferta pública de pago es una suscripción mensual Unlimited de 9,95 € al mes, salvo promoción expresamente indicada. Se renueva automáticamente hasta su cancelación desde el portal de cliente. El uso ilimitado está sujeto a medidas técnicas razonables contra abuso automatizado, fraude, ataques o utilización incompatible con un servicio interactivo normal. Estas salvaguardas no se presentan como una cuota comercial de productos.</p>
     <h2>Pagos, renovaciones y cancelación</h2><p>Stripe muestra el importe y las condiciones antes de confirmar el pago. La cancelación evita futuras renovaciones y mantiene el acceso pagado hasta el final del periodo ya abonado, salvo supuestos legalmente permitidos de suspensión por fraude o abuso. Para incidencias de facturación, escribe a <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</p>
+    <h2>Reembolsos y desistimiento</h2><p>{legal ? legal.refundPolicy : 'La contratación permanece desactivada hasta que se configure y publique la política de reembolsos y desistimiento aplicable.'}</p>
     <h2>Disponibilidad e historial</h2><p>El servicio puede cambiar reglas, fuentes, modelos de IA y funcionalidades para reflejar cambios regulatorios o técnicos. Los análisis históricos son instantáneas y conservan la versión de reglas utilizada cuando técnicamente corresponda.</p>
+    <h2>Prestador y jurisdicción</h2>{legal ? <p><strong>{legal.providerName}</strong><br />{legal.providerAddress}<br />Identificación fiscal: {legal.taxId}<br />Jurisdicción: {legal.jurisdiction}</p> : <p><strong>Servicio en fase previa a contratación:</strong> el checkout de pago permanece bloqueado hasta completar la identidad legal, domicilio, identificación fiscal, jurisdicción y política de reembolsos.</p>}
     <h2>Contacto</h2><p>Soporte: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</p>
-    <p><strong>Información legal pendiente:</strong> antes de aceptar clientes de pago deben añadirse la identidad legal del prestador, domicilio, datos fiscales, jurisdicción y política de reembolsos aplicables.</p>
     <p><Link href="/privacy">Política de privacidad</Link> · <Link href="/">Volver a Import Rules Verifier</Link></p>
   </main>;
 }
