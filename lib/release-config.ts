@@ -33,6 +33,9 @@ export function checkReleaseConfig(env: NodeJS.ProcessEnv = process.env): Releas
   if (production && env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY && !env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.startsWith('sb_publishable_')) {
     errors.push('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY debe ser una publishable key de Supabase, no una secret/service-role key.');
   }
+  if (production && env.SUPABASE_SECRET_KEY && !env.SUPABASE_SECRET_KEY.startsWith('sb_secret_')) {
+    errors.push('SUPABASE_SECRET_KEY debe ser una secret key de Supabase con prefijo sb_secret_.');
+  }
   if (production && env.STRIPE_SECRET_KEY && !env.STRIPE_SECRET_KEY.startsWith('sk_live_')) {
     errors.push('STRIPE_SECRET_KEY debe ser una clave live de Stripe en producción.');
   }
