@@ -5,6 +5,7 @@ import { manifestFor } from '../lib/pwa-manifest';
 import { LANGUAGES } from '../lib/landing-i18n';
 
 const sw = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
+const pwaRegister = readFileSync(new URL('../components/PwaRegister.tsx', import.meta.url), 'utf8');
 
 test('el manifest conserva identidad e instalación standalone en todos los idiomas', () => {
   for (const language of LANGUAGES) {
@@ -43,4 +44,12 @@ test('el service worker excluye explícitamente rutas privadas del caché', () =
   for (const privatePath of ['/api/', '/auth/', '/dashboard', '/reset-password']) assert.ok(sw.includes(`'${privatePath}'`));
   assert.match(sw, /PRIVATE_PREFIXES\.some/);
   assert.match(sw, /CACHEABLE_NAVIGATIONS/);
+});
+
+test('las actualizaciones del service worker no dejan rechazos sin gestionar al volver online o visible', () => {
+  assert.match(pwaRegister, /const updateRegistration = async \(\) =>/);
+  assert.match(pwaRegister, /try \{[\s\S]*await registration\.update\(\);[\s\S]*\} catch \{/);
+  assert.match(pwaRegister, /const refresh = \(\) => \{ if \(!document\.hidden\) void updateRegistration\(\); \}/);
+  assert.match(pwaRegister, /cancelled = true/);
+  assert.doesNotMatch(pwaRegister, /void registration\?\.update\(\)/);
 });
