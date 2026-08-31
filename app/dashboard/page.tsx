@@ -3,6 +3,7 @@ import AnalysisReviewGate from '@/components/AnalysisReviewGate';
 import FreeTrialUpgradePrompt from '@/components/FreeTrialUpgradePrompt';
 import IntelligenceSuite from '@/components/IntelligenceSuite';
 import LatestRegulatoryAssessment from '@/components/LatestRegulatoryAssessment';
+import PurchaseIntentCheckout from '@/components/PurchaseIntentCheckout';
 import UnlimitedExperience from '@/components/UnlimitedExperience';
 import WelcomeFlash from '@/components/WelcomeFlash';
 import { createClient } from '@/lib/supabase/server';
@@ -13,5 +14,5 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) redirect('/login');
   const params = await searchParams;
-  return <><WelcomeFlash show={params.welcome === 'registered'} /><UnlimitedExperience /><FreeTrialUpgradePrompt /><AnalysisReviewGate /><Dashboard email={user.email ?? ''} /><IntelligenceSuite /><LatestRegulatoryAssessment /></>;
+  return <><PurchaseIntentCheckout /><WelcomeFlash show={params.welcome === 'registered'} /><UnlimitedExperience /><FreeTrialUpgradePrompt /><AnalysisReviewGate /><Dashboard email={user.email ?? ''} /><IntelligenceSuite /><LatestRegulatoryAssessment /></>;
 }
