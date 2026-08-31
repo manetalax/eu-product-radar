@@ -4,6 +4,7 @@ import { BRAND_DOCUMENT_FOOTER, BRAND_NAME } from './brand';
 import { localizeEuRegulatoryAssessment } from './eu-regulatory-i18n';
 import type { Language } from './landing-i18n';
 import { reportLabels } from './report-i18n';
+import { reportSheetNames } from './report-sheet-i18n';
 
 const LANGUAGES: Language[] = ['es','en','fr','de','it','pt'];
 const local = (language: Language, es: string, en: string, fr: string, de: string, it: string, pt: string) => ({ es, en, fr, de, it, pt })[language];
@@ -21,9 +22,8 @@ export function addRegulatoryWorksheet(workbook: ExcelJS.Workbook, results: Resu
   if (!regulatory.length) return;
   const language = activeLanguage(requestedLanguage);
   const t = reportLabels[language];
-  const worksheetName = local(language, 'Evaluación regulatoria', 'Regulatory assessment', 'Évaluation réglementaire', 'Regulatorische Bewertung', 'Valutazione normativa', 'Avaliação regulamentar');
 
-  const ws = workbook.addWorksheet(worksheetName, {
+  const ws = workbook.addWorksheet(reportSheetNames[language].regulatory, {
     views: [{ state: 'frozen', ySplit: 4, showGridLines: false }],
     properties: { defaultRowHeight: 24 },
   });
