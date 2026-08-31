@@ -9,7 +9,11 @@ export default async () => {
   try {
     const response = await fetch(`${siteUrl()}/api/internal/regulatory-refresh`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
       signal: controller.signal,
     });
     const body = await response.text();
