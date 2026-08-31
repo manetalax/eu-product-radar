@@ -178,6 +178,6 @@ export default function AuthForm({ initialMode = 'login', initialMessageKey, req
       {mode === 'login' && <button className="text-button" disabled={busy} onClick={() => change('forgot')}>{t.forgotPassword}</button>}
     </div>}
     <TrustMark title={trust.title} detail={trust.detail} httpsLabel={trust.https} explanation={trust.explanation} compact />
-    <Link className="back-link" href={`/?lang=${language}`}>{t.back}</Link>
+    <Link className="back-link" href={`/${language}`}>{t.back}</Link>
   </section></main>;
 }
