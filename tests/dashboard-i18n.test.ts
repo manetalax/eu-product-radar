@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { dashboardDictionaries, dashboardText } from '../lib/dashboard-copy-v2';
 
 const languages = ['es','en','fr','de','it','pt'] as const;
+const dashboardSource = readFileSync(new URL('../components/Dashboard.tsx', import.meta.url), 'utf8');
 
 test('el dashboard tiene exactamente las mismas claves en seis idiomas', () => {
   const expected = Object.keys(dashboardDictionaries.es).sort();
@@ -27,4 +29,16 @@ test('las plantillas interpolan variables sin dejar tokens visibles', () => {
   assert.equal(dashboardText('en','remaining',{n:3}), '3 left');
   assert.equal(dashboardText('fr','workingWith',{file:'catalogue.xlsx'}), 'Vous travaillez avec catalogue.xlsx.');
   assert.equal(dashboardText('de','subscribeFor',{price:'9,95 €'}), 'Für 9,95 €/Monat abonnieren');
+});
+
+test('Dashboard.tsx está conectado estructuralmente al idioma activo', () => {
+  assert.match(dashboardSource, /dashboardText\(language, key, values\)/);
+  assert.match(dashboardSource, /toLocaleString\(localeFor\(language\)/);
+  assert.match(dashboardSource, /pdfBytes\(current, language\)/);
+  assert.match(dashboardSource, /reportBytes\(current, language\)/);
+  assert.match(dashboardSource, /guideScopeFor\(language\)/);
+  assert.match(dashboardSource, /documentationFor\(product, currentMarketCode, language\)/);
+  assert.doesNotMatch(dashboardSource, /\bGUIDE_SCOPE\b/);
+  assert.doesNotMatch(dashboardSource, /formatPrice\('es'/);
+  assert.doesNotMatch(dashboardSource, /\['dashboard', 'Resumen', 'Vista general'\]/);
 });
