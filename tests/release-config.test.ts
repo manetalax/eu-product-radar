@@ -14,7 +14,7 @@ const baseEnv = {
   STRIPE_PRICE_STARTER: 'price_example',
 } as NodeJS.ProcessEnv;
 
-test('permite producción con proveedor gratuito sin exigir OpenAI', () => {
+test('permite producción gratuita sin exigir OpenAI', () => {
   const result = checkReleaseConfig({ ...baseEnv, AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key' });
   assert.equal(result.ok, true);
   assert.equal(result.errors.some(error => /OPENAI/i.test(error)), false);
@@ -27,13 +27,15 @@ test('free_only exige SiliconFlow y siempre exige al menos un proveedor', () => 
   assert.ok(freeOnly.errors.some(error => /al menos un proveedor/));
 });
 
-test('free_first acepta OpenAI como respaldo cuando SiliconFlow todavía no está configurado', () => {
-  const result = checkReleaseConfig({ ...baseEnv, AI_COST_POLICY: 'free_first', OPENAI_API_KEY: 'openai-key' });
-  assert.equal(result.ok, true);
-  assert.ok(result.warnings.some(warning => /SiliconFlow/));
+test('producción rechaza políticas que permitan gasto de IA', () => {
+  for (const policy of ['free_first', 'premium_allowed'] as const) {
+    const result = checkReleaseConfig({ ...baseEnv, AI_COST_POLICY: policy, SILICONFLOW_API_KEY: 'sf-key', OPENAI_API_KEY: 'openai-key' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some(error => /free_only/));
+  }
 });
 
-test('la política de coste cae de forma segura a free_first', () => {
+test('la política de coste cae de forma segura a free_first fuera del release guard', () => {
   const previous = process.env.AI_COST_POLICY;
   try {
     delete process.env.AI_COST_POLICY;
