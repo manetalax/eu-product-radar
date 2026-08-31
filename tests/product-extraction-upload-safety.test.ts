@@ -3,25 +3,36 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const route = readFileSync(new URL('../app/api/product-extraction/route.ts', import.meta.url), 'utf8');
+const imageTypes = readFileSync(new URL('../lib/upload-image-type.ts', import.meta.url), 'utf8');
 
-test('product extraction validates decoded size and MIME before rate-limited AI work', () => {
+test('product extraction validates decoded size and image signature before rate-limited AI work', () => {
   const parseIndex = route.indexOf('upload = parseDataUrl(dataUrl, language)');
-  const validateIndex = route.indexOf('kind = validateUploadType(filename, mimeType, upload.mimeType, language)');
+  const validateIndex = route.indexOf('kind = validateUploadType(filename, mimeType, upload.mimeType, upload.bytes, language)');
   const rateLimitIndex = route.indexOf('const allowed = await consumeApiRateLimit');
-  const visionIndex = route.indexOf('generateVisionText(dataUrl');
+  const visionIndex = route.indexOf('generateVisionText(normalizedDataUrl');
   assert.ok(parseIndex > 0);
   assert.ok(validateIndex > parseIndex);
   assert.ok(rateLimitIndex > validateIndex);
   assert.ok(visionIndex > rateLimitIndex);
   assert.match(route, /bytes\.length > MAX_FILE_BYTES/);
+  assert.match(route, /validateImageUploadType\(filename, declared, data, bytes\)/);
 });
 
-test('image extension and MIME must agree, including HEIC/HEIF, and spreadsheet formats stay local', () => {
+test('image extension, MIME metadata and magic bytes agree while missing mobile MIME is handled safely', () => {
   assert.match(route, /IMAGE_EXTENSIONS/);
   assert.match(route, /IMAGE_MIME/);
   assert.match(route, /heic\|heif/);
-  assert.ok(route.includes("const IMAGE_MIME = /^image\\/(png|jpeg|webp|heic|heif)$/i;"));
-  assert.match(route, /declared === 'image\/heic' && data === 'image\/heif'/);
+  assert.match(route, /sniffSupportedImageMime\(upload\.bytes\)/);
+  assert.match(route, /normalizedDataUrl/);
+
+  assert.match(imageTypes, /\.hei\[cf\]\$\/i/);
+  assert.match(imageTypes, /\['image\/heic', 'image\/heif'\]/);
+  assert.match(imageTypes, /application\/octet-stream/);
+  assert.match(imageTypes, /0xff.*0xd8.*0xff/s);
+  assert.match(imageTypes, /ftyp/);
+  assert.match(imageTypes, /extension-mismatch/);
+  assert.match(imageTypes, /mime-mismatch/);
+
   assert.match(route, /productExtractionText\(language, 'imageMime'\)/);
   assert.doesNotMatch(route, /ALLOWED_EXTENSIONS = .*csv/);
   assert.doesNotMatch(route, /ALLOWED_EXTENSIONS = .*xlsx/);
