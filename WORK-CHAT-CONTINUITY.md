@@ -59,7 +59,8 @@
 - Service worker cache moved to `importverifier-shell-v3`; the localized `/manifest.webmanifest` is deliberately excluded from the offline shell and fetch cache so a user-language manifest cannot become stale after a language change. Private routes remain excluded.
 - PWA/icon/upload/export regression tests cover manifest language parity, real icon assets, private-cache exclusion, HEIC/HEIF input safety and premium report structure.
 - Concurrent mobile QA additionally corrected Intelligence Suite safe-area padding so left/right insets are independent, retains bottom safe-area spacing and keeps 16px iOS form controls; `tests/intelligence-suite-mobile-safe-area.test.ts` protects these invariants.
-- Latest validated branch HEAD `f9af353e6f3aa6b200c6b957f049723a8fb883a8` passed exact-head `ImportVerifier release check` run #873 **SUCCESS**: tests, typecheck and build all passed. Core PWA/export functional work is contained in `5164e0cd8eef43768e1b0f2c5d448d17fc9a85f2` and predecessors.
+- Product Regulatory Twin confidence no longer exposes raw technical `high` / `medium` / `low` enums. It reuses the existing localized report confidence labels for ES/EN/FR/DE/IT/PT; `tests/intelligence-suite-confidence-i18n.test.ts` protects the linkage and language coverage.
+- Latest validated branch HEAD `f9af353e6f3aa6b200c6b957f049723a8fb883a8` passed exact-head `ImportVerifier release check` run #873 **SUCCESS**: tests, typecheck and build all passed. Reconfirm exact current HEAD after the latest code/handoff commits.
 
 ## Production facts last checked 2026-08-31
 - Supabase project: `hfuwwjdcyudflamwwnon`.
@@ -73,10 +74,10 @@
 - Supabase security advisor substantive external setting still pending: leaked-password protection disabled.
 
 ## IN PROGRESS / NEXT — execute without asking
-1. Verify exact latest HEAD CI after this handoff-only commit; fix any tests/typecheck/build regression immediately.
+1. Verify exact latest HEAD CI after this handoff commit; fix any tests/typecheck/build regression immediately.
 2. Continue static desktop/iPhone/iPad/PWA export QA: inspect blob-download lifecycle and save-to-Files behavior for PDF/XLSX/template generation; real-device/browser execution remains BLOCKED EXTERNAL.
 3. Continue security sweep for remaining customer-visible external URLs or values that become hyperlinks outside Evidence/Radar/documentary official sources.
-4. Continue customer-visible i18n sweep inside Intelligence Suite/reports and PWA install surfaces; branded shorthand may remain, explanatory fallback English must not leak into non-English locales.
+4. Continue customer-visible i18n sweep inside Intelligence Suite/reports and PWA install surfaces; branded shorthand and original official-source text may remain, but explanatory fallback English and raw internal enum values must not leak into non-English locales.
 5. Future-market US/CN/GB/JP documentary narratives remain non-customer-active; fully localize and substantiate them before activation. `ACTIVE_MARKET_CODES` must remain EU-only until that work is complete.
 6. Continue canonical-price audit when new surfaces are touched; all public price rendering must originate from `UNLIMITED_PLAN` and remain EUR 9.95/month.
 7. Consider adding explicit `.heif` to the Dashboard file picker accept list in addition to `image/*` when next touching that component; server support is already correct.
