@@ -25,7 +25,7 @@ test('los precios Stripe se validan y se relacionan con su plan fuera de producc
   }
 });
 
-test('producción fija Unlimited al price live canónico aunque la variable de entorno derive', () => {
+test('producción fija Unlimited al price live canónico y rechaza un mapeo derivado', () => {
   const oldPrice = process.env.STRIPE_PRICE_STARTER;
   const oldNodeEnv = process.env.NODE_ENV;
   process.env.NODE_ENV = 'production';
@@ -33,7 +33,7 @@ test('producción fija Unlimited al price live canónico aunque la variable de e
   try {
     assert.equal(stripePriceId('starter'), IMPORTVERIFIER_UNLIMITED_PRICE_ID);
     assert.equal(planIdForStripePrice(IMPORTVERIFIER_UNLIMITED_PRICE_ID), 'starter');
-    assert.equal(planIdForStripePrice('price_wrong'), 'starter');
+    assert.equal(planIdForStripePrice('price_wrong'), null);
   } finally {
     if (oldPrice === undefined) delete process.env.STRIPE_PRICE_STARTER;
     else process.env.STRIPE_PRICE_STARTER = oldPrice;
