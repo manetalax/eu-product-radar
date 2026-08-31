@@ -64,3 +64,12 @@ test('rechaza un RSS que supera 4 MB durante streaming aunque no declare Content
   }), { status: 200 });
   await assert.rejects(() => fetchEurLexEvents(fakeFetch as typeof fetch), /tamaño permitido/);
 });
+
+test('rechaza una respuesta RSS que termine redirigida fuera del dominio oficial', async () => {
+  const fakeFetch = async () => {
+    const response = new Response(rss, { status: 200 });
+    Object.defineProperty(response, 'url', { value: 'https://example.com/redirected-feed.xml' });
+    return response;
+  };
+  await assert.rejects(() => fetchEurLexEvents(fakeFetch as typeof fetch), /fuera del dominio oficial/);
+});
