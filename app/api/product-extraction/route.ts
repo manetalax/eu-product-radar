@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { MAX_FILE_BYTES } from '@/lib/analysis';
 import { normalizeExtractedProducts, type ExtractedProduct } from '@/lib/product-ingestion';
-import { readJsonBody, sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
+import { readJsonBody, RequestBodyTooLargeError, sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { createClient } from '@/lib/supabase/server';
 import { aiCostPolicy, generateText, generateVisionText } from '@/lib/ai-provider';
 import { recordAiUsage } from '@/lib/ai-telemetry';
@@ -155,7 +155,7 @@ export async function POST(request: Request) {
   try {
     body = await readJsonBody(request, PRODUCT_EXTRACTION_BODY_MAX_BYTES) as typeof body;
   } catch (error) {
-    const oversized = error instanceof Error && error.message.includes('límite');
+    const oversized = error instanceof RequestBodyTooLargeError;
     return json({ error: productExtractionText(language, oversized ? 'tooLarge' : 'readError') }, oversized ? 413 : 400);
   }
 
