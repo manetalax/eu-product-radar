@@ -1,12 +1,23 @@
 {
+  "id": "/",
   "name": "Import Rules Verifier",
-  "short_name": "Import Verifier",
-  "description": "Verifica requisitos, documentación pendiente y riesgos regulatorios antes de importar y vender productos en la Unión Europea.",
+  "short_name": "ImportVerifier",
+  "description": "Verifica requisitos, documentación pendiente y señales regulatorias antes de importar y vender productos en la Unión Europea.",
+  "lang": "es",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
   "background_color": "#f6f7fb",
   "theme_color": "#4f46e5",
+  "categories": ["business", "productivity", "utilities"],
   "icons": [
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Abrir ImportVerifier", "short_name": "ImportVerifier", "url": "/dashboard" },
+    { "name": "Privacidad", "short_name": "Privacidad", "url": "/privacy" }
   ]
 }
