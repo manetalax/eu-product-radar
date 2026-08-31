@@ -1,6 +1,7 @@
 import { FREE_TRIAL_PRODUCT_LIMIT, isPlanId, ONE_TIME_AUDIT, PlanId, PLANS_BY_ID } from './plans';
 
 export const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'trialing'] as const;
+export const IMPORTVERIFIER_UNLIMITED_PRICE_ID = 'price_1UAJy5HJnO8odw1Mn4jMVjFt';
 export type BillingPlanId = 'free' | 'audit' | PlanId;
 
 export type BillingStatus = {
@@ -35,6 +36,7 @@ export function auditBillingStatus(): BillingStatus {
 }
 
 export function stripePriceId(planId: PlanId): string {
+  if (process.env.NODE_ENV === 'production' && planId === 'starter') return IMPORTVERIFIER_UNLIMITED_PRICE_ID;
   const names: Record<PlanId, string> = {
     starter: 'STRIPE_PRICE_STARTER',
     growth: 'STRIPE_PRICE_GROWTH',
@@ -48,6 +50,7 @@ export function stripePriceId(planId: PlanId): string {
 
 export function planIdForStripePrice(priceId: string | null | undefined): PlanId | null {
   if (!priceId) return null;
+  if (process.env.NODE_ENV === 'production' && priceId === IMPORTVERIFIER_UNLIMITED_PRICE_ID) return 'starter';
   const entries = [
     ['starter', process.env.STRIPE_PRICE_STARTER],
     ['growth', process.env.STRIPE_PRICE_GROWTH],
