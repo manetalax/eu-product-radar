@@ -6,13 +6,17 @@ import { readFileSync } from 'node:fs';
 const checkout = readFileSync(new URL('../app/api/billing/checkout/route.ts', import.meta.url), 'utf8');
 const portal = readFileSync(new URL('../app/api/billing/portal/route.ts', import.meta.url), 'utf8');
 
-test('configured site origin accepts HTTPS and HTTP localhost but rejects unsafe protocols or credentials', () => {
-  assert.equal(configuredSiteOrigin('https://importverifier.netlify.app/anything'), 'https://importverifier.netlify.app');
-  assert.equal(configuredSiteOrigin('http://localhost:3000/path'), 'http://localhost:3000');
-  assert.equal(configuredSiteOrigin('https://localhost:3000/path'), 'https://localhost:3000');
+test('configured site origin accepts only root HTTPS and root HTTP localhost while rejecting ambiguous or unsafe URLs', () => {
+  assert.equal(configuredSiteOrigin('https://importverifier.netlify.app'), 'https://importverifier.netlify.app');
+  assert.equal(configuredSiteOrigin('https://importverifier.netlify.app/'), 'https://importverifier.netlify.app');
+  assert.equal(configuredSiteOrigin('http://localhost:3000'), 'http://localhost:3000');
+  assert.equal(configuredSiteOrigin('https://localhost:3000'), 'https://localhost:3000');
+  assert.equal(configuredSiteOrigin('https://importverifier.netlify.app/anything'), null);
+  assert.equal(configuredSiteOrigin('http://localhost:3000/path'), null);
+  assert.equal(configuredSiteOrigin('https://localhost:3000/path'), null);
   assert.equal(configuredSiteOrigin('http://example.com'), null);
-  assert.equal(configuredSiteOrigin('ftp://localhost:3000/path'), null);
-  assert.equal(configuredSiteOrigin('file://localhost/tmp'), null);
+  assert.equal(configuredSiteOrigin('ftp://localhost:3000'), null);
+  assert.equal(configuredSiteOrigin('file://localhost'), null);
   assert.equal(configuredSiteOrigin('https://user:secret@example.com'), null);
   assert.equal(configuredSiteOrigin('not-a-url'), null);
   assert.equal(configuredSiteOrigin(undefined), null);
