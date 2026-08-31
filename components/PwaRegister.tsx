@@ -5,10 +5,28 @@ import { useEffect } from 'react';
 export default function PwaRegister() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
-    const register = () => navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+    let registration: ServiceWorkerRegistration | null = null;
+
+    const register = async () => {
+      try {
+        registration = await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' });
+        await registration.update();
+      } catch {
+        registration = null;
+      }
+    };
+    const refresh = () => { if (!document.hidden) void registration?.update(); };
+
     if (document.readyState === 'complete') void register();
     else window.addEventListener('load', register, { once: true });
-    return () => window.removeEventListener('load', register);
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('online', refresh);
+
+    return () => {
+      window.removeEventListener('load', register);
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('online', refresh);
+    };
   }, []);
   return null;
 }
