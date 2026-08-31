@@ -11,6 +11,11 @@ function isSupportedLanguage(value: unknown): value is Language {
   return typeof value === 'string' && (SUPPORTED_LANGUAGES as readonly string[]).includes(value);
 }
 
+function languageFromPathname(pathname: string): Language | null {
+  const firstSegment = pathname.split('/').filter(Boolean)[0]?.slice(0, 2).toLowerCase();
+  return isSupportedLanguage(firstSegment) ? firstSegment : null;
+}
+
 type LanguageContextValue = {
   language: Language;
   setLanguage: (next: Language) => void;
@@ -22,10 +27,11 @@ export function LanguageProvider({ initialLanguage, children }: { initialLanguag
   const [language, setLanguageState] = useState<Language>(initialLanguage);
 
   useEffect(() => {
+    const pathLanguage = languageFromPathname(window.location.pathname);
     const urlLanguage = new URLSearchParams(window.location.search).get('lang');
     const storedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
     const browserLanguage = navigator.language.slice(0, 2);
-    const preferred = [urlLanguage, storedLanguage, initialLanguage, browserLanguage].find(isSupportedLanguage);
+    const preferred = [pathLanguage, urlLanguage, storedLanguage, initialLanguage, browserLanguage].find(isSupportedLanguage);
     if (preferred) setLanguageState(current => current === preferred ? current : preferred);
   }, [initialLanguage]);
 
@@ -38,7 +44,9 @@ export function LanguageProvider({ initialLanguage, children }: { initialLanguag
   const setLanguage = useCallback((next: Language) => {
     setLanguageState(next);
     const url = new URL(window.location.href);
-    url.searchParams.set('lang', next);
+    const pathLanguage = languageFromPathname(url.pathname);
+    if (pathLanguage) url.pathname = `/${next}`;
+    else url.searchParams.set('lang', next);
     window.history.replaceState(window.history.state, '', url);
   }, []);
 
