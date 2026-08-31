@@ -3,7 +3,7 @@ import { MAX_FILE_BYTES } from '@/lib/analysis';
 import { normalizeExtractedProducts } from '@/lib/product-ingestion';
 import { sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { createClient } from '@/lib/supabase/server';
-import { generateText, generateVisionText } from '@/lib/ai-provider';
+import { aiCostPolicy, generateText, generateVisionText } from '@/lib/ai-provider';
 import { recordAiUsage } from '@/lib/ai-telemetry';
 
 export const dynamic = 'force-dynamic';
@@ -46,6 +46,9 @@ function decodeTextDataUrl(dataUrl: string): string {
 }
 
 async function extractDocumentWithOpenAi(filename: string, mimeType: string, dataUrl: string) {
+  if (aiCostPolicy() === 'free_only') {
+    throw new Error('Este formato aún no está disponible en modo gratuito. Usa una imagen, TXT, Markdown, JSON, CSV o Excel mientras terminamos el parser local de PDF/Word.');
+  }
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error('Este formato requiere temporalmente el proveedor documental de respaldo.');
   const model = process.env.OPENAI_PRODUCT_EXTRACT_MODEL || 'gpt-5.6-terra';
