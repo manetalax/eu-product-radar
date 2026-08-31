@@ -108,11 +108,13 @@ test('el indicador solo evalúa presencia, no cumplimiento', () => {
   const products=validateProducts([{name:'Ejemplo',manufacturer:'No comprobado',responsible:'No comprobado',warning:'No comprobado'}]);
   assert.equal(analyze(products)[0].score,8);
 });
-test('la cuota gratuita cuenta cinco productos por mes UTC y nunca queda negativa', () => {
-  const quota = productQuota(3, new Date('2026-08-29T23:30:00Z'));
-  assert.deepEqual(quota, { limit: 5, used: 3, remaining: 2, periodStart: '2026-08-01', billing: { planId: 'free', planName: 'Gratis', status: null, productLimit: 5, currentPeriodEnd: null, cancelAtPeriodEnd: false } });
+test('la prueba gratuita cuenta cinco productos totales por cuenta y nunca se reinicia por fecha', () => {
+  const august = productQuota(3, new Date('2026-08-29T23:30:00Z'));
+  const september = productQuota(3, new Date('2026-09-29T23:30:00Z'));
+  assert.deepEqual(august, { limit: 5, used: 3, remaining: 2, periodStart: 'lifetime', billing: { planId: 'free', planName: 'Gratis', status: null, productLimit: 5, currentPeriodEnd: null, cancelAtPeriodEnd: false } });
+  assert.deepEqual(september, august);
   assert.equal(productQuota(8).remaining, 0);
-  assert.match(quotaExceededMessage(4, quota), /contiene 4.*te quedan 2/);
+  assert.match(quotaExceededMessage(4, august), /5 productos en total.*contiene 4.*te quedan 2/i);
 });
 test('redirecciones de autenticación limitadas a destinos internos concretos', () => {
   for(const path of ['https://evil.example','//evil.example','/\\evil.example',null,'/dashboard?token=x']) assert.equal(safeAuthDestination(path),'/dashboard');
