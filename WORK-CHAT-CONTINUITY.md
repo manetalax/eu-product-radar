@@ -54,7 +54,7 @@ Continue autonomously through every actionable task. Never stop because one task
 - Landing conversion clearly states five lifetime free products/no card, one Unlimited plan at €9.95/month and truthful value proof without fabricated scarcity/social proof.
 
 ## DONE — canonical customer-facing identity
-- Canonical product constant is now exactly `ImportVerifier`; document title is `IMPORTVERIFIER`.
+- Canonical product constant is exactly `ImportVerifier`; document title is `IMPORTVERIFIER`.
 - Global `Brand` wordmark no longer renders the retired `Import Rules Verifier` name.
 - Dashboard signup-confirmation flash is localized in ES/EN/FR/DE/IT/PT and names ImportVerifier consistently.
 - Internal Trust Mark converts old `EPR`/`IRV` abbreviations to ImportVerifier while preserving the explicit independent/non-certification explanation supplied by the caller.
@@ -63,6 +63,12 @@ Continue autonomously through every actionable task. Never stop because one task
 - Stripe integration `appInfo.name` uses the canonical brand constant.
 - Login, privacy and terms back-navigation returns directly to the selected static `/${language}` landing instead of routing through `/?lang=...`.
 - Historical internal file names, package name and PR title may still contain `import-rules-verifier`; do not churn them merely for naming cleanliness because they are not customer-facing identity.
+
+## DONE — canonical localized SEO
+- Public localized landing routes `/es`, `/en`, `/fr`, `/de`, `/it`, `/pt` are all published in `sitemap.xml` on the canonical ImportVerifier origin.
+- Each localized landing advertises the six language alternates; canonical URLs never derive from mutable deployment-origin configuration.
+- `robots.txt` points to the canonical `https://importverifier.netlify.app/sitemap.xml`, preserves private/auth/API exclusions and keeps Deploy Previews/branch deploys non-indexable.
+- Regression coverage locks localized sitemap entries, canonical origin, private-route exclusions and preview no-index behavior.
 
 ## DONE — production fail-closed release gate
 - `next.config.ts` runs `checkReleaseConfig()` only for Netlify `CONTEXT=production`; CI and Deploy Previews remain usable without production secrets.
@@ -77,12 +83,13 @@ Continue autonomously through every actionable task. Never stop because one task
 - Localized SEO metadata lives under `app/[lang]`; language picker navigates directly among static locale paths.
 - PWA registration waits for an idle window after `load`; redundant immediate Service Worker update was removed. Online/visibility checks remain contained.
 - Service Worker public cache remains language-keyed and private/authenticated routes remain excluded.
-- Latest measured Netlify Lighthouse aggregate before the security/branding-only pass was roughly **Performance 16–17 / Accessibility 100 / Best Practices 92 / SEO 100**. The detailed audit breakdown is unavailable through current connectors. Do not continue speculative React/CSS rewrites without TTFB/LCP/TBT/CLS/resource-level evidence.
+- Latest measured Netlify Lighthouse aggregate before the security/branding/SEO-only pass was roughly **Performance 16–17 / Accessibility 100 / Best Practices 92 / SEO 100**. The detailed audit breakdown is unavailable through current connectors. Do not continue speculative React/CSS rewrites without TTFB/LCP/TBT/CLS/resource-level evidence.
 
 ## Latest exact functional verification — 2026-09-01
-- Verified functional HEAD: **`8cac37516ad41ce589cd1d30c1672b09959133d7`** (`fix: use canonical brand in Stripe integration`).
-- GitHub `ImportVerifier release check` push run **#1402 SUCCESS** on exact `8cac375...`: **317 tests passed, 0 failed**, typecheck passed and production build passed.
-- Netlify Deploy Preview is **READY** on exact `8cac375...` on the correct project **`importverifier`** at `https://deploy-preview-4--importverifier.netlify.app`.
+- Verified functional HEAD: **`9690d03a3f05abd67d812201f9dc8d168e65e319`** (`test: lock canonical localized SEO routes`).
+- GitHub `ImportVerifier release check` **#1410 SUCCESS** on exact `9690d03...`: **320 tests passed, 0 failed**, typecheck passed and production build passed.
+- Build confirms all six localized landing paths are statically generated and `robots.txt` / `sitemap.xml` are static outputs.
+- Netlify Deploy Preview is **READY** on exact `9690d03...` on the correct project **`importverifier`** at `https://deploy-preview-4--importverifier.netlify.app`.
 - PR #4 is **open, mergeable and not merged**.
 - This documentation update creates a newer docs-only HEAD. Reconfirm exact CI/preview for that docs head before treating it as final release HEAD; the functional parent above is already fully verified.
 
