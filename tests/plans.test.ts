@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { formatProductCount, landingCopy, LANGUAGES } from '../lib/landing-i18n';
-import { PLANS, UNLIMITED_FAIR_USE_CEILING } from '../lib/plans';
+import { FREE_TRIAL_PRODUCT_LIMIT, PLANS, UNLIMITED_FAIR_USE_CEILING } from '../lib/plans';
+
+test('cada cuenta conserva exactamente 5 productos de prueba gratuita', () => {
+  assert.equal(FREE_TRIAL_PRODUCT_LIMIT, 5);
+});
 
 test('la oferta comercial pública es un único plan Unlimited a 9,95 €/mes', () => {
   assert.deepEqual(PLANS.map(plan => [plan.id, plan.name, plan.monthlyPriceEur, plan.unlimited]), [
