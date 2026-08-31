@@ -257,7 +257,7 @@ export default function Dashboard({ email }: { email: string }) {
       en: 'Example product,Example Manufacturer Ltd,EU Importer Ltd,Model warning',
       fr: 'Produit exemple,Fabricant Exemple SAS,Importateur UE SAS,Avertissement du modèle',
       de: 'Beispielprodukt,Beispiel Hersteller GmbH,EU Importeur GmbH,Modellwarnung',
-      it: 'Prodotto di esempio,Produttore Esempio SRL,Importatore UE SRL,Avvertenza del modelo',
+      it: 'Prodotto di esempio,Produttore Esempio SRL,Importatore UE SRL,Avvertenza del modello',
       pt: 'Produto de exemplo,Fabricante Exemplo Lda,Importador UE Lda,Aviso do modelo',
     } as const;
     const csv = `\uFEFFname,manufacturer,eu_operator,warning\n${samples[language]}\n`;
