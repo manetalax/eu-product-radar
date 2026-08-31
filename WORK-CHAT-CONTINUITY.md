@@ -39,7 +39,7 @@
 - Production AI policy is fail-closed `free_only`; CSV/XLS/XLSX stay local, supported text/doc/image inputs use free-compatible extraction when configured, unsupported scanned/legacy formats fail honestly rather than leaking premium spend.
 - External AI calls are bounded by 30-second abort timeouts, including the direct premium document fallback path that is unreachable under production `free_only`; production release validation rejects malformed, non-HTTPS or credential-bearing `SILICONFLOW_BASE_URL` values, and runtime validates the provider base URL before use.
 - Product-extraction request-body overflow handling uses typed `RequestBodyTooLargeError`; oversized uploads deterministically map to HTTP 413 and regression tests protect declared and streamed overflow cases. The 8 MB API body ceiling safely accommodates base64 expansion of the advertised 5 MB file limit.
-- Request-size semantics are now consistent across Product Extraction, Evidence, ImportVerifier AI and internal Radar ingestion: oversized JSON bodies preserve HTTP 413 instead of collapsing into generic 400 responses. Internal Radar ingestion also rejects non-`application/json` content with HTTP 415. Regression coverage protects these boundaries.
+- Request-size semantics are consistent across Product Extraction, Evidence, ImportVerifier AI and internal Radar ingestion: oversized JSON bodies preserve HTTP 413 instead of collapsing into generic 400 responses. Internal Radar ingestion also rejects non-`application/json` content with HTTP 415. Regression coverage protects these boundaries.
 - Canonical site-origin validation is fail-closed: runtime accepts only a root HTTPS origin (or localhost HTTP for local development), rejects credentials/path/query/hash, and same-origin APIs require an exact canonical Origin header.
 - Supabase session refresh middleware covers all authenticated client APIs used by analyses, Evidence, Product Extraction, Regulatory Agent, Regulatory Changes, account and billing while intentionally excluding Stripe webhook/internal endpoints.
 - EU regulatory engine, Product Regulatory Twin, persisted evidence readiness and Regulatory Impact Radar architecture are implemented.
@@ -49,16 +49,17 @@
 - Google auth button includes a visible Google mark; production code pins Google/signup/recovery return flow to `https://importverifier.netlify.app`.
 - PWA private-cache hardening, dynamic localized manifest, real own-brand icons, safe areas, 44px touch targets, iOS form sizing and review-modal keyboard/scroll behavior are covered.
 - PWA cache boundary is restricted to static style/script/image/font requests and refuses responses marked private/no-store/no-cache; arbitrary same-origin GET/fetch responses are not opportunistically cached.
-- Mobile upload control accepts spreadsheets, documents and photo/camera input; server supports HEIC/HEIF with extension/MIME agreement. The picker includes `image/*`, so HEIF is functionally accepted even before an optional explicit `.heif` token is added.
-- PDF/XLSX/template downloads use explicit filenames, browser Blob URLs, DOM click and delayed `URL.revokeObjectURL`; regression tests protect this lifecycle for mobile/PWA static QA.
+- Mobile upload control accepts spreadsheets, documents and photo/camera input; server supports HEIC/HEIF with extension/MIME agreement and the Dashboard picker now declares `.heic`, `.heif` and `image/*` explicitly.
+- PDF/XLSX/template downloads use explicit filenames, browser Blob URLs, DOM click and a 60-second delayed `URL.revokeObjectURL`; the CSV template window is aligned with PDF/XLSX for Safari/iPadOS save-to-Files robustness. Regression coverage protects the lifecycle.
+- Dashboard API response parsing is defensive: malformed/non-object upstream JSON can no longer surface browser/parser exception details to customers and falls back to localized application errors.
 - PDF/Excel reports include premium visual hierarchy, localized regulatory narrative, evidence and source traceability. ExcelJS formulas are created only from application-owned formula objects; user strings are written as string cell values.
 - `README.md`, `SETUP.md` and `IMPORT_RULES_VERIFIER.md` no longer instruct developers to use the legacy EU Product Radar production domain, monthly free resets or obsolete Starter/Growth/Pro/Business public plans.
 - US/CN/GB/JP remain structurally isolated and `ACTIVE_MARKET_CODES` remains EU-only.
 
 ## CI / HEAD last verified 2026-08-31
-- Last fully green handoff HEAD before this execution: `ff9ec8604d85f5179fd09f76f928c3466feaafb1`; exact-head `ImportVerifier release check` **#1005 SUCCESS**.
-- Latest functional/security HEAD before this handoff commit: `c42496a26dc68ea22eccdc521c38a95c5fa30bf9`.
-- Exact-head `ImportVerifier release check` **#1015** was **IN PROGRESS** when this handoff was written; do not treat the new request-boundary changes as CI-confirmed until that run (or the later exact handoff-head run) finishes green.
+- Exact-head `ImportVerifier release check` **#1015 SUCCESS** for functional/security HEAD `c42496a26dc68ea22eccdc521c38a95c5fa30bf9`.
+- Latest functional/mobile HEAD before this handoff commit: `7ab0d489504c65a00669ec241d2c6f3580cdb478`.
+- Exact-head `ImportVerifier release check` **#1023** was **IN PROGRESS** when this handoff was written; confirm it or the later exact handoff-head run before declaring this execution fully green.
 - PR #4 remained **open** and **not merged**.
 - Netlify Deploy Preview for the new HEAD still requires recheck; do not call the exact handoff HEAD production-verified until Netlify confirms it.
 
@@ -74,8 +75,8 @@
 
 ## NEXT — execute without asking
 1. Reconfirm exact new handoff HEAD CI and Netlify Deploy Preview; repair any regression immediately.
-2. Continue security sweep for remaining customer-visible API/provider error leakage and unsafe external URL/render/fetch boundaries; specifically review defensive JSON parsing in shared client-side Dashboard API handling so malformed upstream responses cannot surface browser/parser details.
-3. Continue static mobile/iPhone/iPad/PWA QA around actual upload/export/save-to-Files flows; real-device/browser execution is BLOCKED EXTERNAL. Align the CSV template Blob URL revocation window with the 60-second PDF/XLSX window when a safe minimal Dashboard patch path is available; explicit `.heif` remains optional because `image/*` already accepts it and server support is complete.
+2. Continue security sweep for remaining customer-visible API/provider error leakage and unsafe external URL/render/fetch boundaries, prioritizing any route that still maps typed request failures to generic responses or trusts externally supplied links.
+3. Continue static mobile/iPhone/iPad/PWA QA around drag/drop, camera/photo selection, very long filenames, report downloads and save-to-Files; real-device/browser execution remains BLOCKED EXTERNAL.
 4. Recheck production auth logs after Supabase/Netlify domain wiring is corrected; canonical Google login must never return to the old domain.
 5. Use `/importverifier-sample-5-products.csv` for final new-account acceptance once canonical auth works; then prove history/PDF/XLSX end-to-end from that account.
 6. Keep EU as the only active market; US/CN/GB/JP must not activate before legally substantiated market documentation and localization are complete.
