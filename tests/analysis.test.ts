@@ -128,6 +128,6 @@ test('las mutaciones requieren el origen configurado y JSON de tamaño acotado',
     assert.equal(sameOrigin(new Request('https://importverifier.netlify.app/api/analyses',{headers:{origin:process.env.NEXT_PUBLIC_SITE_URL}})),true);
     assert.deepEqual(await readJsonBody(new Request('http://local',{method:'POST',body:'{"products":[]}'})),{products:[]});
     await assert.rejects(readJsonBody(new Request('http://local',{method:'POST',body:'x'})),/válido/);
-    await assert.rejects(readJsonBody(new Request('http://local',{method:'POST',body:'a'.repeat(MAX_BODY_BYTES+1)})),/2 MB/);
+    await assert.rejects(readJsonBody(new Request('http://local',{method:'POST',body:'a'.repeat(MAX_BODY_BYTES+1)})),/límite permitido/);
   } finally { if(old===undefined)delete process.env.NEXT_PUBLIC_SITE_URL;else process.env.NEXT_PUBLIC_SITE_URL=old; }
 });
