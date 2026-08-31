@@ -8,314 +8,331 @@ Active PR: `#4` — **Import Rules Verifier · versión paralela basada en PR #3
 
 Active branch: `feat/import-rules-verifier-branding`
 
-This is the detailed architectural handoff. Always read `WORK-CHAT-CONTINUITY.md` first: it is the short operational source of truth for exact HEAD, CI, blockers and immediate NEXT items. If this document conflicts with the short handoff, the short handoff wins. Never deploy to obsolete EU Product Radar instances, never create a replacement project, and never merge PR #4 without explicit owner instruction.
+Always read `WORK-CHAT-CONTINUITY.md` first. It is the short operational source of truth for exact HEAD, CI, Deploy Preview, blockers and immediate NEXT. This file describes durable architecture and acceptance requirements. Never create a replacement project, never deploy obsolete EU Product Radar instances, and never merge PR #4 without explicit owner instruction.
 
 ---
 
-## 1. Product direction and immutable commercial rules
+## 1. Product and immutable commercial rules
 
-ImportVerifier is an **AI-assisted Product Compliance OS** for sellers, importers and ecommerce operators. The product accepts a catalogue, document, text or image and helps identify potentially applicable EU regulatory requirements, evidence already supplied, missing evidence, supplier requests, priority actions and the changing regulatory state of each saved product.
+ImportVerifier is an **AI-assisted Product Compliance OS** for EU sellers, importers and ecommerce operators. It accepts catalogues, spreadsheets, documents, text and images; identifies candidate EU regulatory requirements; separates supplied evidence from inference; records missing evidence and supplier actions; and keeps a product-level regulatory state through the Regulatory Twin and Impact Radar architecture.
 
-Commercial rules:
+Commercial invariants:
 
 - Exactly **5 products free in total per account**.
-- No card is required for the five-product trial.
-- The allowance is lifetime/cumulative; it does not reset monthly.
+- The five-product allowance is lifetime/cumulative; it never resets monthly.
+- No card is required for the free allowance.
 - One public paid offer only: **ImportVerifier Unlimited · €9.95/month**.
-- Internal plan ID `starter` remains for Stripe/database compatibility and must not leak as the public product name.
-- Legacy plan IDs remain readable only for historical compatibility; they are not sold to new customers.
-- Commercially Unlimited usage is still protected by reasonable technical anti-abuse/rate/file-size safeguards.
+- Internal plan ID `starter` remains only for Stripe/database compatibility and must not leak as a customer-facing plan name.
+- Legacy plan IDs/schema remain readable for historical compatibility but are not sold to new customers.
+- Unlimited is commercially unlimited while still protected by reasonable technical anti-abuse, rate and file-size safeguards.
 
-AI rules:
+AI invariants:
 
-- End users see **ImportVerifier AI**, never provider/model names.
+- Customers see **ImportVerifier AI**, never provider/model names.
 - Production cost policy is fail-closed `AI_COST_POLICY=free_only`.
-- CSV/XLS/XLSX parsing stays local and AI-free.
-- Supported text/document/image extraction may use free-compatible AI when configured.
-- Unsupported scanned/legacy formats must fail honestly rather than silently spend through a premium fallback.
+- CSV/XLS/XLSX parsing remains local and AI-free.
+- Supported text/document/image extraction may use configured free-compatible AI.
+- Unsupported scanned/legacy formats fail honestly rather than silently falling back to paid AI.
 
-Legal/trust rules:
+Legal/trust invariants:
 
-- ImportVerifier remains the identifiable issuer of its reports.
-- Never claim EU/government certification, endorsement, approval or authorship unless it genuinely exists.
-- Never declare a product compliant merely because fields are present or an AI response is confident.
+- ImportVerifier is the identifiable issuer of its reports.
+- Never claim EU/government certification, endorsement, approval or authorship without genuine authority.
+- Never declare a product compliant merely from field completeness or AI confidence.
 - Keep supplied evidence, inference, uncertainty and verified official sources distinct.
 - Strong institutional visual language is acceptable; fabricated authority is not.
 
 ---
 
-## 2. Current system architecture
+## 2. Runtime, landing and performance architecture
 
-### 2.1 Web/runtime
+### Web/runtime
 
 - Next.js application deployed through Netlify.
 - Responsive desktop/mobile/iPad web UX.
 - PWA service worker and installability foundation.
-- Private/authenticated content is deliberately excluded from persistent PWA caching.
-- Public-shell cache requests omit credentials and refuse Cookie/Authorization-varying/private/no-store/no-cache responses.
-- Service-worker visibility/online update failures are contained so Safari/iPadOS/offline transitions cannot create unhandled promise rejections.
+- Private/authenticated content is excluded from persistent PWA caching.
+- Public-shell cache requests omit credentials and reject Cookie/Authorization-varying/private/no-store/no-cache responses.
+- Service-worker online/visibility update failures are contained so Safari/iPadOS/offline transitions do not create unhandled rejections.
 
-### 2.2 Authentication and account lifecycle
+### Public landing
+
+The landing is intentionally server/static-first:
+
+- `app/page.tsx` is a Server Component; no page-wide `'use client'`.
+- Native anchors replace JavaScript `scrollIntoView` navigation.
+- `/es`, `/en`, `/fr`, `/de`, `/it`, `/pt` are statically generated.
+- `app/layout.tsx` no longer reads `cookies()`, `headers()` or `serverLanguage()`. This avoids opting the public landing tree into request-time dynamic rendering.
+- Localized SEO metadata lives in `app/[lang]/layout.tsx` and uses absolute localized titles to avoid duplicating the root title template.
+- `components/LandingLanguagePicker.tsx` is the small landing language client island. It persists `iv_lang`/localStorage and navigates directly between static locale paths.
+- `LanguageProvider` resolves a locale pathname before query/storage/browser fallbacks, keeping direct `/es`/`/de` etc. navigation aligned after hydration without reintroducing request-time APIs in the root layout.
+- The large `landing-i18n` copy module is not imported into the root language client runtime.
+
+PWA startup is also kept outside the critical rendering window:
+
+- Registration is scheduled after `load` into `requestIdleCallback` where available, with a fallback timeout.
+- Registration cleanup cancels idle/timer work when unmounted.
+- `navigator.serviceWorker.register()` is not immediately followed by a redundant `registration.update()`; later online/visibility update checks remain contained.
+- Public offline landing cache remains language-keyed; private/auth/API/reset routes remain excluded.
+
+Performance evidence:
+
+- Netlify Lighthouse on exact landing-architecture head `25a2e62d...` measured **Performance 16 / Accessibility 100 / Best Practices 92 / SEO 100**.
+- The prior measured performance was 17. Removing request-time root language APIs and deferring PWA registration therefore did **not** materially change the aggregate score.
+- The available connectors expose the aggregate but not the audit-level Lighthouse breakdown. Do not keep rewriting React/layout/CSS speculatively; obtain metric/audit evidence (TTFB/LCP/TBT/CLS/resource waterfall) before selecting the next performance change.
+
+---
+
+## 3. Authentication and account lifecycle
 
 - Supabase Auth.
-- Email signup/login/reset/logout.
-- Google OAuth UI/flow.
-- Auth callback/confirmation origin handling is pinned to the canonical ImportVerifier origin in code.
-- SDK-returned OAuth navigation is validated before browser navigation: exact configured Supabase origin and `/auth/v1/authorize` only; lookalikes, credentials, unsafe schemes, unexpected paths and nonstandard ports fail closed.
-- Histories/data are account-isolated using RLS and authenticated ownership checks.
-- Self-service account deletion revokes session/data and is billing-aware.
+- Email signup/login/reset/logout flows exist.
+- Google OAuth UI includes visible Google identity.
+- Auth callback/confirmation return handling is pinned in code to canonical ImportVerifier surfaces.
+- SDK-returned OAuth browser navigation is validated: exact configured Supabase origin and `/auth/v1/authorize`; lookalikes, credentials, unsafe schemes, unexpected paths and nonstandard ports fail closed.
+- Histories/data are account-isolated through RLS and authenticated ownership checks.
+- Self-service account deletion revokes expected session/data and is billing-aware.
+- Latest observed Supabase Auth logs include successful Google OAuth/token/user activity from `https://importverifier.netlify.app` and canonical callback. Earlier `euproductradar` traffic remains historical.
 
-Remaining production console work for Auth is BLOCKED EXTERNAL and listed in the short handoff.
+Remaining Auth console/security acceptance is BLOCKED EXTERNAL and listed below.
 
-### 2.3 Product ingestion
+---
+
+## 4. Product ingestion and mobile input
 
 Normalization boundary: `lib/product-ingestion.ts`.
 
-Current input paths include:
+Supported input paths include:
 
 - CSV/XLS/XLSX;
-- text/JSON/RTF/MD;
-- PDF/DOCX/ODT where local text extraction is supported;
+- TXT/MD/JSON/RTF;
+- PDF/DOCX/ODT where a local text layer can be extracted;
 - images/photos including PNG/JPEG/WebP/HEIC/HEIF;
-- legacy `.doc` and scanned PDF without text fail honestly when no free-compatible path is available.
+- legacy `.doc` and scanned PDF without text fail honestly when no free-compatible route exists.
 
-Mobile/camera behavior:
+Mobile/camera safeguards:
 
-- Universal file picker remains broad and does **not** force camera capture.
-- Separate image-only `capture="environment"` input exists for direct mobile/iPhone/iPad camera use.
-- Both paths reuse the same `load()` pipeline, quota enforcement, idempotency and server-side binary validation.
-- Blank or `application/octet-stream` iOS image MIME is accepted only when magic bytes and extension are consistent.
-- Spoofed/disagreeing image type data fails closed.
+- Universal file picker stays broad and does not force camera capture.
+- A separate image-only `capture="environment"` input supports direct mobile/iPhone/iPad camera capture.
+- Both paths reuse the same secure load/quota/idempotency pipeline.
+- Blank or `application/octet-stream` iOS image MIME is accepted only when magic bytes and extension agree.
+- Spoofed/disagreeing image types fail closed.
 - Camera/file-picker cancellation does not enter the import pipeline or consume quota.
-- Multi-file drag/drop is rejected as a whole rather than silently processing only the first file.
+- Multi-file drag/drop is rejected as a whole instead of silently processing one file.
+- Long filenames wrap safely in mobile cards.
 
-### 2.4 Analysis and free allowance
+---
 
-- Product analysis is versioned and persisted privately.
-- Creation has request idempotency for mobile/network retries.
-- Lifetime free usage is enforced server/database-side, not just by UI.
-- Production probe previously accepted products 1–5, rejected product 6 and rolled the probe back cleanly.
-- Runtime client parsers validate quota, history, analysis detail/create and extracted-product payloads before React state updates.
-- The free quota parser preserves `limit=5`, lifetime period and internally consistent used/remaining counts.
+## 5. Analysis and lifetime free allowance
 
-### 2.5 Billing
+- Product analyses are versioned and persisted privately.
+- Creation has request idempotency for mobile/network retries and duplicate races.
+- Lifetime free usage is enforced server/database-side, not only by UI.
+- Production aggregate currently shows zero accounts above five and maximum observed lifetime usage exactly five.
+- A transactional production probe previously accepted products 1–5, rejected product 6 and rolled back cleanly.
+- Runtime parsers validate quota, history, analysis detail/create and extracted-product payloads before state mutation.
+- Free quota semantics remain `limit=5`, lifetime period and internally consistent used/remaining counts.
+
+---
+
+## 6. Billing
 
 - Stripe Checkout + Customer Portal + signed webhook code exists.
-- Canonical live public offer is Unlimited at EUR 9.95/month; live price recorded in short handoff.
-- Checkout revalidates amount/currency/recurrence and only accepts internal `starter` for new purchases.
-- Checkout and portal destination URLs are validated at the final browser navigation boundary against exact Stripe HTTPS hosts.
-- Checkout return requires a structurally valid confirmation and does not expose raw parser/provider errors.
+- Canonical live public offer is ImportVerifier Unlimited at EUR 9.95/month; exact live price is recorded in the short handoff.
+- Checkout revalidates amount, currency and monthly recurrence and only accepts internal `starter` for new purchases.
+- Checkout/Portal destination URLs are validated at the final browser navigation boundary against exact Stripe HTTPS hosts.
+- Checkout return requires structurally valid confirmation and never surfaces raw provider/parser failures.
 - Webhook ordering/idempotency and subscription synchronization are defended in code.
 - Paid entitlement uses Unlimited semantics rather than historical public product caps.
-- Trial exhaustion now presents a localized, high-intent but truthful continuation surface with concrete benefits, exact price/cadence and secure Stripe wording.
+- Trial exhaustion presents a localized truthful upgrade surface with exact price/cadence and retained product value.
+- Live Stripe webhook is enabled on the canonical production endpoint. Stripe and the application DB currently contain zero subscriptions, so no pre-launch entitlement drift is observed.
 
-### 2.6 Regulatory engine
+Paid production acceptance remains fail-closed until truthful legal-provider variables and Netlify live secret wiring are confirmed.
 
-- EU is the only active market.
-- US/CN/GB/JP architecture remains structurally present but inactive; do not imply live coverage.
-- Deterministic/versioned EU regulatory engine produces:
-  - candidate category;
-  - confidence/uncertainty;
-  - potentially applicable acts;
-  - obligations;
-  - evidence requests;
-  - official-source references/URLs;
-  - human-confirmation flags.
-- Official/source URLs use explicit HTTPS host allowlists and reject credentials, lookalikes and non-default ports.
-- Final React render and export boundaries revalidate source URLs.
+---
 
-### 2.7 Evidence Intelligence / Product Regulatory Twin
+## 7. EU regulatory engine, Evidence and Regulatory Twin
+
+EU is the only active market. US/CN/GB/JP architecture may remain structurally present but must not be marketed as active coverage.
+
+The deterministic/versioned EU engine produces candidate category, confidence/uncertainty, potentially applicable acts, obligations, evidence requests, official-source references and human-confirmation flags.
+
+Official-source URLs use explicit HTTPS host allowlists and reject credentials, lookalikes and non-default ports. Final render/export/AI-context boundaries revalidate them.
+
+Evidence Intelligence:
 
 - Persisted evidence store is account-owned and RLS-protected.
 - Evidence records support requirement key/status plus document/page/URL/note traceability.
 - URLs are sanitized at persistence/API/render/export/AI-context boundaries.
-- Client runtime validates evidence row IDs, product index, requirement key, status, bounded text fields and safe URL before state mutation.
+- Client runtime validates evidence IDs, product index, requirement key, status, bounded text fields and safe URLs before state mutation.
 - Malformed success responses cannot silently become trusted Evidence state.
-- Regulatory Twin connects product, market/category/confidence, applicable rules, evidence, uncertainty, actions and regulatory impacts.
-- Reports export the same traceability rather than creating a disconnected narrative.
 
-### 2.8 ImportVerifier AI
+The Product Regulatory Twin connects product identity, market/category/confidence, applicable rules, supplied/missing evidence, uncertainty, actions and regulatory impacts. Reports export the same traceability rather than producing a disconnected narrative.
+
+---
+
+## 8. ImportVerifier AI
 
 - Authenticated `/api/regulatory-agent` is context-limited and source/evidence aware.
-- The agent is instructed not to invent rules, certificates or lab results and not to declare certification/compliance.
-- External AI calls have abort timeouts and safe configured-base-URL checks.
-- Server-only AI telemetry avoids content/PII.
-- User-facing client response handling requires safe object/string shapes and never renders raw provider error text.
+- Agent policy forbids invented rules, certificates or lab results and forbids declaring certification/compliance merely from model confidence.
+- External AI calls have abort timeouts and safe configured-base-URL validation.
+- Server-only AI telemetry stores no prompt/document/product content or customer PII.
+- User-facing responses require safe object/string shapes and never render raw provider errors.
+- Provider/model identity is hidden from end users.
 
-### 2.9 Regulatory Impact Radar
+Production free-only AI still needs real service configuration/acceptance externally.
+
+---
+
+## 9. Regulatory Impact Radar
 
 - Persistent regulatory-change architecture, authenticated retrieval and product matching exist.
-- Official ingestion normalizes/allowlists/deduplicates events and is protected by an internal secret.
-- First real adapter consumes official EUR-Lex RSS feeds for Parliament/Council legislation, Commission proposals and OJ L acts.
-- Keep `REGULATORY_RADAR_LIVE=false` until production has genuinely ingested official events. Last known persisted event count is 0.
-- Do not claim live monitoring until the production secret/scheduler/ingestion has run successfully.
+- Official EUR-Lex RSS adapter handles Parliament/Council legislation, Commission proposals and OJ L acts.
+- Events are normalized, official-host allowlisted, deduplicated and persisted idempotently.
+- Production persisted event count remains **0**; keep `REGULATORY_RADAR_LIVE=false` until real official ingestion succeeds.
 
-### 2.10 Marketplace connectors
+Current runtime hardening:
 
-Architecture exists for Shopify, Amazon and Etsy:
+- Netlify scheduled function targets the canonical `https://importverifier.netlify.app/api/internal/regulatory-refresh` endpoint instead of trusting a mutable site-origin variable.
+- Scheduler requires `REGULATORY_INGEST_SECRET` with at least 32 trimmed characters and sends it as Bearer auth.
+- Internal refresh route requires the same minimum-strength secret and uses `timingSafeEqual` after equal-length validation.
+- Route accepts only JSON, enforces a 1 KiB body ceiling and requires an empty JSON object.
+- Oversize/invalid/content-type/auth/config failures return bounded sanitized errors; internal exceptions are logged server-side but not reflected raw to customers.
+- Scheduler/route behavior has regression coverage.
 
-- common connector capability model;
-- platform URL detection;
-- catalogue/listing import/refresh/status-sync concepts.
-
-OAuth/API implementations remain unavailable until legitimate official apps, credentials and scopes exist. Buttons must stay clearly inactive. Never scrape around official authentication.
-
----
-
-## 3. Security/trust-boundary work completed
-
-Do not repeat these sweeps unless a new code path is introduced:
-
-- Site-origin/canonical-origin fail-closed validation.
-- Stripe Checkout/Portal server and client navigation allowlists.
-- Supabase OAuth browser-navigation allowlist.
-- Dashboard 2xx runtime validation.
-- Latest Regulatory Assessment 2xx runtime validation.
-- Analysis Review Gate request-body runtime validation.
-- Evidence GET/PUT runtime validation and optimistic rollback.
-- Intelligence Suite history/detail/Evidence/Radar/AI response validation.
-- Trial/Unlimited quota response validation.
-- Raw API/provider error redaction on customer-facing surfaces.
-- Oversized request 413 preservation on Analysis/Evidence/Product Extraction/AI/Radar surfaces where implemented.
-- Internal Radar JSON content-type and body-size enforcement.
-- Official regulatory/guidance URL allowlists and final render/export/AI-context sanitization.
-- Account/RLS/privileged-table ownership hardening.
-- PWA private-cache and cache-poisoning defenses.
-
-When continuing the security sweep, only fix an actually discovered unvalidated surface; do not churn already-protected components.
+Do not claim live monitoring until the production secret is configured and real official events are persisted.
 
 ---
 
-## 4. Premium report system
+## 10. Marketplace connectors
 
-`lib/export-pdf.ts` now implements the premium report direction rather than a raw export.
+Architecture exists for Shopify, Amazon and Etsy: common capability model, platform URL detection, catalogue/listing import concepts, refresh and status-sync concepts.
 
-Completed:
-
-- PDF-native geometric ImportVerifier brand mark; provisional `IV` monogram removed.
-- Dark institutional cover with restrained purple/gold identity.
-- Localized regulatory report classification.
-- Executive metrics and clear section hierarchy.
-- Red `VERIFIED` seal explicitly qualified as an **ImportVerifier review** in ES/EN/FR/DE/IT/PT.
-- Branded page chrome on interior pages.
-- Repeated footer with ImportVerifier issuer, EU regulatory context, traceability framing and pagination.
-- Evidence/document/page/URL traceability preserved.
-- Official-source references preserved.
-- Independence notice and regulatory disclaimers preserved.
-- Regression tests protect identity, footer, localization and traceability.
-
-Country/ministry context rule:
-
-- Do not infer a ministry/commerce authority from UI language alone.
-- Add country-specific authority context only when country is reliably known and applicable logo/asset usage is permitted.
-- If logo permission is uncertain, use the verified authority name and official source rather than copying a protected mark.
-
-Excel remains the full data-oriented companion export, including evidence traceability.
+Direct OAuth/API implementations stay inactive until legitimate official applications, credentials and scopes exist. Do not scrape around platform authentication and do not imply active partnerships.
 
 ---
 
-## 5. Conversion/landing architecture
+## 11. Security/trust boundaries already completed
 
-The public landing has completed a substantial truthful conversion pass:
+Do not redo these sweeps unless a genuinely new path appears:
 
-- Five-product lifetime free entry is visible, with no card required.
-- Exact Unlimited continuation price/cadence is visible.
-- One paid plan only; no fake tier grid.
-- Hero includes benefit/value proof and a large red `VERIFIED · ImportVerifier review` decorative mark.
-- Commerce/payment/institutional visual marks are larger and responsive; explanatory compatibility/payment copy remains responsible for preventing implied partnerships or unsupported payment methods.
-- Pricing emphasizes one plan/everything included.
-- Trial-exhaustion upgrade surface explains retained value already experienced by the user.
-- No fabricated scarcity, fake countdown, fake review/customer count, invented saving or false compliance claim is allowed.
+- canonical site-origin validation;
+- Stripe Checkout/Portal server and client navigation allowlists;
+- Supabase OAuth navigation allowlist;
+- Dashboard success payload validation;
+- Latest Regulatory Assessment validation;
+- Analysis Review Gate body validation;
+- Evidence GET/PUT validation and optimistic rollback;
+- Intelligence Suite history/detail/Evidence/Radar/AI validation;
+- Trial/Unlimited quota validation;
+- raw customer-facing API/provider error redaction;
+- oversized request 413 preservation where implemented;
+- internal Radar auth/content-type/body-size validation;
+- official regulatory/guidance URL allowlists and final render/export/AI-context sanitization;
+- account/RLS/privileged-table hardening;
+- PWA private-cache/cache-poisoning defenses.
 
-### 5.1 Landing performance architecture — important
-
-The landing page was converted from a page-wide client component to a **server-rendered page**:
-
-- `app/page.tsx` is no longer `'use client'`.
-- Native anchor links replace JavaScript `scrollIntoView` handlers.
-- `components/LandingLanguagePicker.tsx` is the small dedicated client island for language changes.
-- It writes the `iv_lang` cookie + existing localStorage preference before navigation so subsequent server HTML/metadata can follow the selected language.
-- `lib/use-language.ts` no longer imports the large `landing-i18n` copy module into the root client provider.
-- Server-rendering/performance regressions are covered by tests.
-
-Reason: an older Netlify Lighthouse preview showed very poor performance despite strong accessibility. Do not optimize against that stale score; measure the current preview after this architecture change and target the actual remaining bottleneck.
+Only fix newly discovered gaps; avoid security churn in already hardened surfaces.
 
 ---
 
-## 6. Internationalization
+## 12. Premium reports and exports
 
-Active customer language set:
+`lib/export-pdf.ts` implements the premium report direction:
 
-- ES
-- EN
-- FR
-- DE
-- IT
-- PT
+- PDF-native geometric ImportVerifier brand mark;
+- dark institutional cover and restrained purple/gold identity;
+- localized regulatory report classification;
+- executive metrics and clear hierarchy;
+- localized red `VERIFIED` seal explicitly qualified as an **ImportVerifier review**, not authority certification;
+- branded interior page chrome;
+- repeated footer with ImportVerifier issuer, EU context, traceability framing and pagination;
+- document/page/URL evidence traceability and official-source references;
+- independence notice and regulatory disclaimers;
+- regression tests for identity, localization and traceability.
 
-Covered/actively maintained surfaces include landing, auth, dashboard, upload/extraction, billing, Evidence, Intelligence Suite, regulatory assessment, reports and account lifecycle.
+Excel remains the full data-oriented companion export with evidence traceability.
 
-Rules:
+Country/ministry context must never be inferred from UI language. Add authority context only when country is independently reliable and trademark/logo use is permitted; otherwise use authority name plus verified official source.
 
-- Report language follows requested/current supported language.
-- Language selection persists through `iv_lang` + localStorage.
-- Do not infer geographic country/legal authority solely from language.
-- Any new active customer-facing copy must ship in all six languages or have an explicit safe fallback.
+Further typography/overflow changes should come from real multi-product acceptance output, not speculative coordinate changes.
 
 ---
 
-## 7. Mobile/iPad/PWA acceptance standard
+## 13. Internationalization
+
+Active customer languages: ES, EN, FR, DE, IT, PT.
+
+Covered/maintained surfaces include landing, auth, dashboard, upload/extraction, billing, Evidence, Intelligence Suite, regulatory assessment, reports and account lifecycle.
+
+Language rules:
+
+- language selection persists through `iv_lang` + localStorage;
+- static landing routes own locale-specific metadata/content;
+- report language follows requested/current supported language;
+- do not infer geographic country/legal authority solely from language;
+- new active customer-facing copy ships in all six languages or has an explicit safe fallback.
+
+---
+
+## 14. Mobile/iPad/PWA acceptance standard
 
 Already covered statically:
 
-- safe-area handling;
-- 44px/48px touch targets in key flows;
+- safe areas and key touch targets;
 - iOS form sizing;
-- review modal keyboard/scroll behavior;
+- modal keyboard/scroll behavior;
 - long filename wrapping;
-- separate camera capture path;
-- camera/picker cancel guard;
+- separate camera capture path and cancellation guard;
 - HEIC/HEIF handling;
-- multi-file drag/drop rejection;
-- PDF/XLSX/template Blob URLs retained long enough for Safari/iPadOS save-to-Files behavior;
-- PWA private-cache boundary;
-- PWA update-failure containment.
+- multi-file rejection;
+- delayed Blob URL revocation for PDF/XLSX/template save-to-Files robustness;
+- PWA private-cache boundary and update-failure containment;
+- language-keyed offline landing cache.
 
-Still required externally:
+Still external:
 
-- real iPhone/iPad Safari camera return/cancel test;
-- PWA install/update test;
-- PDF/Excel save-to-Files/share test;
+- real iPhone/iPad Safari camera return/cancel;
+- PWA install/update;
+- PDF/Excel save-to-Files/share;
 - rotation/safe-area visual check on physical devices.
 
-Future native packaging direction remains Capacitor (iOS/iPadOS/Android) and Tauri (desktop), with backend business logic shared rather than forked.
+Future packaging direction remains Capacitor for iOS/iPadOS/Android and Tauri for desktop, sharing backend business logic rather than forking it.
 
 ---
 
-## 8. Production services last known
+## 15. Production service facts and BLOCKED EXTERNAL
 
 Supabase project: `hfuwwjdcyudflamwwnon`.
 
-Stripe:
+Known production facts:
 
-- public product: ImportVerifier Unlimited;
-- EUR 9.95/month;
-- internal compatibility plan: `starter`;
-- exact live price ID is recorded in `WORK-CHAT-CONTINUITY.md`.
+- free accounts above limit: 0;
+- maximum observed lifetime free usage: 5;
+- app subscription rows: 0;
+- Stripe subscriptions: 0;
+- persisted Radar events: 0;
+- AI telemetry events observed at last check: 0;
+- lifetime quota function/trigger names are canonical;
+- Stripe has one active canonical Unlimited EUR 9.95 monthly price and one enabled canonical webhook;
+- Supabase advisor still reports leaked-password protection disabled.
 
-Production caveats:
+BLOCKED EXTERNAL when console/browser/secret access is unavailable:
 
-- Recent historical Auth logs still showed the obsolete euproductradar origin, so Supabase Site URL/redirect allowlist and/or Netlify higher-precedence env must be corrected and retested externally.
-- Supabase leaked-password protection and desired CAPTCHA/signup-abuse controls require dashboard configuration.
-- SMTP requires real production verification.
-- SiliconFlow/free-only AI production variables require service configuration.
-- Radar requires a strong shared ingestion secret and a successful real official-source ingestion before live claims.
+- confirm Netlify production branch/env precedence and promote intended exact release;
+- verify live `STRIPE_WEBHOOK_SECRET`, canonical Stripe vars, truthful legal-provider vars and SiliconFlow/free-only AI vars in Netlify;
+- configure the same strong `REGULATORY_INGEST_SECRET` wherever production scheduler/runtime requires it and run first real EUR-Lex ingestion;
+- enable Supabase leaked-password protection plus suitable CAPTCHA/signup-abuse controls;
+- production SMTP signup/reset acceptance with a genuinely new non-owner mailbox;
+- official Shopify/Amazon/Etsy apps/credentials/scopes;
+- physical iPhone/iPad/Safari/PWA validation;
+- truthful legal-provider identity/address/tax/jurisdiction/refund values before paid checkout intentionally passes the legal guard.
 
-These are BLOCKED EXTERNAL when console/browser credentials are unavailable. Skip them and continue code work rather than stopping.
+Skip blocked items and continue autonomous code work elsewhere.
 
 ---
 
-## 9. Current release-quality verification model
+## 16. Release verification and final acceptance
 
 Every functional head must pass:
 
@@ -325,64 +342,40 @@ Every functional head must pass:
 4. `npm run build`
 5. correct Netlify Deploy Preview on project **importverifier** at the exact head
 
-Historical Netlify comments for project `euproductradar` are irrelevant to this product.
+Historical `euproductradar`/`importrulesverifier` preview comments are irrelevant to release decisions.
 
-The short handoff records the exact latest verified CI/run/head and preview status. Do not copy an old successful run onto a newer head.
+Before calling ImportVerifier finished, a genuinely fresh account on production must prove:
 
----
-
-## 10. Final production acceptance journey
-
-Do not call the product finished until a genuine fresh account completes this on `https://importverifier.netlify.app/`:
-
-1. Localized landing renders current five-free + Unlimited offer.
-2. Email registration/confirmation and Google login remain on canonical ImportVerifier domain.
-3. Password reset works through production email.
-4. Upload paths work for spreadsheet plus representative text/document/image input.
-5. Extracted products can be reviewed before final analysis where applicable.
-6. Exactly five free products are accepted lifetime.
-7. Sixth free product is rejected without corrupting history/quota.
-8. History is isolated to the account and persists across a new session.
-9. ImportVerifier AI answers against the correct product/context without provider leakage.
-10. Regulatory Twin/Evidence show saved traceability correctly.
-11. Radar wording matches actual production ingestion state.
-12. Premium localized PDF and Excel download successfully.
-13. Upgrade uses exact Unlimited €9.95 monthly Stripe checkout.
-14. Verified webhook activates entitlement.
-15. Portal opens; cancellation retains access through paid period and expires correctly.
-16. Second account cannot read first account analyses/evidence.
-17. Account deletion removes/revokes expected data/session safely.
-18. Desktop, iPhone, iPad and PWA flows pass.
-19. Exact release head has green tests/typecheck/build and correct production deployment.
+1. localized landing and correct five-free/Unlimited offer;
+2. canonical email registration/confirmation and Google login;
+3. password reset through production email;
+4. representative spreadsheet/text/document/image ingestion;
+5. extracted-product review where applicable;
+6. exactly five free products accepted lifetime;
+7. sixth free product rejected without corrupting quota/history;
+8. isolated persistent history across sessions/accounts;
+9. ImportVerifier AI works without provider leakage or premium-cost leakage;
+10. Regulatory Twin/Evidence traceability persists correctly;
+11. Radar claims match real production ingestion state;
+12. localized premium PDF and Excel download correctly;
+13. exact Unlimited €9.95 monthly Stripe Checkout;
+14. webhook activates entitlement;
+15. Portal/cancel lifecycle retains access through paid period then expires correctly;
+16. second account cannot read first account data;
+17. account deletion safely removes/revokes expected data/session;
+18. desktop/iPhone/iPad/PWA flows pass;
+19. exact release head has green CI and correct production deployment.
 
 ---
 
-## 11. BLOCKED EXTERNAL bucket
+## 17. Remaining autonomous NEXT priorities
 
-Batch these for the owner/browser-enabled Work pass instead of interrupting code work:
+1. Reconfirm exact CI and `importverifier` Deploy Preview after each functional/docs batch; repair regressions immediately.
+2. Do not make another landing performance rewrite until audit-level Lighthouse/Web Vitals evidence identifies the actual remaining bottleneck; current aggregate performance is 16.
+3. Continue static mobile/iPad/PWA QA only for newly discovered edge states.
+4. Continue customer-facing API/link security work only where an actually unvalidated path is found.
+5. Review PDF overflow/typography against real acceptance output and fix observed defects.
+6. Keep Radar/AI/Evidence failure modes honest and fail-closed while production secrets are absent.
+7. Once external Auth/Netlify/service wiring is corrected, run the complete fresh-account five-product + billing + reports acceptance journey.
 
-- Supabase Auth Site URL + canonical redirect allowlist.
-- Supabase leaked-password protection and CAPTCHA/signup abuse settings.
-- Netlify production branch/env and production promotion.
-- Netlify live Stripe webhook secret and other production secrets.
-- Production SMTP sender/setup and non-owner email test.
-- SiliconFlow/free-only AI credentials.
-- Strong `REGULATORY_INGEST_SECRET` in GitHub/Netlify plus first real ingestion.
-- Shopify/Amazon/Etsy official app/API credentials.
-- Physical iPhone/iPad/Safari validation.
-
----
-
-## 12. Remaining autonomous NEXT priorities
-
-Do these without asking, while skipping BLOCKED EXTERNAL items:
-
-1. Recheck exact current HEAD CI and correct importverifier Deploy Preview after every functional/docs batch; repair regressions immediately.
-2. Measure current post-server-render landing performance/Web Vitals and optimize only verified bottlenecks.
-3. Continue static mobile/iPad/PWA QA for export/share/camera edge states without duplicating completed tests.
-4. Continue customer-facing API/link security sweep only where a genuinely unvalidated path is found.
-5. Review report overflow/typography against real multi-product acceptance output and fix observed issues.
-6. Keep Radar/AI/evidence failure modes fail-closed while production secrets are absent.
-7. Once external canonical Auth wiring is corrected, run the full fresh-account five-product acceptance journey and prove history/PDF/XLSX/sixth-rejection end to end.
-
-Keep this handoff architectural rather than chronological; keep exact operational state in `WORK-CHAT-CONTINUITY.md`.
+Keep this file architectural rather than chronological; keep exact current HEAD/run/preview state in `WORK-CHAT-CONTINUITY.md`.
