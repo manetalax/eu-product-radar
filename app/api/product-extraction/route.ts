@@ -3,10 +3,14 @@ import { MAX_FILE_BYTES } from '@/lib/analysis';
 import { normalizeExtractedProducts } from '@/lib/product-ingestion';
 import { sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { createClient } from '@/lib/supabase/server';
+import { generateText, generateVisionText } from '@/lib/ai-provider';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
 const ALLOWED_EXTENSIONS = /\.(pdf|doc|docx|rtf|odt|txt|md|json|csv|xls|xlsx|png|jpe?g|webp|heic)$/i;
+const LOCAL_TEXT_EXTENSIONS = /\.(txt|md|json)$/i;
+const PRODUCT_PROMPT = `Identifica todos los productos reales presentes en el material. No inventes. Devuelve exclusivamente JSON válido con esta forma: {"products":[{"name":"","manufacturer":"","responsible":"","warning":"","description":"","materials":"","intendedUse":"","audience":"","power":"","connectivity":"","composition":""}]}. Usa cadena vacía cuando un dato no esté explícito o claramente sustentado. Conserva el idioma original. Los campos responsible/importador UE, advertencias, materiales, alimentación, conectividad y composición se usarán para clasificar normativa: no los completes por suposición.`;
 
 function outputText(response: Record<string, unknown>) {
   const output = Array.isArray(response.output) ? response.output : [];
@@ -20,6 +24,57 @@ function outputText(response: Record<string, unknown>) {
     }
   }
   return '';
+}
+
+function parseProductsJson(text: string): unknown[] {
+  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+  const candidate = start >= 0 && end > start ? cleaned.slice(start, end + 1) : cleaned;
+  const parsed = JSON.parse(candidate) as { products?: unknown };
+  return Array.isArray(parsed.products) ? parsed.products : [];
+}
+
+function decodeTextDataUrl(dataUrl: string): string {
+  const marker = ';base64,';
+  const index = dataUrl.indexOf(marker);
+  if (index < 0) throw new Error('Archivo de texto no válido.');
+  const text = Buffer.from(dataUrl.slice(index + marker.length), 'base64').toString('utf8');
+  if (!text.trim()) throw new Error('El archivo no contiene texto utilizable.');
+  return text.slice(0, 500_000);
+}
+
+async function extractDocumentWithOpenAi(filename: string, mimeType: string, dataUrl: string) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('Este formato requiere temporalmente el proveedor documental de respaldo.');
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: process.env.OPENAI_PRODUCT_EXTRACT_MODEL || 'gpt-5.6-terra',
+      store: false,
+      instructions: PRODUCT_PROMPT,
+      input: [{ role: 'user', content: [
+        { type: 'input_file', filename, file_data: dataUrl, ...(mimeType === 'application/pdf' ? { detail: 'high' } : {}) },
+        { type: 'input_text', text: PRODUCT_PROMPT },
+      ]}],
+      text: { format: { type: 'json_schema', name: 'product_extraction', strict: true, schema: {
+        type: 'object', properties: { products: { type: 'array', maxItems: 1000, items: {
+          type: 'object', properties: {
+            name: { type: 'string' }, manufacturer: { type: 'string' }, responsible: { type: 'string' }, warning: { type: 'string' },
+            description: { type: 'string' }, materials: { type: 'string' }, intendedUse: { type: 'string' }, audience: { type: 'string' },
+            power: { type: 'string' }, connectivity: { type: 'string' }, composition: { type: 'string' },
+          },
+          required: ['name','manufacturer','responsible','warning','description','materials','intendedUse','audience','power','connectivity','composition'], additionalProperties: false,
+        }}}, required: ['products'], additionalProperties: false,
+      }}}
+    }),
+  });
+  const body = await response.json() as Record<string, unknown>;
+  if (!response.ok) throw new Error('No se ha podido interpretar el documento.');
+  const text = outputText(body);
+  if (!text) throw new Error('No se han encontrado productos identificables.');
+  return parseProductsJson(text);
 }
 
 export async function POST(request: Request) {
@@ -41,46 +96,25 @@ export async function POST(request: Request) {
   if (!filename || filename.length > 120 || !ALLOWED_EXTENSIONS.test(filename)) return json({ error: 'Formato no compatible. Usa foto, PDF, Word, texto, CSV o Excel.' }, 400);
   if (!dataUrl.startsWith('data:') || !dataUrl.includes(';base64,') || dataUrl.length > Math.ceil(MAX_FILE_BYTES * 4 / 3) + 500) return json({ error: 'El archivo está vacío o supera el límite de 5 MB.' }, 400);
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return json({ error: 'La lectura inteligente todavía no está configurada.' }, 503);
-
-  const fileInput = mimeType.startsWith('image/')
-    ? { type: 'input_image', image_url: dataUrl, detail: 'high' }
-    : { type: 'input_file', filename, file_data: dataUrl, ...(mimeType === 'application/pdf' ? { detail: 'high' } : {}) };
-
   try {
-    const openai = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: process.env.OPENAI_PRODUCT_EXTRACT_MODEL || 'gpt-5.6-terra',
-        store: false,
-        instructions: 'Extrae únicamente productos reales visibles o mencionados. No inventes. Para cada campo, usa solo información explícita o claramente inferible del propio material. Si no hay evidencia suficiente, devuelve cadena vacía. Conserva el idioma original.',
-        input: [{ role: 'user', content: [
-          fileInput,
-          { type: 'input_text', text: 'Identifica todos los productos y devuelve: nombre; fabricante/marca; operador responsable/importador UE; advertencias; descripción; materiales; uso previsto; público o edad; alimentación/voltaje/batería; conectividad (Wi‑Fi/Bluetooth/radio); composición o ingredientes. Estos campos se usarán para clasificar normativa, por lo que no debes rellenarlos por suposición.' },
-        ]}],
-        text: { format: { type: 'json_schema', name: 'product_extraction', strict: true, schema: {
-          type: 'object', properties: { products: { type: 'array', maxItems: 1000, items: {
-            type: 'object', properties: {
-              name: { type: 'string' }, manufacturer: { type: 'string' }, responsible: { type: 'string' }, warning: { type: 'string' },
-              description: { type: 'string' }, materials: { type: 'string' }, intendedUse: { type: 'string' }, audience: { type: 'string' },
-              power: { type: 'string' }, connectivity: { type: 'string' }, composition: { type: 'string' },
-            },
-            required: ['name','manufacturer','responsible','warning','description','materials','intendedUse','audience','power','connectivity','composition'], additionalProperties: false,
-          }}}, required: ['products'], additionalProperties: false,
-        }}}
-      }),
-    });
-    const response = await openai.json() as Record<string, unknown>;
-    if (!openai.ok) {
-      const message = typeof (response.error as { message?: unknown } | undefined)?.message === 'string' ? (response.error as { message: string }).message : 'No se ha podido interpretar el archivo.';
-      throw new Error(message);
+    let products: unknown[];
+    let kind: 'image' | 'document' = 'document';
+
+    if (mimeType.startsWith('image/')) {
+      kind = 'image';
+      products = parseProductsJson((await generateVisionText(dataUrl, PRODUCT_PROMPT, { maxTokens: 3500 })).text);
+    } else if (LOCAL_TEXT_EXTENSIONS.test(filename)) {
+      const sourceText = decodeTextDataUrl(dataUrl);
+      products = parseProductsJson((await generateText([
+        { role: 'system', content: PRODUCT_PROMPT },
+        { role: 'user', content: sourceText },
+      ], { maxTokens: 3500, temperature: 0 })).text);
+    } else {
+      products = await extractDocumentWithOpenAi(filename, mimeType, dataUrl);
     }
-    const text = outputText(response);
-    if (!text) throw new Error('No se han encontrado productos identificables.');
-    const parsed = JSON.parse(text) as { products?: unknown };
-    return json({ products: normalizeExtractedProducts({ kind: mimeType.startsWith('image/') ? 'image' : 'document', sourceName: filename, products: Array.isArray(parsed.products) ? parsed.products : [] }) });
+
+    if (!products.length) throw new Error('No se han encontrado productos identificables.');
+    return json({ products: normalizeExtractedProducts({ kind, sourceName: filename, products }) });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : 'No se ha podido interpretar el archivo.' }, 502);
   }
