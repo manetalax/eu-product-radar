@@ -2,14 +2,18 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { PRIVATE_HEADERS } from '@/lib/http';
+import { regulatoryChangesText } from '@/lib/regulatory-changes-i18n';
+import { requestLanguage } from '@/lib/request-language';
 
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
 
 export async function GET(request: Request) {
+  const language = requestLanguage(request);
+  const t = (key: Parameters<typeof regulatoryChangesText>[1]) => regulatoryChangesText(language, key);
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return json({ error: 'Inicia sesión.' }, 401);
+  if (authError || !user) return json({ error: t('signIn') }, 401);
 
   const url = new URL(request.url);
   const limitParam = Number(url.searchParams.get('limit') ?? '20');
@@ -24,7 +28,7 @@ export async function GET(request: Request) {
     .order('last_seen_at', { ascending: false })
     .limit(limit);
 
-  if (error) return json({ error: 'No se puede cargar el Radar regulatorio.' }, 503);
+  if (error) return json({ error: t('loadError') }, 503);
   const events = data ?? [];
   const ingestSecretReady = (process.env.REGULATORY_INGEST_SECRET?.trim().length ?? 0) >= 32;
   const live = process.env.REGULATORY_RADAR_LIVE === 'true' && ingestSecretReady && events.length > 0;
