@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
+import { analyze } from '@/lib/analysis';
 import { generateText } from '@/lib/ai-provider';
 import { recordAiUsage } from '@/lib/ai-telemetry';
 import { consumeApiRateLimit } from '@/lib/api-rate-limit';
 import { sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
+import { relevantRadarChanges } from '@/lib/radar-match';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
+const uuid = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
 export async function POST(request: Request) {
   if (!sameOrigin(request)) return json({ error: 'Origen de solicitud no permitido.' }, 403);
@@ -14,26 +18,77 @@ export async function POST(request: Request) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return json({ error: 'Inicia sesión para usar el asistente regulatorio.' }, 401);
 
-  let body: { question?: unknown; context?: unknown; language?: unknown };
+  let body: { question?: unknown; analysisId?: unknown; productIndex?: unknown; language?: unknown };
   try { body = await request.json(); }
   catch { return json({ error: 'Solicitud no válida.' }, 400); }
 
   const question = typeof body.question === 'string' ? body.question.trim() : '';
-  const context = typeof body.context === 'string' ? body.context.trim() : '';
+  const analysisId = typeof body.analysisId === 'string' ? body.analysisId : '';
+  const productIndex = Number(body.productIndex);
   const language = typeof body.language === 'string' ? body.language.slice(0, 12) : 'es';
   if (!question || question.length > 2000) return json({ error: 'Escribe una pregunta de hasta 2.000 caracteres.' }, 400);
-  if (!context || context.length > 40_000) return json({ error: 'El contexto del análisis no es válido.' }, 400);
+  if (!uuid.test(analysisId) || !Number.isInteger(productIndex) || productIndex < 0 || productIndex >= 1000) return json({ error: 'El producto seleccionado no es válido.' }, 400);
 
   const allowed = await consumeApiRateLimit({ userId: user.id, route: 'regulatory_agent', limit: 60, windowSeconds: 3600 });
   if (!allowed) return json({ error: 'Hay demasiadas consultas seguidas. Vuelve a intentarlo más tarde.' }, 429);
 
+  const { data: analysis, error: analysisError } = await supabase
+    .from('analyses')
+    .select('id,filename,rule_version,market_code,products')
+    .eq('id', analysisId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (analysisError) return json({ error: 'No se ha podido cargar el análisis.' }, 503);
+  if (!analysis) return json({ error: 'Análisis no encontrado.' }, 404);
+
+  const products = Array.isArray(analysis.products) ? analysis.products : [];
+  if (productIndex >= products.length) return json({ error: 'El producto seleccionado no existe en este análisis.' }, 400);
+  const typedProducts = products as Parameters<typeof analyze>[0];
+  const results = analyze(typedProducts, analysis.market_code ?? 'EU');
+  const product = typedProducts[productIndex];
+  const result = results[productIndex];
+
+  const [evidenceResult, radarResult] = await Promise.all([
+    supabase.from('analysis_evidence')
+      .select('product_index,evidence_key,status,note,source_document,source_page,source_url')
+      .eq('analysis_id', analysisId)
+      .eq('user_id', user.id)
+      .eq('product_index', productIndex),
+    createAdminClient().from('regulatory_change_events')
+      .select('id,source_name,source_url,title,summary,published_at,effective_at,severity,affected_keywords,official_reference,last_seen_at')
+      .eq('active', true)
+      .order('published_at', { ascending: false, nullsFirst: false })
+      .limit(30),
+  ]);
+  if (evidenceResult.error) return json({ error: 'No se ha podido cargar la evidencia del producto.' }, 503);
+  if (radarResult.error) return json({ error: 'No se ha podido cargar el contexto regulatorio oficial.' }, 503);
+
+  const radar = relevantRadarChanges(
+    (radarResult.data ?? []).map(event => ({
+      ...event,
+      affected_keywords: Array.isArray(event.affected_keywords) ? event.affected_keywords : [],
+      official_reference: event.official_reference ?? '',
+    })),
+    product,
+    result?.regulatory?.category ?? '',
+  ).slice(0, 5);
+
+  const context = JSON.stringify({
+    product,
+    result,
+    evidence: evidenceResult.data ?? [],
+    radar,
+    analysis: { filename: analysis.filename, ruleVersion: analysis.rule_version, marketCode: analysis.market_code ?? 'EU' },
+  }).slice(0, 40_000);
+
   const started = Date.now();
   try {
-    const result = await generateText([
+    const resultAi = await generateText([
       {
         role: 'system',
         content: [
-          'Eres el Regulatory AI Agent de Import Rules Verifier.',
+          'Eres ImportVerifier AI, asistente regulatorio del producto ImportVerifier.',
+          'El contexto ha sido reconstruido por el servidor desde el análisis y las evidencias pertenecientes a la cuenta autenticada.',
           'Responde únicamente a partir del contexto regulatorio y evidencias proporcionadas por la aplicación.',
           'No inventes normas, certificados, resultados de laboratorio, autoridades, fechas ni hechos ausentes.',
           'Distingue siempre entre información aportada, inferencia, incertidumbre y evidencia confirmada.',
@@ -47,14 +102,14 @@ export async function POST(request: Request) {
 
     void recordAiUsage({
       task: 'regulatory_agent',
-      provider: result.provider,
-      model: result.model,
-      fallback: result.provider === 'openai' && Boolean(process.env.SILICONFLOW_API_KEY),
+      provider: resultAi.provider,
+      model: resultAi.model,
+      fallback: resultAi.provider === 'openai' && Boolean(process.env.SILICONFLOW_API_KEY),
       latencyMs: Date.now() - started,
     });
 
     return json({
-      answer: result.text,
+      answer: resultAi.text,
       disclaimer: 'Asistencia regulatoria orientativa. No constituye certificación, dictamen jurídico ni aprobación de una autoridad.',
     });
   } catch (error) {
