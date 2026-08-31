@@ -15,3 +15,10 @@ test('visible wordmark no longer renders the retired Import Rules Verifier name'
   assert.doesNotMatch(brand, />Rules</);
   assert.doesNotMatch(brand, /Import Rules Verifier/);
 });
+
+test('brand link can preserve the caller locale and uses a language-neutral accessible name', () => {
+  assert.match(brand, /href = '\/'/);
+  assert.match(brand, /href=\{href\}/);
+  assert.match(brand, /aria-label=\{BRAND_NAME\}/);
+  assert.doesNotMatch(brand, /aria-label=\{`\$\{BRAND_NAME\}, inicio`\}/);
+});
