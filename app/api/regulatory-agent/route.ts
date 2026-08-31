@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { generateText } from '@/lib/ai-provider';
 import { recordAiUsage } from '@/lib/ai-telemetry';
+import { consumeApiRateLimit } from '@/lib/api-rate-limit';
 import { sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { createClient } from '@/lib/supabase/server';
 
@@ -22,6 +23,9 @@ export async function POST(request: Request) {
   const language = typeof body.language === 'string' ? body.language.slice(0, 12) : 'es';
   if (!question || question.length > 2000) return json({ error: 'Escribe una pregunta de hasta 2.000 caracteres.' }, 400);
   if (!context || context.length > 40_000) return json({ error: 'El contexto del análisis no es válido.' }, 400);
+
+  const allowed = await consumeApiRateLimit({ userId: user.id, route: 'regulatory_agent', limit: 60, windowSeconds: 3600 });
+  if (!allowed) return json({ error: 'Hay demasiadas consultas seguidas. Vuelve a intentarlo más tarde.' }, 429);
 
   const started = Date.now();
   try {
