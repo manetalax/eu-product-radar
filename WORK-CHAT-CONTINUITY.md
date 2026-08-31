@@ -57,9 +57,9 @@
 - US/CN/GB/JP remain structurally isolated and `ACTIVE_MARKET_CODES` remains EU-only.
 
 ## CI / HEAD last verified 2026-08-31
-- Exact-head `ImportVerifier release check` **#1015 SUCCESS** for functional/security HEAD `c42496a26dc68ea22eccdc521c38a95c5fa30bf9`.
-- Latest functional/mobile HEAD before this handoff commit: `7ab0d489504c65a00669ec241d2c6f3580cdb478`.
-- Exact-head `ImportVerifier release check` **#1023** was **IN PROGRESS** when this handoff was written; confirm it or the later exact handoff-head run before declaring this execution fully green.
+- Functional/mobile head `7ab0d489504c65a00669ec241d2c6f3580cdb478` initially produced release check **#1023 FAILURE** because one pre-existing CSV download regression test still asserted the obsolete 1-second Blob URL cleanup. The application behavior itself was intentional at 60 seconds.
+- Regression test repaired at `d56a4891317479527547710c133bae10f05892a5` to assert the same 60-second cleanup used by CSV/PDF/XLSX.
+- Exact-head `ImportVerifier release check` **#1027 SUCCESS** for `d56a4891317479527547710c133bae10f05892a5`: install, all tests, typecheck and build passed.
 - PR #4 remained **open** and **not merged**.
 - Netlify Deploy Preview for the new HEAD still requires recheck; do not call the exact handoff HEAD production-verified until Netlify confirms it.
 
@@ -75,7 +75,7 @@
 
 ## NEXT — execute without asking
 1. Reconfirm exact new handoff HEAD CI and Netlify Deploy Preview; repair any regression immediately.
-2. Continue security sweep for remaining customer-visible API/provider error leakage and unsafe external URL/render/fetch boundaries, prioritizing any route that still maps typed request failures to generic responses or trusts externally supplied links.
+2. Continue security sweep for unsafe external URL/render/fetch boundaries and customer-facing non-structured API responses; direct `error.message` → `NextResponse.json` leakage was re-searched after #1027 and no new match was found.
 3. Continue static mobile/iPhone/iPad/PWA QA around drag/drop, camera/photo selection, very long filenames, report downloads and save-to-Files; real-device/browser execution remains BLOCKED EXTERNAL.
 4. Recheck production auth logs after Supabase/Netlify domain wiring is corrected; canonical Google login must never return to the old domain.
 5. Use `/importverifier-sample-5-products.csv` for final new-account acceptance once canonical auth works; then prove history/PDF/XLSX end-to-end from that account.
