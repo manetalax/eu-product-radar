@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { analyze, type Product } from '@/lib/analysis';
+import { isValidEvidenceUrl } from '@/lib/evidence';
 import { marketCodeOrEu, type MarketCode } from '@/lib/markets';
 import { createClient } from '@/lib/supabase/server';
 import { PRIVATE_HEADERS, readJsonBody, sameOrigin } from '@/lib/http';
@@ -8,7 +9,6 @@ export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
 const uuid = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const allowed = new Set(['available', 'pending', 'not_applicable']);
-const httpsUrl = /^https:\/\//i;
 
 function regulatoryEvidenceKeys(product: Product, marketCode: MarketCode): Set<string> {
   const result = analyze([product], marketCode)[0];
@@ -52,7 +52,7 @@ export async function PUT(request: Request) {
       || sourceDocument.length > 240
       || sourcePage.length > 80
       || sourceUrl.length > 1000
-      || (sourceUrl && !httpsUrl.test(sourceUrl))) throw new Error('Datos de evidencia no válidos.');
+      || (sourceUrl && !isValidEvidenceUrl(sourceUrl))) throw new Error('Datos de evidencia no válidos.');
 
     const { data: analysis, error: analysisError } = await supabase
       .from('analyses')
