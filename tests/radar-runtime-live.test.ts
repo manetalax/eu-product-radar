@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { radarRuntimeEnabled } from '../lib/radar-runtime';
+import { radarRuntimeConfigured, radarRuntimeEnabled } from '../lib/radar-runtime';
 
 const route = readFileSync(new URL('../app/api/regulatory-changes/route.ts', import.meta.url), 'utf8');
 const agentRoute = readFileSync(new URL('../app/api/regulatory-agent/route.ts', import.meta.url), 'utf8');
@@ -11,15 +11,20 @@ const githubScheduler = readFileSync(new URL('../.github/workflows/regulatory-ra
 
 test('Radar live requires the flag, a strong ingest secret and persisted events', () => {
   const strongSecret = 'x'.repeat(32);
+  assert.equal(radarRuntimeConfigured('true', strongSecret), true);
+  assert.equal(radarRuntimeConfigured('false', strongSecret), false);
+  assert.equal(radarRuntimeConfigured('true', 'short'), false);
   assert.equal(radarRuntimeEnabled('true', strongSecret, 1), true);
-  assert.equal(radarRuntimeEnabled('false', strongSecret, 1), false);
-  assert.equal(radarRuntimeEnabled('true', 'short', 1), false);
   assert.equal(radarRuntimeEnabled('true', strongSecret, 0), false);
 });
 
 test('pre-live Radar events are not exposed to clients or ImportVerifier AI', () => {
+  assert.match(route, /radarRuntimeConfigured\(process\.env\.REGULATORY_RADAR_LIVE, process\.env\.REGULATORY_INGEST_SECRET\)/);
+  assert.match(route, /if \(!radarConfigured\) return json\(\{ events: \[\], live: false, sourcePolicy: 'official-only' \}\)/);
   assert.match(route, /radarRuntimeEnabled\(process\.env\.REGULATORY_RADAR_LIVE, process\.env\.REGULATORY_INGEST_SECRET, events\.length\)/);
   assert.match(route, /events: live \? events : \[\]/);
+  assert.match(agentRoute, /const radarPromise = radarConfigured/);
+  assert.match(agentRoute, /: Promise\.resolve\(null\)/);
   assert.match(agentRoute, /radarRuntimeEnabled\(process\.env\.REGULATORY_RADAR_LIVE, process\.env\.REGULATORY_INGEST_SECRET, radarRows\.length\)/);
   assert.match(agentRoute, /: \[\];/);
 });
