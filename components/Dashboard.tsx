@@ -84,12 +84,26 @@ export default function Dashboard({ email }: { email: string }) {
 
   async function api(url: string, options?: RequestInit) {
     const response = await fetch(url, { ...options, cache: 'no-store' });
-    const body = await response.json();
+    let body: Record<string, unknown> = {};
+    let validJson = false;
+    try {
+      const parsed = await response.json();
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        body = parsed as Record<string, unknown>;
+        validJson = true;
+      }
+    } catch {
+      // Provider/proxy parser details must never leak into customer-facing UI.
+    }
     if (response.status === 401) window.location.replace(`/login?lang=${language}`);
-    if (body.quota) setQuota(body.quota);
-    if (!response.ok) {
-      const apiError = new Error(body.error || body.errorCode || d('importError')) as Error & { code?: AccountDeletionErrorCode };
-      if (body.errorCode) apiError.code = body.errorCode as AccountDeletionErrorCode;
+    if (body.quota) setQuota(body.quota as ProductQuota);
+    if (!response.ok || !validJson) {
+      const apiError = new Error(
+        typeof body.error === 'string' ? body.error
+          : typeof body.errorCode === 'string' ? body.errorCode
+            : d('importError'),
+      ) as Error & { code?: AccountDeletionErrorCode };
+      if (typeof body.errorCode === 'string') apiError.code = body.errorCode as AccountDeletionErrorCode;
       throw apiError;
     }
     return body;
@@ -100,9 +114,9 @@ export default function Dashboard({ email }: { email: string }) {
     setLoading(true);
     api(`/api/analyses?page=${page}`, { signal: controller.signal }).then(body => {
       if (!controller.signal.aborted) {
-        setHistory(body.analyses);
-        setHasMore(body.hasMore);
-        setQuota(body.quota);
+        setHistory(body.analyses as AnalysisSummary[]);
+        setHasMore(Boolean(body.hasMore));
+        setQuota(body.quota as ProductQuota);
       }
     }).catch(e => {
       if (!controller.signal.aborted) setError(e instanceof Error ? e.message : d('historyError'));
@@ -169,19 +183,20 @@ export default function Dashboard({ email }: { email: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename: file.name, products, requestId, marketCode: selectedMarket }),
       });
-      setQuota(updatedQuota);
-      setCurrent(analysis);
+      const typedAnalysis = analysis as Analysis;
+      setQuota(updatedQuota as ProductQuota);
+      setCurrent(typedAnalysis);
       setTab('products');
       setNotice(d('analysisSaved', { market: marketName(selectedMarket) }));
       pendingImport.current = null;
       setHistory(items => [{
-        id: analysis.id,
-        filename: analysis.filename,
-        created_at: analysis.created_at,
-        rule_version: analysis.rule_version,
-        market_code: analysis.market_code,
-        product_count: analysis.products.length,
-      }, ...items.filter(item => item.id !== analysis.id)].slice(0, 20));
+        id: typedAnalysis.id,
+        filename: typedAnalysis.filename,
+        created_at: typedAnalysis.created_at,
+        rule_version: typedAnalysis.rule_version,
+        market_code: typedAnalysis.market_code,
+        product_count: typedAnalysis.products.length,
+      }, ...items.filter(item => item.id !== typedAnalysis.id)].slice(0, 20));
       if (page !== 0) setPage(0);
     } catch (e) {
       setError(e instanceof Error ? e.message : d('importError'));
@@ -198,9 +213,10 @@ export default function Dashboard({ email }: { email: string }) {
     setBusy(true);
     try {
       const { analysis } = await api(`/api/analyses?id=${encodeURIComponent(id)}`);
-      if (!supportsRuleVersion(analysis.rule_version)) throw new Error(d('unsupportedVersion'));
-      setCurrent(analysis);
-      setSelectedMarket(analysisMarket(analysis));
+      const typedAnalysis = analysis as Analysis;
+      if (!supportsRuleVersion(typedAnalysis.rule_version)) throw new Error(d('unsupportedVersion'));
+      setCurrent(typedAnalysis);
+      setSelectedMarket(analysisMarket(typedAnalysis));
       setTab('products');
     } catch (e) {
       setError(e instanceof Error ? e.message : d('openError'));
@@ -241,7 +257,7 @@ export default function Dashboard({ email }: { email: string }) {
       en: 'Example product,Example Manufacturer Ltd,EU Importer Ltd,Model warning',
       fr: 'Produit exemple,Fabricant Exemple SAS,Importateur UE SAS,Avertissement du modèle',
       de: 'Beispielprodukt,Beispiel Hersteller GmbH,EU Importeur GmbH,Modellwarnung',
-      it: 'Prodotto di esempio,Produttore Esempio SRL,Importatore UE SRL,Avvertenza del modello',
+      it: 'Prodotto di esempio,Produttore Esempio SRL,Importatore UE SRL,Avvertenza del modelo',
       pt: 'Produto de exemplo,Fabricante Exemplo Lda,Importador UE Lda,Aviso do modelo',
     } as const;
     const csv = `\uFEFFname,manufacturer,eu_operator,warning\n${samples[language]}\n`;
@@ -252,7 +268,7 @@ export default function Dashboard({ email }: { email: string }) {
     document.body.appendChild(link);
     link.click();
     link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
     setTemplateReady(true);
     setNotice(d('templateDownloaded'));
   }
@@ -265,7 +281,7 @@ export default function Dashboard({ email }: { email: string }) {
     try {
       const { url } = await api('/api/billing/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ purchaseId: 'starter' }) });
       clearPlanIntent();
-      window.location.assign(url);
+      window.location.assign(url as string);
     } catch (checkoutError) {
       setError(checkoutError instanceof Error ? checkoutError.message : d('paymentError'));
       setBusy(false);
@@ -277,7 +293,7 @@ export default function Dashboard({ email }: { email: string }) {
     setError('');
     try {
       const { url } = await api('/api/billing/portal', { method: 'POST' });
-      window.location.assign(url);
+      window.location.assign(url as string);
     } catch (portalError) {
       setError(portalError instanceof Error ? portalError.message : d('portalError'));
       setBusy(false);
@@ -365,7 +381,7 @@ export default function Dashboard({ email }: { email: string }) {
         <div className="notice trust-notice"><strong>{d('euActiveTitle')}</strong> {d('euActiveBody')} <span>{d('euDisclaimer')}</span></div>
         {error && <p role="alert" className="message error">{error}</p>}
         {notice && <p role="status" className="message success">{notice}</p>}
-        <input ref={input} className="file-input" aria-label={d('importAria')} type="file" accept=".csv,.xls,.xlsx,.pdf,.doc,.docx,.rtf,.odt,.txt,.md,.json,.png,.jpg,.jpeg,.webp,.heic,image/*" disabled={busy || loading || quotaBlocked} onChange={event => { const file = event.target.files?.[0]; if (file) void load(file); }} />
+        <input ref={input} className="file-input" aria-label={d('importAria')} type="file" accept=".csv,.xls,.xlsx,.pdf,.doc,.docx,.rtf,.odt,.txt,.md,.json,.png,.jpg,.jpeg,.webp,.heic,.heif,image/*" disabled={busy || loading || quotaBlocked} onChange={event => { const file = event.target.files?.[0]; if (file) void load(file); }} />
 
         {(tab === 'dashboard' || tab === 'products') && <div className="card import-card premium-import" onDragEnter={event => { event.preventDefault(); setDragging(true); }} onDragOver={event => event.preventDefault()} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false); }} onDrop={event => { event.preventDefault(); setDragging(false); const file = event.dataTransfer.files?.[0]; if (file) void load(file); }} data-dragging={dragging}>
           <div className="import-icon" aria-hidden="true">↑</div>
