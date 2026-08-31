@@ -8,7 +8,7 @@ import { localizeEuRegulatoryAssessment } from '@/lib/eu-regulatory-i18n';
 import { readJsonBody, RequestBodyTooLargeError, sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { isLanguage } from '@/lib/landing-i18n';
 import { relevantRadarChanges } from '@/lib/radar-match';
-import { radarRuntimeEnabled } from '@/lib/radar-runtime';
+import { radarRuntimeConfigured, radarRuntimeEnabled } from '@/lib/radar-runtime';
 import { regulatoryAgentText } from '@/lib/regulatory-agent-i18n';
 import { safeOfficialRegulatoryUrl } from '@/lib/regulatory-source-url';
 import { requestLanguage } from '@/lib/request-language';
@@ -18,6 +18,20 @@ import { createClient } from '@/lib/supabase/server';
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
 const uuid = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+
+type RadarRow = {
+  id: string;
+  source_name: string;
+  source_url: string | null;
+  title: string;
+  summary: string | null;
+  published_at: string | null;
+  effective_at: string | null;
+  severity: string | null;
+  affected_keywords: unknown;
+  official_reference: string | null;
+  last_seen_at: string | null;
+};
 
 export async function POST(request: Request) {
   const initialLanguage = requestLanguage(request);
@@ -66,18 +80,21 @@ export async function POST(request: Request) {
     ? { ...result, regulatory: localizeEuRegulatoryAssessment(rawRegulatory, language) }
     : result;
 
-  const [evidenceResult, radarResult] = await Promise.all([
-    supabase.from('analysis_evidence')
-      .select('product_index,evidence_key,status,note,source_document,source_page,source_url')
-      .eq('analysis_id', analysisId)
-      .eq('user_id', user.id)
-      .eq('product_index', productIndex),
-    createAdminClient().from('regulatory_change_events')
-      .select('id,source_name,source_url,title,summary,published_at,effective_at,severity,affected_keywords,official_reference,last_seen_at')
-      .eq('active', true)
-      .order('published_at', { ascending: false, nullsFirst: false })
-      .limit(30),
-  ]);
+  const radarConfigured = radarRuntimeConfigured(process.env.REGULATORY_RADAR_LIVE, process.env.REGULATORY_INGEST_SECRET);
+  const evidencePromise = supabase.from('analysis_evidence')
+    .select('product_index,evidence_key,status,note,source_document,source_page,source_url')
+    .eq('analysis_id', analysisId)
+    .eq('user_id', user.id)
+    .eq('product_index', productIndex);
+  const radarPromise = radarConfigured
+    ? createAdminClient().from('regulatory_change_events')
+        .select('id,source_name,source_url,title,summary,published_at,effective_at,severity,affected_keywords,official_reference,last_seen_at')
+        .eq('active', true)
+        .order('published_at', { ascending: false, nullsFirst: false })
+        .limit(30)
+    : Promise.resolve({ data: [] as RadarRow[], error: null });
+
+  const [evidenceResult, radarResult] = await Promise.all([evidencePromise, radarPromise]);
   if (evidenceResult.error) return json({ error: a('evidenceLoad') }, 503);
   if (radarResult.error) return json({ error: a('radarLoad') }, 503);
 
@@ -85,7 +102,7 @@ export async function POST(request: Request) {
     ...item,
     source_url: safeEvidenceUrl(item.source_url),
   }));
-  const radarRows = radarResult.data ?? [];
+  const radarRows = (radarResult.data ?? []) as RadarRow[];
   const radar = radarRuntimeEnabled(process.env.REGULATORY_RADAR_LIVE, process.env.REGULATORY_INGEST_SECRET, radarRows.length)
     ? relevantRadarChanges(
         radarRows.map(event => ({
