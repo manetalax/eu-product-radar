@@ -3,6 +3,7 @@ import { analyze } from '@/lib/analysis';
 import { generateText } from '@/lib/ai-provider';
 import { recordAiUsage } from '@/lib/ai-telemetry';
 import { consumeApiRateLimit } from '@/lib/api-rate-limit';
+import { safeEvidenceUrl } from '@/lib/evidence';
 import { localizeEuRegulatoryAssessment } from '@/lib/eu-regulatory-i18n';
 import { readJsonBody, sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { isLanguage } from '@/lib/landing-i18n';
@@ -75,6 +76,10 @@ export async function POST(request: Request) {
   if (evidenceResult.error) return json({ error: a('evidenceLoad') }, 503);
   if (radarResult.error) return json({ error: a('radarLoad') }, 503);
 
+  const evidence = (evidenceResult.data ?? []).map(item => ({
+    ...item,
+    source_url: safeEvidenceUrl(item.source_url),
+  }));
   const radar = relevantRadarChanges(
     (radarResult.data ?? []).map(event => ({
       ...event,
@@ -88,7 +93,7 @@ export async function POST(request: Request) {
   const context = JSON.stringify({
     product,
     result: localizedResult,
-    evidence: evidenceResult.data ?? [],
+    evidence,
     radar,
     analysis: { filename: analysis.filename, ruleVersion: analysis.rule_version, marketCode: analysis.market_code ?? 'EU' },
   }).slice(0, 40_000);
