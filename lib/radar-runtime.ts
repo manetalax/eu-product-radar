@@ -1,9 +1,4 @@
-type RadarRuntimeEnv = {
-  REGULATORY_RADAR_LIVE?: string;
-  REGULATORY_INGEST_SECRET?: string;
-};
-
-export function radarRuntimeEnabled(env: RadarRuntimeEnv, eventCount: number) {
-  const ingestSecretReady = (env.REGULATORY_INGEST_SECRET?.trim().length ?? 0) >= 32;
-  return env.REGULATORY_RADAR_LIVE === 'true' && ingestSecretReady && eventCount > 0;
+export function radarRuntimeEnabled(liveFlag: string | undefined, ingestSecret: string | undefined, eventCount: number) {
+  const ingestSecretReady = (ingestSecret?.trim().length ?? 0) >= 32;
+  return liveFlag === 'true' && ingestSecretReady && eventCount > 0;
 }
