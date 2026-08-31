@@ -2,6 +2,7 @@ import { inflateRawSync, inflateSync } from 'node:zlib';
 
 const MAX_EXTRACTED_TEXT = 500_000;
 const MAX_ZIP_ENTRY_BYTES = 8 * 1024 * 1024;
+const MAX_ZIP_ENTRIES = 4096;
 const MAX_PDF_STREAMS = 256;
 const MAX_PDF_DECODED_BYTES = 16 * 1024 * 1024;
 const MAX_PDF_PIECES = 20_000;
@@ -67,6 +68,7 @@ function readZipEntry(buffer: Buffer, wantedName: string): Buffer | null {
   const eocd = findEocd(buffer);
   if (eocd < 0) return null;
   const totalEntries = buffer.readUInt16LE(eocd + 10);
+  if (totalEntries > MAX_ZIP_ENTRIES) throw new Error('El documento contiene demasiadas entradas internas.');
   let offset = buffer.readUInt32LE(eocd + 16);
 
   for (let entry = 0; entry < totalEntries && offset + 46 <= buffer.length; entry++) {
