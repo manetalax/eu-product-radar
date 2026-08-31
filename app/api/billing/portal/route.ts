@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { billingText } from '@/lib/billing-i18n';
 import { configuredSiteOrigin, sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { requestLanguage } from '@/lib/request-language';
+import { trustedStripeNavigationUrl } from '@/lib/stripe/navigation';
 import { stripeClient } from '@/lib/stripe/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
@@ -26,7 +27,9 @@ export async function POST(request: Request) {
     if (!data?.stripe_customer_id) return json({ error: b('noSubscription') }, 404);
 
     const session = await stripeClient().billingPortal.sessions.create({ customer: data.stripe_customer_id, return_url: `${siteOrigin}/dashboard` });
-    return json({ url: session.url });
+    const portalUrl = trustedStripeNavigationUrl(session.url, 'portal');
+    if (!portalUrl) throw new Error(b('portalOpen'));
+    return json({ url: portalUrl });
   } catch {
     return json({ error: b('portalOpen') }, 503);
   }
