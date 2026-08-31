@@ -54,7 +54,7 @@ export default function ReadinessEvidencePanel({ analysis }: { analysis: Analysi
     };
   }
 
-  async function saveEvidence(productIndex: number, evidenceKey: string, patch: Partial<EvidenceRow>) {
+  async function saveEvidence(productIndex: number, evidenceKey: string, patch: Partial<EvidenceRow>): Promise<boolean> {
     const existing = rowFor(productIndex, evidenceKey);
     const next: EvidenceRow = { ...existing, ...patch, product_index: productIndex, evidence_key: evidenceKey };
     const token = `${productIndex}:${evidenceKey}`;
@@ -69,12 +69,20 @@ export default function ReadinessEvidencePanel({ analysis }: { analysis: Analysi
       if (!response.ok) throw new Error('evidence_save_failed');
       const body = await response.json();
       setRows(current => [...current.filter(row => !(row.product_index === productIndex && row.evidence_key === evidenceKey)), body.evidence]);
+      return true;
     } catch {
       setRows(current => [...current.filter(row => !(row.product_index === productIndex && row.evidence_key === evidenceKey)), existing]);
       setSaveError(t.saveError);
+      return false;
     } finally {
       setSavingKey(current => current === token ? '' : current);
     }
+  }
+
+  async function saveTextField(input: HTMLInputElement, productIndex: number, evidenceKey: string, field: 'source_document' | 'source_page' | 'source_url' | 'note', previous: string) {
+    const value = input.value.trim();
+    const saved = await saveEvidence(productIndex, evidenceKey, { [field]: value });
+    if (!saved) input.value = previous;
   }
 
   const items = analysis.products.map((product, index) => {
@@ -112,11 +120,11 @@ export default function ReadinessEvidencePanel({ analysis }: { analysis: Analysi
             return <div key={key} className="card" style={{ padding: 16, marginTop: 12 }}>
               <div className="toprow"><strong>{evidence}</strong><select aria-label={`${evidence}: status`} value={current.status} onChange={event => void saveEvidence(index, key, { status: event.target.value as EvidenceStatus })}><option value="pending">{t.pending}</option><option value="available">{t.available}</option><option value="not_applicable">{t.na}</option></select></div>
               <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10, marginTop: 12 }}>
-                <label><span className="muted">{t.document}</span><input defaultValue={current.source_document} maxLength={240} placeholder={t.documentPlaceholder} onBlur={event => void saveEvidence(index, key, { source_document: event.currentTarget.value.trim() })} /></label>
-                <label><span className="muted">{t.page}</span><input defaultValue={current.source_page} maxLength={80} placeholder={t.pagePlaceholder} onBlur={event => void saveEvidence(index, key, { source_page: event.currentTarget.value.trim() })} /></label>
-                <label><span className="muted">{t.url}</span><input type="url" defaultValue={current.source_url} maxLength={1000} placeholder="https://…" onBlur={event => void saveEvidence(index, key, { source_url: event.currentTarget.value.trim() })} /></label>
+                <label><span className="muted">{t.document}</span><input defaultValue={current.source_document} maxLength={240} placeholder={t.documentPlaceholder} onBlur={event => void saveTextField(event.currentTarget, index, key, 'source_document', current.source_document)} /></label>
+                <label><span className="muted">{t.page}</span><input defaultValue={current.source_page} maxLength={80} placeholder={t.pagePlaceholder} onBlur={event => void saveTextField(event.currentTarget, index, key, 'source_page', current.source_page)} /></label>
+                <label><span className="muted">{t.url}</span><input type="url" defaultValue={current.source_url} maxLength={1000} placeholder="https://…" onBlur={event => void saveTextField(event.currentTarget, index, key, 'source_url', current.source_url)} /></label>
               </div>
-              <label style={{ display: 'block', marginTop: 10 }}><span className="muted">{t.note}</span><input defaultValue={current.note} maxLength={2000} placeholder={t.notePlaceholder} onBlur={event => void saveEvidence(index, key, { note: event.currentTarget.value.trim() })} /></label>
+              <label style={{ display: 'block', marginTop: 10 }}><span className="muted">{t.note}</span><input defaultValue={current.note} maxLength={2000} placeholder={t.notePlaceholder} onBlur={event => void saveTextField(event.currentTarget, index, key, 'note', current.note)} /></label>
               {savingKey === token && <small className="muted">{t.saving}</small>}
             </div>;
           })}
