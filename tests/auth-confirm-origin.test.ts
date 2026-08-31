@@ -14,6 +14,12 @@ test('auth confirm fija producción al dominio canónico', () => {
 
 test('auth confirm mantiene destinos internos fijos para signup y recovery', () => {
   assert.match(confirm, /type === 'recovery' \? '\/reset-password' : '\/dashboard\?welcome=registered'/);
-  assert.match(confirm, /new URL\(destination, origin\)/);
-  assert.match(confirm, /new URL\('\/login\?message=link_error', origin\)/);
+  assert.match(confirm, /localizedDestination\(destination, origin, language\)/);
+  assert.match(confirm, /localizedDestination\('\/login\?message=link_error', origin, language\)/);
+});
+
+test('auth confirm solo propaga un idioma validado', () => {
+  assert.match(confirm, /const requestedLanguage = request\.nextUrl\.searchParams\.get\('lang'\)/);
+  assert.match(confirm, /const language = isLanguage\(requestedLanguage\) \? requestedLanguage : null/);
+  assert.match(confirm, /if \(language\) target\.searchParams\.set\('lang', language\)/);
 });
