@@ -18,6 +18,7 @@ const copy = {
   it: 'Conferma dell’abbonamento Unlimited…',
   pt: 'A confirmar a sua subscrição Unlimited…',
 } as const;
+const CONFIRM_TIMEOUT_MS = 20_000;
 
 export default function CheckoutReturnSync({ checkout, sessionId, synced = false }: Props) {
   const { language } = useLanguage();
@@ -27,24 +28,37 @@ export default function CheckoutReturnSync({ checkout, sessionId, synced = false
   useEffect(() => {
     if (checkout !== 'success' || !sessionId || synced) return;
     let cancelled = false;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), CONFIRM_TIMEOUT_MS);
     void (async () => {
       try {
         const response = await fetch('/api/billing/confirm', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sessionId }),
+          signal: controller.signal,
         });
-        const body = await response.json() as { confirmed?: boolean; error?: string };
+        let body: { confirmed?: boolean; error?: string } = {};
+        try { body = await response.json() as typeof body; } catch { /* Never expose parser errors to customers. */ }
         if (!response.ok || !body.confirmed) throw new Error(body.error || billingText(language, 'paymentOpen'));
         if (!cancelled) window.location.replace('/dashboard?checkout=success&synced=1');
       } catch (confirmError) {
         if (!cancelled) {
-          setError(confirmError instanceof Error ? confirmError.message : billingText(language, 'paymentOpen'));
+          const safeMessage = confirmError instanceof Error && confirmError.name !== 'AbortError' && !confirmError.name.includes('Syntax')
+            ? confirmError.message
+            : billingText(language, 'paymentOpen');
+          setError(safeMessage || billingText(language, 'paymentOpen'));
           setBusy(false);
         }
+      } finally {
+        window.clearTimeout(timeout);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      controller.abort();
+      window.clearTimeout(timeout);
+    };
   }, [checkout, sessionId, synced, language]);
 
   useEffect(() => {
