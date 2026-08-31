@@ -156,7 +156,7 @@ export async function buildReport(analysis: Analysis, requestedLanguage?: Langua
   guide.getRow(2).height = 58;
   header(guide, 4, [t.product, t.document, localized(language,'Estado','Status','État','Status','Stato','Estado'), t.applicability, t.whereToGet, t.whatToCheck, t.officialSource]);
   let guideRow = 5;
-  products.forEach(p => documentationFor(p, marketCode).forEach(action => {
+  products.forEach(p => documentationFor(p, marketCode, language).forEach(action => {
     body(guide, guideRow, [p.name, action.title, action.status, action.condition, action.obtain, action.check, action.source]);
     guide.getCell(guideRow, 7).value = { text: action.source, hyperlink: action.source };
     guideRow++;
@@ -191,7 +191,7 @@ export async function buildReport(analysis: Analysis, requestedLanguage?: Langua
   evidenceSheet.pageSetup.printArea = `A1:G${evidenceRow - 1}`;
   evidenceSheet.pageSetup.printTitlesRow = '1:4';
 
-  addRegulatoryWorksheet(wb, results);
+  addRegulatoryWorksheet(wb, results, language);
   summary.getCell('A17').value = localized(language,
     'Incluye evaluación regulatoria y evidencia persistida. Es asistencia automatizada y trazabilidad aportada por el usuario, no certificación.',
     'Includes regulatory assessment and persisted evidence. It is automated assistance and user-provided traceability, not certification.',
