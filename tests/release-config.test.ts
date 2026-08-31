@@ -36,9 +36,9 @@ test('producción rechaza políticas que permitan gasto de IA', () => {
 });
 
 test('el router cae en free_only por defecto en producción y en free_first fuera de producción', () => {
-  assert.equal(aiCostPolicy({ NODE_ENV: 'production' }), 'free_only');
-  assert.equal(aiCostPolicy({ NODE_ENV: 'development' }), 'free_first');
-  assert.equal(aiCostPolicy({}), 'free_first');
-  assert.equal(aiCostPolicy({ NODE_ENV: 'production', AI_COST_POLICY: 'invalid' }), 'free_only');
-  assert.equal(aiCostPolicy({ NODE_ENV: 'production', AI_COST_POLICY: 'premium_allowed' }), 'premium_allowed');
+  assert.equal(aiCostPolicy({ NODE_ENV: 'production' } as NodeJS.ProcessEnv), 'free_only');
+  assert.equal(aiCostPolicy({ NODE_ENV: 'development' } as NodeJS.ProcessEnv), 'free_first');
+  assert.equal(aiCostPolicy({} as NodeJS.ProcessEnv), 'free_first');
+  assert.equal(aiCostPolicy({ NODE_ENV: 'production', AI_COST_POLICY: 'invalid' } as NodeJS.ProcessEnv), 'free_only');
+  assert.equal(aiCostPolicy({ NODE_ENV: 'production', AI_COST_POLICY: 'premium_allowed' } as NodeJS.ProcessEnv), 'premium_allowed');
 });
