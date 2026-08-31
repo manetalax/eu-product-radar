@@ -12,7 +12,7 @@ const KEYWORD_RULES: Array<[RegExp, string]> = [
   [/battery|batteries/i, 'battery'],
   [/radio equipment|wireless|bluetooth|wi-?fi/i, 'radio equipment'],
   [/electrical|low voltage/i, 'electrical'],
-  [/electromagnetic|emc/i, 'emc'],
+  [/electromagnetic|\bemc\b/i, 'emc'],
   [/machinery|machine/i, 'machinery'],
   [/medical device/i, 'medical device'],
   [/cosmetic/i, 'cosmetic'],
@@ -20,13 +20,18 @@ const KEYWORD_RULES: Array<[RegExp, string]> = [
   [/textile/i, 'textile'],
   [/footwear/i, 'footwear'],
   [/detergent/i, 'detergent'],
-  [/chemical|reach|clp/i, 'chemical'],
+  [/chemical|\breach\b|\bclp\b/i, 'chemical'],
   [/packaging|packaging waste/i, 'packaging'],
   [/ecodesign|energy label/i, 'ecodesign'],
   [/construction product/i, 'construction product'],
-  [/personal protective|ppe/i, 'ppe'],
+  [/personal protective|\bppe\b/i, 'ppe'],
   [/market surveillance/i, 'market surveillance'],
   [/consumer product/i, 'consumer product'],
+  [/ce marking|conformity assessment|declaration of conformity/i, 'conformity'],
+  [/digital product passport/i, 'digital product passport'],
+  [/restriction of hazardous substances|\brohs\b/i, 'rohs'],
+  [/waste electrical|\bweee\b/i, 'weee'],
+  [/labelling|labeling|traceability/i, 'labelling traceability'],
 ];
 
 function decodeXml(value: string): string {
@@ -63,7 +68,7 @@ function officialReference(guid: string, link: string, title: string): string {
 }
 
 function keywords(text: string): string[] {
-  return KEYWORD_RULES.filter(([pattern]) => pattern.test(text)).map(([, keyword]) => keyword);
+  return Array.from(new Set(KEYWORD_RULES.filter(([pattern]) => pattern.test(text)).map(([, keyword]) => keyword)));
 }
 
 export function parseEurLexRss(xml: string, sourceName: string): RawRegulatoryEvent[] {
@@ -80,7 +85,8 @@ export function parseEurLexRss(xml: string, sourceName: string): RawRegulatoryEv
     const description = tag(block, 'description');
     const guid = tag(block, 'guid');
     const published = tag(block, 'pubDate') || tag(block, 'dc:date');
-    const haystack = `${title} ${description}`;
+    const affectedKeywords = keywords(`${title} ${description}`);
+    if (!affectedKeywords.length) continue;
     events.push({
       sourceName,
       sourceUrl: url.toString(),
@@ -88,7 +94,7 @@ export function parseEurLexRss(xml: string, sourceName: string): RawRegulatoryEv
       summary: description.slice(0, 6000),
       publishedAt: published || null,
       severity: 'review',
-      affectedKeywords: keywords(haystack),
+      affectedKeywords,
       officialReference: officialReference(guid, link, title),
     });
   }
