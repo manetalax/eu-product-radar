@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { analyze, type Product } from '@/lib/analysis';
-import { isValidEvidenceUrl } from '@/lib/evidence';
+import { isValidEvidenceUrl, safeEvidenceUrl } from '@/lib/evidence';
 import { evidenceApiText } from '@/lib/evidence-api-i18n';
 import { marketCodeOrEu, type MarketCode } from '@/lib/markets';
 import { createClient } from '@/lib/supabase/server';
@@ -30,6 +30,10 @@ function customerEvidenceError(language: Language, error: unknown): string {
   return e('invalid');
 }
 
+function sanitizeEvidenceRow<T extends { source_url?: string | null }>(row: T): T & { source_url: string } {
+  return { ...row, source_url: safeEvidenceUrl(row.source_url) };
+}
+
 export async function GET(request: Request) {
   const language = requestLanguage(request);
   const e = (key: Parameters<typeof evidenceApiText>[1]) => evidenceApiText(language, key);
@@ -40,7 +44,7 @@ export async function GET(request: Request) {
   if (!uuid.test(analysisId)) return json({ error: e('invalidAnalysis') }, 400);
   const { data, error } = await supabase.from('analysis_evidence').select('id,analysis_id,product_index,evidence_key,status,note,source_document,source_page,source_url,updated_at').eq('analysis_id', analysisId).eq('user_id', user.id).order('product_index').order('evidence_key');
   if (error) return json({ error: e('read') }, 503);
-  return json({ evidence: data ?? [] });
+  return json({ evidence: (data ?? []).map(sanitizeEvidenceRow) });
 }
 
 export async function PUT(request: Request) {
@@ -94,7 +98,7 @@ export async function PUT(request: Request) {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'analysis_id,product_index,evidence_key' }).select('id,analysis_id,product_index,evidence_key,status,note,source_document,source_page,source_url,updated_at').single();
     if (error) throw new Error(e('save'));
-    return json({ evidence: data });
+    return json({ evidence: sanitizeEvidenceRow(data) });
   } catch (error) {
     return json({ error: customerEvidenceError(language, error) }, 400);
   }
