@@ -21,3 +21,12 @@ test('Stripe subscription sync fails closed unless exactly one subscription item
   assert.ok(itemGuard >= 0 && priceRead > itemGuard);
   assert.doesNotMatch(source, /Math\.max\(\.\.\.ends\)/);
 });
+
+test('persisted Stripe customer ownership is authoritative over mutable subscription metadata', () => {
+  const customerLookup = source.indexOf(".eq('stripe_customer_id', customerId)");
+  const existingUser = source.indexOf('const existingUserId = existingCustomer?.user_id ?? null');
+  const mismatch = source.indexOf("throw new Error('subscription_customer_user_mismatch')");
+  const resolved = source.indexOf('const userId = existingUserId ?? metadataUserId');
+  assert.ok(customerLookup >= 0 && existingUser > customerLookup && mismatch > existingUser && resolved > mismatch);
+  assert.doesNotMatch(source, /let userId = subscription\.metadata\.user_id/);
+});
