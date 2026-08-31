@@ -11,8 +11,10 @@ import { extractLocalDocumentText } from '@/lib/local-document-text';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
-const ALLOWED_EXTENSIONS = /\.(pdf|doc|docx|rtf|odt|txt|md|json|csv|xls|xlsx|png|jpe?g|webp|heic)$/i;
+const ALLOWED_EXTENSIONS = /\.(pdf|doc|docx|rtf|odt|txt|md|json|png|jpe?g|webp|heic)$/i;
+const IMAGE_EXTENSIONS = /\.(png|jpe?g|webp|heic)$/i;
 const LOCALLY_EXTRACTABLE = /\.(pdf|docx|rtf|odt|txt|md|json)$/i;
+const IMAGE_MIME = /^image\/(png|jpeg|webp|heic|heif)$/i;
 const PRODUCT_PROMPT = `Identifica todos los productos reales presentes en el material. No inventes. Devuelve exclusivamente JSON válido con esta forma: {"products":[{"name":"","manufacturer":"","responsible":"","warning":"","description":"","materials":"","intendedUse":"","audience":"","power":"","connectivity":"","composition":""}]}. Usa cadena vacía cuando un dato no esté explícito o claramente sustentado. Conserva el idioma original. Los campos responsible/importador UE, advertencias, materiales, alimentación, conectividad y composición se usarán para clasificar normativa: no los completes por suposición.`;
 
 function outputText(response: Record<string, unknown>) {
@@ -39,11 +41,35 @@ function parseProductsJson(text: string): ExtractedProduct[] {
   return parsed.products.filter((item): item is ExtractedProduct => Boolean(item) && typeof item === 'object' && !Array.isArray(item));
 }
 
-function dataUrlBuffer(dataUrl: string): Buffer {
-  const marker = ';base64,';
-  const index = dataUrl.indexOf(marker);
-  if (index < 0) throw new Error('Archivo no válido.');
-  return Buffer.from(dataUrl.slice(index + marker.length), 'base64');
+function parseDataUrl(dataUrl: string): { mimeType: string; bytes: Buffer } {
+  const match = /^data:([^;,]+);base64,([A-Za-z0-9+/=\r\n]+)$/i.exec(dataUrl);
+  if (!match) throw new Error('Archivo no válido.');
+  const bytes = Buffer.from(match[2], 'base64');
+  if (!bytes.length) throw new Error('El archivo está vacío.');
+  if (bytes.length > MAX_FILE_BYTES) throw new Error('El archivo supera el límite de 5 MB.');
+  return { mimeType: match[1].toLowerCase(), bytes };
+}
+
+function validateUploadType(filename: string, declaredMime: string, dataMime: string): 'image' | 'document' {
+  const isImageExtension = IMAGE_EXTENSIONS.test(filename);
+  const declared = declaredMime.toLowerCase();
+  const data = dataMime.toLowerCase();
+  const declaredImage = IMAGE_MIME.test(declared);
+  const dataImage = IMAGE_MIME.test(data);
+
+  if (isImageExtension) {
+    if (!declaredImage || !dataImage) throw new Error('La imagen no tiene un tipo MIME compatible con su extensión.');
+    if (declared !== data && !(declared === 'image/heic' && data === 'image/heif') && !(declared === 'image/heif' && data === 'image/heic')) {
+      throw new Error('El tipo MIME declarado no coincide con el archivo recibido.');
+    }
+    return 'image';
+  }
+
+  if (declaredImage || dataImage) throw new Error('El tipo MIME no coincide con la extensión del documento.');
+  if (declared !== 'application/octet-stream' && data !== 'application/octet-stream' && declared !== data) {
+    throw new Error('El tipo MIME declarado no coincide con el archivo recibido.');
+  }
+  return 'document';
 }
 
 async function structureLocalText(filename: string, text: string, started: number): Promise<ExtractedProduct[]> {
@@ -114,10 +140,19 @@ export async function POST(request: Request) {
   catch { return json({ error: 'No se ha podido leer el archivo.' }, 400); }
 
   const filename = typeof body.filename === 'string' ? body.filename.trim() : '';
-  const mimeType = typeof body.mimeType === 'string' ? body.mimeType : 'application/octet-stream';
+  const mimeType = typeof body.mimeType === 'string' ? body.mimeType.trim().toLowerCase() : 'application/octet-stream';
   const dataUrl = typeof body.dataUrl === 'string' ? body.dataUrl : '';
-  if (!filename || filename.length > 120 || !ALLOWED_EXTENSIONS.test(filename)) return json({ error: 'Formato no compatible. Usa foto, PDF, Word, texto, CSV o Excel.' }, 400);
-  if (!dataUrl.startsWith('data:') || !dataUrl.includes(';base64,') || dataUrl.length > Math.ceil(MAX_FILE_BYTES * 4 / 3) + 500) return json({ error: 'El archivo está vacío o supera el límite de 5 MB.' }, 400);
+  if (!filename || filename.length > 120 || !ALLOWED_EXTENSIONS.test(filename)) return json({ error: 'Formato no compatible. Usa foto, PDF, Word o texto. CSV y Excel se procesan localmente.' }, 400);
+  if (!dataUrl.startsWith('data:') || dataUrl.length > Math.ceil(MAX_FILE_BYTES * 4 / 3) + 1000) return json({ error: 'El archivo está vacío o supera el límite de 5 MB.' }, 400);
+
+  let upload: { mimeType: string; bytes: Buffer };
+  let kind: 'image' | 'document';
+  try {
+    upload = parseDataUrl(dataUrl);
+    kind = validateUploadType(filename, mimeType, upload.mimeType);
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'El tipo de archivo no es válido.' }, 400);
+  }
 
   const allowed = await consumeApiRateLimit({ userId: user.id, route: 'product_extraction', limit: 30, windowSeconds: 3600 });
   if (!allowed) return json({ error: 'Hay demasiados documentos procesándose desde esta cuenta. Vuelve a intentarlo más tarde.' }, 429);
@@ -125,10 +160,8 @@ export async function POST(request: Request) {
   const started = Date.now();
   try {
     let products: ExtractedProduct[];
-    let kind: 'image' | 'document' = 'document';
 
-    if (mimeType.startsWith('image/')) {
-      kind = 'image';
+    if (kind === 'image') {
       const result = await generateVisionText(dataUrl, PRODUCT_PROMPT, { maxTokens: 3500 });
       products = parseProductsJson(result.text);
       void recordAiUsage({
@@ -139,7 +172,7 @@ export async function POST(request: Request) {
         latencyMs: Date.now() - started,
       });
     } else if (LOCALLY_EXTRACTABLE.test(filename)) {
-      const sourceText = extractLocalDocumentText(filename, dataUrlBuffer(dataUrl));
+      const sourceText = extractLocalDocumentText(filename, upload.bytes);
       if (sourceText) products = await structureLocalText(filename, sourceText, started);
       else {
         const result = await extractDocumentWithOpenAi(filename, mimeType, dataUrl);
