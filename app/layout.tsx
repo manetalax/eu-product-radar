@@ -6,7 +6,7 @@ import { BRAND_NAME, BRAND_SITE_URL } from '@/lib/brand';
 import PwaRegister from '@/components/PwaRegister';
 import { LanguageProvider } from '@/lib/use-language';
 
-const EARLY_LANGUAGE_SCRIPT = "(()=>{const m=location.pathname.match(/^\\/(es|en|fr|de|it|pt)(?:\\/|$)/);if(m)document.documentElement.lang=m[1]})()";
+const EARLY_LANGUAGE_SCRIPT = "(()=>{const ok=/^(es|en|fr|de|it|pt)$/;const path=location.pathname.split('/').filter(Boolean)[0]||'';const query=new URLSearchParams(location.search).get('lang')||'';const lang=ok.test(path)?path:ok.test(query)?query:'';if(lang)document.documentElement.lang=lang})()";
 const defaultTitle = `${BRAND_NAME} · EU product compliance intelligence`;
 const defaultDescription = 'Analyse EU product requirements, evidence and regulatory actions with ImportVerifier.';
 
