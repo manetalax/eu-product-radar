@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const authForm = readFileSync(new URL('../components/AuthForm.tsx', import.meta.url), 'utf8');
 const callback = readFileSync(new URL('../app/auth/callback/route.ts', import.meta.url), 'utf8');
+const resetPage = readFileSync(new URL('../app/reset-password/page.tsx', import.meta.url), 'utf8');
 
 test('Google, signup and password reset preserve the selected language', () => {
   assert.match(authForm, /new URLSearchParams\(\{ lang: language \}\)/);
@@ -17,4 +18,9 @@ test('the OAuth callback only propagates validated language values', () => {
   assert.match(callback, /const language = isLanguage\(requestedLanguage\) \? requestedLanguage : null/);
   assert.match(callback, /target\.searchParams\.set\('lang', language\)/);
   assert.match(callback, /failure\.searchParams\.set\('lang', language\)/);
+});
+
+test('an invalid or expired reset session keeps a validated language on the login error redirect', () => {
+  assert.match(resetPage, /const language = isLanguage\(lang\) \? lang : undefined/);
+  assert.match(resetPage, /message=link_error\$\{language \? `&lang=\$\{language\}` : ''\}/);
 });
