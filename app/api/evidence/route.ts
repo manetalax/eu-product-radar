@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { analyze, type Product } from '@/lib/analysis';
+import { marketCodeOrEu, type MarketCode } from '@/lib/markets';
 import { createClient } from '@/lib/supabase/server';
 import { PRIVATE_HEADERS, readJsonBody, sameOrigin } from '@/lib/http';
 
@@ -9,7 +10,7 @@ const uuid = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const allowed = new Set(['available', 'pending', 'not_applicable']);
 const httpsUrl = /^https:\/\//i;
 
-function regulatoryEvidenceKeys(product: Product, marketCode: string): Set<string> {
+function regulatoryEvidenceKeys(product: Product, marketCode: MarketCode): Set<string> {
   const result = analyze([product], marketCode)[0];
   const keys = result?.regulatory?.obligations.flatMap(obligation =>
     obligation.evidence.map(evidence => `${obligation.title}: ${evidence}`.slice(0, 120)),
@@ -62,7 +63,7 @@ export async function PUT(request: Request) {
     if (analysisError) throw new Error('No se ha podido validar el análisis.');
     const products = Array.isArray(analysis?.products) ? analysis.products as Product[] : [];
     if (!analysis || productIndex >= products.length) throw new Error('El producto no existe en este análisis.');
-    if (!regulatoryEvidenceKeys(products[productIndex], analysis.market_code ?? 'EU').has(evidenceKey)) {
+    if (!regulatoryEvidenceKeys(products[productIndex], marketCodeOrEu(analysis.market_code)).has(evidenceKey)) {
       throw new Error('La evidencia no corresponde a un requisito regulatorio de este producto.');
     }
 
