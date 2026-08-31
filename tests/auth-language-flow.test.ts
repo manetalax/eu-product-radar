@@ -13,6 +13,8 @@ test('Google, signup and password reset preserve the selected language', () => {
 });
 
 test('the OAuth callback only propagates validated language values', () => {
-  assert.match(callback, /isLanguage\(language\)/);
-  assert.match(callback, /params\.set\('lang', language\)/);
+  assert.match(callback, /const requestedLanguage = request\.nextUrl\.searchParams\.get\('lang'\)/);
+  assert.match(callback, /const language = isLanguage\(requestedLanguage\) \? requestedLanguage : null/);
+  assert.match(callback, /target\.searchParams\.set\('lang', language\)/);
+  assert.match(callback, /failure\.searchParams\.set\('lang', language\)/);
 });
