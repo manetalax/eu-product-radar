@@ -26,21 +26,9 @@ function isAnalysisCreate(input: RequestInfo | URL, init?: RequestInit) {
   }
 }
 
-function cancelledResponse(message: string) {
-  return new Response(JSON.stringify({ error: message }), {
-    status: 409,
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-  });
+function cancelledReview() {
+  return new DOMException('', 'AbortError');
 }
-
-const cancelled = {
-  es:'Análisis cancelado. No se ha consumido cuota ni guardado ningún producto.',
-  en:'Analysis cancelled. No quota was consumed and no product was saved.',
-  fr:'Analyse annulée. Aucun quota n’a été consommé et aucun produit n’a été enregistré.',
-  de:'Analyse abgebrochen. Es wurde kein Kontingent verbraucht und kein Produkt gespeichert.',
-  it:'Analisi annullata. Non è stata consumata alcuna quota e nessun prodotto è stato salvato.',
-  pt:'Análise cancelada. Não foi consumida quota nem guardado qualquer produto.',
-} as const;
 
 export default function AnalysisReviewGate() {
   const { language } = useLanguage();
@@ -77,7 +65,7 @@ export default function AnalysisReviewGate() {
       window.fetch = nativeFetch;
       originalFetch.current = null;
       if (pending.current) {
-        pending.current.resolve(cancelledResponse(cancelled[languageRef.current]));
+        pending.current.reject(cancelledReview());
         pending.current = null;
       }
     };
@@ -88,7 +76,7 @@ export default function AnalysisReviewGate() {
     if (!request) return;
     pending.current = null;
     setDraft(null);
-    request.resolve(cancelledResponse(cancelled[language]));
+    request.reject(cancelledReview());
   };
 
   const confirm = async () => {
