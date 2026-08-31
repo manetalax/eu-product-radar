@@ -5,11 +5,14 @@ import { readFileSync } from 'node:fs';
 const source = readFileSync(new URL('../lib/export-pdf.ts', import.meta.url), 'utf8');
 
 test('PDF report keeps premium issuer identity and document classification', () => {
-  assert.match(source, /function drawMonogram/);
+  assert.match(source, /function drawBrandMark/);
+  assert.match(source, /target\.drawLine/);
   assert.match(source, /BRAND_DOCUMENT_TITLE/);
   assert.match(source, /reportClass/);
   assert.match(source, /VERIFIED/);
+  assert.match(source, /reviewSealLabel/);
   assert.match(source, /drawVerifiedSeal/);
+  assert.doesNotMatch(source, /drawText\('IV'/);
 });
 
 test('PDF report repeats regulatory context and pagination on every page', () => {
