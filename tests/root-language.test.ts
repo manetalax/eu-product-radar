@@ -16,6 +16,14 @@ test('root layout stays static and initializes one shared client provider', () =
   assert.match(layout, /<LanguageProvider initialLanguage="en">/);
 });
 
+test('localized static paths set the document language synchronously before body content', () => {
+  assert.match(layout, /const EARLY_LANGUAGE_SCRIPT =/);
+  assert.match(layout, /location\.pathname\.match\(\/\^\\\\\/\(es\|en\|fr\|de\|it\|pt\)/);
+  assert.match(layout, /document\.documentElement\.lang=m\[1\]/);
+  assert.match(layout, /<head><script dangerouslySetInnerHTML=\{\{ __html: EARLY_LANGUAGE_SCRIPT \}\} \/><\/head>/);
+  assert.ok(layout.indexOf('<head><script') < layout.indexOf('<body>'));
+});
+
 test('language provider prioritizes static locale path before query and saved preferences', () => {
   assert.match(languageHook, /languageFromPathname\(window\.location\.pathname\)/);
   assert.match(languageHook, /\[pathLanguage, urlLanguage, storedLanguage, initialLanguage, browserLanguage\]\.find\(isSupportedLanguage\)/);
@@ -35,14 +43,14 @@ test('client language provider stays decoupled from the large landing copy bundl
   assert.doesNotMatch(languageHook, /from '.\/landing-i18n'/);
 });
 
-test('localized static landing owns localized SEO metadata', () => {
+test('localized static landing owns localized SEO metadata on the canonical origin', () => {
   assert.match(localizedLayout, /export async function generateMetadata/);
   assert.match(localizedLayout, /landingCopy\[rawLanguage\]\.hero/);
   assert.match(localizedLayout, /locale: OPEN_GRAPH_LOCALE\[rawLanguage\]/);
   assert.match(localizedLayout, /canonical: `\/\$\{rawLanguage\}`/);
   assert.match(localizedLayout, /languages: LANGUAGE_ALTERNATES/);
-  assert.match(layout, /parsed\.protocol === 'https:'/);
-  assert.match(layout, /IMPORTVERIFIER_PRODUCTION_URL/);
+  assert.match(layout, /metadataBase: new URL\(BRAND_SITE_URL\)/);
+  assert.doesNotMatch(layout, /NEXT_PUBLIC_SITE_URL/);
 });
 
 test('Accept-Language resolves supported languages conservatively', () => {
