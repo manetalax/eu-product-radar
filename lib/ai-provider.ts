@@ -9,9 +9,20 @@ export type TextGenerationResult = {
 export type AiCostPolicy = 'free_only' | 'free_first' | 'premium_allowed';
 
 const AI_PROVIDER_TIMEOUT_MS = 30_000;
+const DEFAULT_SILICONFLOW_BASE_URL = 'https://api.siliconflow.com/v1';
 
 function siliconFlowBaseUrl() {
-  return (process.env.SILICONFLOW_BASE_URL || 'https://api.siliconflow.com/v1').replace(/\/$/, '');
+  const value = process.env.SILICONFLOW_BASE_URL || DEFAULT_SILICONFLOW_BASE_URL;
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error('La URL del proveedor gratuito no es válida.');
+  }
+  if (parsed.protocol !== 'https:' || parsed.username || parsed.password || !parsed.hostname) {
+    throw new Error('La URL del proveedor gratuito debe usar HTTPS y no incluir credenciales.');
+  }
+  return parsed.href.replace(/\/$/, '');
 }
 
 async function providerFetch(input: string, init: RequestInit): Promise<Response> {
