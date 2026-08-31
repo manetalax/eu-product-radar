@@ -43,19 +43,22 @@
 - Google auth button includes a visible Google mark; production code pins Google/signup/recovery return flow to the canonical ImportVerifier domain.
 - PWA private-cache hardening, localized manifest, own-brand icons, safe areas, 44px touch targets, iOS form sizing and review-modal keyboard/scroll behavior are covered.
 - PWA cache is restricted to public static style/script/image/font requests and refuses private/no-store/no-cache responses.
+- **PWA public-shell cache boundary hardened 2026-08-31:** service-worker precache fetches public shell resources with `credentials: 'omit'`; responses varying on `Cookie` or `Authorization` are not cached; query-bearing navigations cannot overwrite canonical pathname cache entries; activation deletes only obsolete `importverifier-shell-*` caches instead of unrelated origin caches. Regression coverage locks these invariants.
 - Upload UI supports spreadsheet/document/photo inputs and declares `.heic`, `.heif` and `image/*`.
 - **Mobile photo MIME robustness hardened 2026-08-31:** Product Extraction now validates PNG/JPEG/WebP/HEIC/HEIF from binary signatures plus filename extension and any MIME metadata that exists. Legitimate Safari/iOS/iPadOS images with blank/`application/octet-stream` MIME are accepted only when their magic bytes agree; extension spoofing and MIME/signature disagreement remain fail-closed. The image `data:` payload is normalized to the detected MIME before calling vision.
 - **Multi-file drag/drop ambiguity removed 2026-08-31:** Dashboard now rejects drops containing more than one file without processing any of them, shows localized ES/EN/FR/DE/IT/PT guidance, and ignores drag/drop imports while busy/loading or when the free quota is exhausted. The touch/file picker remains intentionally single-file. Regression coverage prevents silently returning to `files[0]` behavior.
 - Mobile cards wrap long unbroken filenames and constrain flex children.
 - PDF/XLSX/template downloads use explicit filenames, Blob URLs and 60-second delayed revocation for Safari/iPadOS save-to-Files robustness.
 - Dashboard API parsing is defensive against malformed/non-object JSON.
+- **Intelligence Suite client API boundary hardened 2026-08-31:** history, detail, Evidence, Radar and ImportVerifier AI responses are parsed as defensive JSON objects; failed history/detail HTTP states no longer continue as trusted data; malformed/non-object JSON degrades safely; AI responses require a non-empty string answer; raw server/provider `body.error` values are never rendered to customers. Regression coverage prevents reintroducing parser/provider error leakage.
 - PDF/Excel reports include localized regulatory narrative, evidence and source traceability; spreadsheet formula injection is avoided by writing user strings as strings.
 - Public/developer docs no longer point to the obsolete production domain, monthly free reset or legacy public pricing tiers.
 - `ACTIVE_MARKET_CODES` remains EU-only; US/CN/GB/JP are structurally isolated and inactive.
 
 ## CI / HEAD last verified 2026-08-31
-- Functional head `225e5746b5da4212de01751ee2a8f6c16694494e` contains explicit multi-file drop rejection, localized guidance and regression coverage.
-- GitHub `ImportVerifier release check` **#1075 SUCCESS** on that exact functional head: `npm ci`, tests, `npm run typecheck` and `npm run build` passed.
+- Functional head `2a64ef2a5c27f2c3b4089873ebc0582814f62bef` contains the hardened PWA public-shell cache boundary plus defensive Intelligence Suite API parsing/error privacy and their regression coverage.
+- GitHub `ImportVerifier release check` **#1087 SUCCESS** on that exact functional head: `npm ci`, **257 tests**, `npm run typecheck` and `npm run build` passed.
+- Intermediate release check **#1085 FAILURE** was caused only by a test RegExp `s` flag incompatible with the current TypeScript target; production code/tests otherwise passed. Commit `2a64ef2a…` replaced the incompatible assertion and #1087 verified the repair.
 - Previous exact-head Netlify Deploy Preview for **importverifier** was READY; reconfirm the preview after this continuity-only commit before treating the newest HEAD as preview-verified.
 - PR #4 remains **open** and **not merged**.
 
@@ -71,11 +74,12 @@
 
 ## IN PROGRESS / NEXT — execute without asking
 1. Reconfirm exact newest HEAD GitHub CI and Netlify Deploy Preview after this continuity-only commit; repair any regression immediately.
-2. Continue static mobile/iPhone/iPad/PWA QA around camera/photo import, drag/drop states and save-to-Files; real-device validation remains external.
-3. Continue security sweep of client API trust boundaries and external links/customer-facing provenance without duplicating the already-protected market/evidence/Radar URL work.
-4. Recheck production Auth logs after Supabase/Netlify domain wiring is corrected; canonical Google login must never return to the old domain.
-5. Use `/importverifier-sample-5-products.csv` for final new-account acceptance once canonical Auth works; prove history/PDF/XLSX end-to-end from that account.
-6. Keep EU as the only active market; do not remove historical plan IDs/monthly schema merely for naming cleanliness.
+2. Harden Dashboard client-side Stripe navigation as defense in depth: reuse `trustedStripeNavigationUrl` before `window.location.assign` for Checkout and Portal, without weakening the already server-side allowlisted billing boundary.
+3. Continue static mobile/iPhone/iPad/PWA QA around camera/photo import, drag/drop states and save-to-Files; real-device validation remains external.
+4. Continue security sweep of remaining client API response-shape/trust boundaries and customer-facing external links without duplicating the already-protected market/evidence/Radar URL work.
+5. Recheck production Auth logs after Supabase/Netlify domain wiring is corrected; canonical Google login must never return to the old domain.
+6. Use `/importverifier-sample-5-products.csv` for final new-account acceptance once canonical Auth works; prove history/PDF/XLSX end-to-end from that account.
+7. Keep EU as the only active market; do not remove historical plan IDs/monthly schema merely for naming cleanliness.
 
 ## BLOCKED EXTERNAL / browser or service-console work
 - Supabase Auth: set Site URL to `https://importverifier.netlify.app` and canonical callbacks; retest Google login and Auth logs.
