@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { PRIVATE_HEADERS } from '@/lib/http';
+import { radarRuntimeEnabled } from '@/lib/radar-runtime';
 import { regulatoryChangesText } from '@/lib/regulatory-changes-i18n';
 import { safeOfficialRegulatoryUrl } from '@/lib/regulatory-source-url';
 import { requestLanguage } from '@/lib/request-language';
@@ -31,7 +32,6 @@ export async function GET(request: Request) {
 
   if (error) return json({ error: t('loadError') }, 503);
   const events = (data ?? []).map(event => ({ ...event, source_url: safeOfficialRegulatoryUrl(event.source_url) }));
-  const ingestSecretReady = (process.env.REGULATORY_INGEST_SECRET?.trim().length ?? 0) >= 32;
-  const live = process.env.REGULATORY_RADAR_LIVE === 'true' && ingestSecretReady && events.length > 0;
-  return json({ events, live, sourcePolicy: 'official-only' });
+  const live = radarRuntimeEnabled(process.env, events.length);
+  return json({ events: live ? events : [], live, sourcePolicy: 'official-only' });
 }
