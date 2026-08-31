@@ -10,12 +10,12 @@ const analysis: Analysis = {
   rule_version: RULE_VERSION,
   market_code: 'EU',
   products: [
-    { name: 'LED lamp', manufacturer: '', responsible: '', warning: '' },
+    { name: 'toy', manufacturer: '', responsible: '', warning: '' },
     { name: 'Backpack', manufacturer: 'North Brand', responsible: 'EU Importer', warning: 'Keep away from fire' },
   ],
 };
 
-test('el Excel en inglés traduce superficies visibles sin romper fórmulas internas', async () => {
+test('el Excel en inglés traduce superficies visibles y narrativa regulatoria sin romper fórmulas internas', async () => {
   const wb = await buildReport(analysis, 'en');
   const summary = wb.getWorksheet('Resumen')!;
   const products = wb.getWorksheet('Productos')!;
@@ -34,6 +34,10 @@ test('el Excel en inglés traduce superficies visibles sin romper fórmulas inte
   assert.match(String(guide.getCell('B5').value), /manufacturer/i);
   assert.match(String(regulatory.getCell('A1').value), /EU REGULATORY ASSESSMENT/i);
   assert.match(String(regulatory.getCell('E4').value), /Reason\/applicability/i);
+  assert.equal(regulatory.getCell('B5').value, 'Toy');
+  assert.match(String(regulatory.getCell('E5').value), /Horizontal consumer-product safety framework/i);
+  assert.doesNotMatch(String(regulatory.getCell('E5').value), /Marco horizontal/i);
+  assert.match(String(regulatory.getCell('F5').value), /Identify all applicable rules/i);
 });
 
 test('el Excel por defecto conserva español para servidor y compatibilidad histórica', async () => {
