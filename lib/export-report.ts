@@ -1,5 +1,6 @@
 import ExcelJS from 'exceljs';
-import { documentationFor, GUIDE_SCOPE, GUIDE_VERSION } from './documentation';
+import { documentationFor, GUIDE_VERSION } from './documentation';
+import { guideScopeFor } from './guide-i18n';
 import { Analysis, analysisMarket, analyze, supportsRuleVersion, validateProducts } from './analysis';
 import { BRAND_DOCUMENT_FOOTER, BRAND_DOCUMENT_TITLE, BRAND_NAME, BRAND_TAGLINE } from './brand';
 import { fetchEvidenceForAnalysis } from './evidence';
@@ -151,7 +152,7 @@ export async function buildReport(analysis: Analysis, requestedLanguage?: Langua
 
   const guide = sheet(wb, 'Guía documental', [44, 32, 34, 55, 65, 65, 60], 4, pageLabel);
   band(guide, 1, `${t.documentaryGuide} · ${t.whereToGet}`, 7, true);
-  band(guide, 2, `${GUIDE_SCOPE} · ${t.guide}: ${GUIDE_VERSION}`, 7);
+  band(guide, 2, `${guideScopeFor(language)} · ${t.guide}: ${GUIDE_VERSION}`, 7);
   guide.getRow(2).height = 58;
   header(guide, 4, [t.product, t.document, localized(language,'Estado','Status','État','Status','Stato','Estado'), t.applicability, t.whereToGet, t.whatToCheck, t.officialSource]);
   let guideRow = 5;
