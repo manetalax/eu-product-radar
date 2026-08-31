@@ -56,6 +56,7 @@
 - ImportVerifier AI: 60 requests/account/hour technical guardrail.
 - AI-backed product extraction: 30 documents/account/hour technical guardrail.
 - These are anti-abuse controls, not commercial product quotas.
+- Integration coverage now forces the atomic limiter to its ceiling, verifies rejection, invalid-parameter fail-closed behavior and fixed-window reset.
 
 ## DONE — regulatory engine / evidence / Twin
 - Versioned EU regulatory engine with candidate category, rules, obligations, uncertainty and official sources.
@@ -65,6 +66,7 @@
 - Evidence UI, PDF traceability and Excel `Evidencia` worksheet implemented.
 - RLS enforces account isolation.
 - Production DB now also has composite `(analysis_id,user_id)` FK defense-in-depth so evidence cannot be attached to another account's analysis even through a future privileged-code bug.
+- Integration coverage now verifies the composite evidence-owner FK rejects cross-account evidence even outside RLS while accepting the true owner.
 
 ## DONE — Regulatory Impact Radar
 - Persistent `regulatory_change_events` store applied in production.
@@ -94,15 +96,20 @@
 - New `report-i18n.ts` provides structural report labels for ES/EN/FR/DE/IT/PT.
 - PDF exporter accepts a language argument (Spanish default for backwards compatibility) and localizes major structural labels/statuses.
 
+## LATEST PASS
+- Previous HEAD `0f8c4aa092ed17c69967098cff3d15c3ea31e042` completed both Netlify Deploy Previews successfully.
+- Security integration test commit: `ea6fc9830741bb114818ab875d2cc49066910725` (`tests/security-invariants.test.ts`).
+- At the time of this handoff update, GitHub Actions `verify` jobs for `ea6fc983…` were running; no failure had been reported yet.
+- This continuity update intentionally does not merge PR #4.
+
 ## IN PROGRESS — continue without asking
 1. Keep the latest HEAD CI green; fix any failure immediately.
-2. Finish Excel structural localization safely without breaking worksheet formulas/tests.
-3. Pass the active user language into PDF/Excel exports; then extend dashboard copy localization structurally (no DOM-translation hacks).
+2. Finish Excel structural localization safely: localize worksheet names, make formulas refer to localized sheet names safely, and pass active language into the regulatory worksheet; add regression tests for formulas/worksheet identity.
+3. Pass the active user language into PDF/Excel exports wherever the dashboard/export call sites still omit it; then extend dashboard copy localization structurally (no DOM-translation hacks).
 4. Continue report narrative localization while preserving verbatim official references/source URLs and avoiding AI-invented translations of legal meaning.
-5. Add/verify tests around rate limiting and evidence owner FK where useful.
-6. Continue security/auth/account isolation sweep.
-7. Continue iPhone/iPad/PWA QA; add 180/192/512 raster install icons when a binary-capable Work/browser path is available.
-8. Refresh the long Work handoff with the latest overrides.
+5. Continue security/auth/account isolation sweep after the new rate-limit/FK integration coverage.
+6. Continue iPhone/iPad/PWA QA; add 180/192/512 raster install icons when a binary-capable Work/browser path is available.
+7. Refresh the long Work handoff when architecture/product state materially changes; security tests alone do not require rewriting its historical background.
 
 ## BLOCKED EXTERNAL / USER OR WORK BROWSER NEEDED
 - Netlify: deploy latest PR #4 branch.
