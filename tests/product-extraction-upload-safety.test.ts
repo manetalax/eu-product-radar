@@ -20,7 +20,7 @@ test('image extension and MIME must agree, including HEIC/HEIF, and spreadsheet 
   assert.match(route, /IMAGE_EXTENSIONS/);
   assert.match(route, /IMAGE_MIME/);
   assert.match(route, /heic\|heif/);
-  assert.match(route, /image\\\/(png\|jpeg\|webp\|heic\|heif)/);
+  assert.ok(route.includes("const IMAGE_MIME = /^image\\/(png|jpeg|webp|heic|heif)$/i;"));
   assert.match(route, /declared === 'image\/heic' && data === 'image\/heif'/);
   assert.match(route, /productExtractionText\(language, 'imageMime'\)/);
   assert.doesNotMatch(route, /ALLOWED_EXTENSIONS = .*csv/);
