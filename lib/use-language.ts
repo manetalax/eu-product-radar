@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { isLanguage, Language } from './landing-i18n';
+import { LANGUAGE_COOKIE } from './request-language';
 
 export const LANGUAGE_STORAGE_KEY = 'import-rules-verifier-language';
 
@@ -19,6 +20,7 @@ export function useLanguage() {
   useEffect(() => {
     document.documentElement.lang = language;
     window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    document.cookie = `${LANGUAGE_COOKIE}=${encodeURIComponent(language)}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`;
   }, [language]);
 
   const setLanguage = useCallback((next: Language) => {
