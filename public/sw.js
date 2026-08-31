@@ -1,4 +1,4 @@
-const CACHE = 'importverifier-shell-v4';
+const CACHE = 'importverifier-shell-v5';
 const SHELL = ['/', '/login', '/privacy', '/terms', '/icon.svg'];
 const PRIVATE_PREFIXES = ['/api/', '/auth/', '/dashboard', '/reset-password'];
 const CACHEABLE_NAVIGATIONS = new Set(['/', '/login', '/privacy', '/terms']);
@@ -7,19 +7,30 @@ const CACHEABLE_ASSET_DESTINATIONS = new Set(['style', 'script', 'image', 'font'
 function responseAllowsCaching(response) {
   if (!response.ok || response.type !== 'basic') return false;
   const cacheControl = (response.headers.get('cache-control') || '').toLowerCase();
+  const vary = (response.headers.get('vary') || '').toLowerCase();
   return !cacheControl.includes('private')
     && !cacheControl.includes('no-store')
-    && !cacheControl.includes('no-cache');
+    && !cacheControl.includes('no-cache')
+    && !vary.split(',').map(value => value.trim()).includes('cookie')
+    && !vary.split(',').map(value => value.trim()).includes('authorization');
+}
+
+function publicShellRequest(path) {
+  return new Request(path, { credentials: 'omit', cache: 'reload' });
 }
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches.open(CACHE)
+      .then(cache => cache.addAll(SHELL.map(publicShellRequest)))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key))))
+      .then(keys => Promise.all(keys.filter(key => key.startsWith('importverifier-shell-') && key !== CACHE).map(key => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
@@ -33,7 +44,7 @@ self.addEventListener('fetch', event => {
   if (url.pathname === '/manifest.webmanifest') return;
 
   if (request.mode === 'navigate') {
-    if (!CACHEABLE_NAVIGATIONS.has(url.pathname)) return;
+    if (!CACHEABLE_NAVIGATIONS.has(url.pathname) || url.search) return;
     event.respondWith(
       fetch(request)
         .then(response => {
