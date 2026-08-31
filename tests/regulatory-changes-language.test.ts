@@ -15,10 +15,9 @@ test('Regulatory Radar API copy is localized in all supported languages', () => 
   assert.match(route, /regulatoryChangesText\(language, key\)/);
 });
 
-test('Radar live remains gated by explicit flag, strong secret and persisted events', () => {
-  assert.match(route, /process\.env\.REGULATORY_RADAR_LIVE === 'true'/);
-  assert.match(route, /REGULATORY_INGEST_SECRET\?\.trim\(\)\.length/);
-  assert.match(route, /ingestSecretReady && events\.length > 0/);
+test('Radar live uses the centralized publication gate and suppresses pre-live events', () => {
+  assert.match(route, /radarRuntimeEnabled\(process\.env, events\.length\)/);
+  assert.match(route, /events: live \? events : \[\]/);
   assert.match(route, /sourcePolicy: 'official-only'/);
 });
 
