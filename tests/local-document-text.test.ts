@@ -65,6 +65,11 @@ function zipWithDeclaredEntryCount(count: number): Buffer {
   return eocd;
 }
 
+function centralDirectoryOffset(zip: Buffer): number {
+  const eocd = zip.length - 22;
+  return zip.readUInt32LE(eocd + 16);
+}
+
 test('extrae texto útil de un PDF con capa de texto', () => {
   const pdf = Buffer.from('%PDF-1.4\n1 0 obj << /Length 120 >>\nstream\nBT /F1 12 Tf (Producto Lampara LED Fabricante Marca Norte Advertencia No cubrir) Tj ET\nendstream\nendobj\n%%EOF', 'latin1');
   const text = extractPdfText(pdf);
@@ -94,6 +99,18 @@ test('DOCX y ODT rechazan archivos con demasiadas entradas ZIP antes de recorrer
   const malicious = zipWithDeclaredEntryCount(4097);
   assert.throws(() => extractLocalDocumentText('catalogo.docx', malicious), /demasiadas entradas internas/);
   assert.throws(() => extractLocalDocumentText('catalogo.odt', malicious), /demasiadas entradas internas/);
+});
+
+test('rechaza offsets locales fuera del archivo y directorios centrales truncados', () => {
+  const badLocalOffset = storedZip('word/document.xml', '<w:document><w:body><w:p>Producto Seguro</w:p></w:body></w:document>');
+  const centralOffset = centralDirectoryOffset(badLocalOffset);
+  badLocalOffset.writeUInt32LE(badLocalOffset.length + 100, centralOffset + 42);
+  assert.throws(() => extractLocalDocumentText('catalogo.docx', badLocalOffset), /cabecera local válida/);
+
+  const badCentral = storedZip('content.xml', '<office:document-content><text:p>Producto Seguro</text:p></office:document-content>');
+  const odtCentralOffset = centralDirectoryOffset(badCentral);
+  badCentral.writeUInt16LE(0xffff, odtCentralOffset + 32);
+  assert.throws(() => extractLocalDocumentText('catalogo.odt', badCentral), /truncado o dañado/);
 });
 
 test('convierte RTF a texto antes de enviarlo al modelo gratuito', () => {
