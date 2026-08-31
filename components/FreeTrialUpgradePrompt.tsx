@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { productQuotaFromUnknown } from '@/lib/dashboard-api-shapes';
 import { localeFor } from '@/lib/landing-i18n';
 import { UNLIMITED_PLAN } from '@/lib/plans';
 import { trustedStripeNavigationUrl } from '@/lib/stripe-navigation';
 import { useLanguage } from '@/lib/use-language';
-
-type QuotaResponse = { quota?: { remaining?: number; billing?: { planId?: string } } };
 
 const copy = {
   es:{ aria:'Fin de la prueba gratuita', eyebrow:'PRUEBA COMPLETADA', title:'Has utilizado tus 5 productos gratuitos.', body:'Continúa analizando sin cuota comercial de productos con ImportVerifier Unlimited por {price} al mes.', idle:'Activar Unlimited · {price}/mes', busy:'Abriendo pago seguro…', error:'No se ha podido abrir el pago.' },
@@ -29,11 +28,21 @@ export default function FreeTrialUpgradePrompt() {
   useEffect(() => {
     let cancelled = false;
     fetch('/api/analyses?page=0', { cache: 'no-store' })
-      .then(response => response.ok ? response.json() : null)
-      .then((body: QuotaResponse | null) => {
-        if (!cancelled) setExhausted(body?.quota?.billing?.planId === 'free' && body?.quota?.remaining === 0);
+      .then(async response => {
+        if (!response.ok) return null;
+        try {
+          const parsed = await response.json();
+          return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null;
+        } catch {
+          return null;
+        }
       })
-      .catch(() => {});
+      .then(body => {
+        if (cancelled) return;
+        const quota = productQuotaFromUnknown(body?.quota);
+        setExhausted(quota?.billing.planId === 'free' && quota.remaining === 0);
+      })
+      .catch(() => { if (!cancelled) setExhausted(false); });
     return () => { cancelled = true; };
   }, []);
 
