@@ -20,4 +20,16 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-export const config = { matcher: ['/dashboard/:path*', '/api/analyses/:path*', '/api/account/:path*', '/api/billing/checkout', '/api/billing/confirm', '/api/billing/portal', '/reset-password'] };
+export const config = { matcher: [
+  '/dashboard/:path*',
+  '/api/analyses/:path*',
+  '/api/account/:path*',
+  '/api/evidence/:path*',
+  '/api/product-extraction/:path*',
+  '/api/regulatory-agent/:path*',
+  '/api/regulatory-changes/:path*',
+  '/api/billing/checkout',
+  '/api/billing/confirm',
+  '/api/billing/portal',
+  '/reset-password',
+] };
