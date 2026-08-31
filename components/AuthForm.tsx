@@ -54,13 +54,20 @@ export default function AuthForm({ initialMode = 'login', initialMessageKey, req
     setShowConfirm(false);
   };
 
+  const callbackUrl = (next?: string) => {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    const params = new URLSearchParams({ lang: language });
+    if (next) params.set('next', next);
+    return `${siteUrl}/auth/callback?${params.toString()}`;
+  };
+
   async function signInWithGoogle() {
     setBusy(true);
     setErrorKey(null);
     setNoticeKey(null);
     try {
       if (requestedPlan) savePlanIntent(requestedPlan);
-      const { data, error } = await authService.signInWithOAuth(`${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`);
+      const { data, error } = await authService.signInWithOAuth(callbackUrl());
       if (error || !data.url) {
         setErrorKey('googleConfig');
         setBusy(false);
@@ -83,7 +90,6 @@ export default function AuthForm({ initialMode = 'login', initialMessageKey, req
     }
     setBusy(true);
     try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!;
       if (mode === 'login') {
         const { error } = await authService.signInWithPassword(email.trim(), password);
         if (error) setErrorKey(authErrorKey(error));
@@ -92,7 +98,7 @@ export default function AuthForm({ initialMode = 'login', initialMessageKey, req
           window.location.assign('/dashboard');
         }
       } else if (mode === 'signup') {
-        const { data, error } = await authService.signUp(email.trim(), password, `${siteUrl}/auth/callback`, requestedPlan ? planInterestMetadata(requestedPlan) : undefined);
+        const { data, error } = await authService.signUp(email.trim(), password, callbackUrl(), requestedPlan ? planInterestMetadata(requestedPlan) : undefined);
         if (error) setErrorKey(authErrorKey(error));
         else if (data.session) window.location.assign('/dashboard');
         else {
@@ -102,7 +108,7 @@ export default function AuthForm({ initialMode = 'login', initialMessageKey, req
           setConfirm('');
         }
       } else if (mode === 'forgot') {
-        const { error } = await authService.resetPasswordForEmail(email.trim(), `${siteUrl}/auth/callback?next=/reset-password`);
+        const { error } = await authService.resetPasswordForEmail(email.trim(), callbackUrl('/reset-password'));
         if (error) setErrorKey(authErrorKey(error)); else setNoticeKey('forgotEmail');
       } else {
         const { error } = await authService.updatePassword(password);
