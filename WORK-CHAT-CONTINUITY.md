@@ -61,19 +61,22 @@
 - PWA manifest/service worker/registration implemented; dashboard/API/auth/reset/private content is excluded from offline caching.
 - Own-brand icon assets make no institutional/EU-certification claim.
 - HSTS, frame denial, no-sniff, strict referrer, restrictive permissions, conservative CSP and fail-closed canonical-origin checks are in place.
-- Mobile CSS covers 44px touch targets, focus visibility, safe areas, wrapping and 16px iOS form controls.
+- Global mobile CSS covers 44px touch targets, focus visibility, safe areas, wrapping and 16px iOS form controls.
+- Product-review modal now also has explicit iOS/iPadOS safe-area padding, `100dvh`, contained momentum scrolling, 44px remove/actions, visible keyboard focus and 16px form controls.
 
-## DONE — localization / reports
+## DONE — localization / reports / critical import UX
 - Main dashboard navigation, notices/errors, quota, import, onboarding, KPIs, results, history, reports, settings, privacy and dates follow ES/EN/FR/DE/IT/PT.
 - Dashboard exports receive the selected language explicitly and Unlimited pricing uses exact two-decimal EUR formatting.
+- Unlimited-active banner and exhausted-free-trial upgrade prompt now use the selected language and canonical `UNLIMITED_PLAN.monthlyPriceEur` with locale-aware two-decimal formatting instead of hardcoded/rounded price copy.
 - Landing Intelligence/pricing and reset-password language flow are localized.
 - Report/guide/documentation layers provide six-language visible structure and documentary guidance.
 - PDF localizes market/operator/missing-field/documentary surfaces; Excel passes language explicitly into nested documentary and regulatory worksheets.
-- EU regulatory narrative now has deterministic localization for category, applicability reasons, obligations, evidence requests, uncertainty and disclaimer while official act titles/references/URLs stay unchanged.
-- `RegulatoryAssessment` and the latest-regulatory wrapper now use the selected UI language rather than hardcoded Spanish.
+- EU regulatory narrative has deterministic localization for category, applicability reasons, obligations, evidence requests, uncertainty and disclaimer while official act titles/references/URLs stay unchanged.
+- `RegulatoryAssessment` and latest-regulatory wrapper use selected UI language instead of hardcoded Spanish.
 - Readiness/evidence UI is localized in six languages. Localized obligation/evidence text is displayed while persistence continues to use canonical evidence keys, preventing language-switch data loss.
 - Deterministic readiness labels/blockers/actions are localized with regression coverage.
-- `market-i18n.ts` provides market display names/short names/operator labels for EU/US/CN/GB/JP in all six languages; remaining report-surface integration is still in progress.
+- Pre-analysis product-review gate is localized in six languages, including cancellation response and market display name; quota is still not consumed until explicit confirm/save.
+- `market-i18n.ts` provides market display names/short names/operator labels for EU/US/CN/GB/JP in all six languages and is used by current PDF/Excel market/operator surfaces.
 - Stable worksheet tab names remain Spanish for formula/backward compatibility at present.
 - Future-market documentary narratives (US/CN/GB/JP) remain Spanish internally; those markets are not customer-active and must be localized before activation.
 
@@ -90,20 +93,19 @@
 - Radar events: 0 at last check; do not enable live claim.
 - `pg_cron` and `pg_net` are not enabled; do not add hidden dependencies on them.
 
-## LATEST CI STATE
-- Starting HEAD for this pass was `0b6858fc4ae879bd7a16f4980a384b8177e87351`; `ImportVerifier release check` run #504 completed successfully.
-- Localization/readiness work then advanced the branch through `d54527772960ef73d81817afb66151b50d558d05`.
-- Run #512 on predecessor `da15c5c8d3cd2978284600d556a3590a083e71aa` passed tests and typecheck and was building when last inspected; exact latest HEAD must still be rechecked before claiming it green.
+## LATEST VERIFIED BUILD
+- Functional HEAD `a6d9d677e0a01a18805eb2b6edd894830c4912c0` completed `ImportVerifier release check` run #534 successfully: tests + typecheck + build green.
+- The continuity commit created after that functional HEAD must be checked at its exact SHA before ending the execution.
 - PR #4 remains open, unmerged and mergeable.
 
 ## IN PROGRESS / NEXT — execute without asking
 1. Keep exact latest HEAD CI green; fix any failure immediately.
-2. Integrate `marketDisplayFor(...)` into remaining Excel/PDF visible market/operator surfaces without altering canonical market codes or formulas.
-3. Audit remaining customer-visible price formatting so EUR 9.95 is never rounded to 10.
-4. Continue security/account/billing sweep and add targeted regression tests where an invariant is not yet covered.
-5. Continue desktop/iPhone/iPad/PWA QA, especially upload/export flows, table overflow, touch targets, safe-area and keyboard behavior.
-6. Audit ImportVerifier AI/Twin/Radar visible surfaces for any remaining Spanish leakage in EN/FR/DE/IT/PT.
-7. Localize US/CN/GB/JP documentary narratives before any of those markets becomes customer-active.
+2. Continue security/account/billing sweep; harden evidence/source URL validation and add focused regression coverage if current parsing accepts malformed HTTPS values or credentials.
+3. Audit ImportVerifier AI/Twin/Radar and remaining ancillary dashboard components for Spanish leakage in EN/FR/DE/IT/PT.
+4. Continue desktop/iPhone/iPad/PWA QA, especially upload/export flows, table overflow, modal keyboard behavior and touch/safe-area edge cases.
+5. Audit any remaining customer-visible price copy to ensure EUR 9.95 always comes from the canonical plan definition and never rounds to 10.
+6. Localize US/CN/GB/JP documentary narratives before any of those markets becomes customer-active.
+7. Revisit localized worksheet tab names only with formula-safe indirection/backward compatibility; current stable Spanish sheet IDs are deliberate.
 8. Refresh `WORK-HANDOFF-IMPORTVERIFIER.md` after the next material architecture/release-state pass or when external production wiring changes.
 
 ## BLOCKED EXTERNAL / USER OR WORK BROWSER NEEDED
