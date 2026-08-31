@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Product } from '@/lib/analysis';
+import { productsFromUnknown } from '@/lib/dashboard-api-shapes';
 import { marketDisplayFor } from '@/lib/market-i18n';
 import { MARKETS, type MarketCode } from '@/lib/markets';
 import { useLanguage } from '@/lib/use-language';
@@ -49,12 +50,21 @@ export default function AnalysisReviewGate() {
       if (!init?.body || typeof init.body !== 'string') return nativeFetch(input, init);
 
       let body: Record<string, unknown>;
-      try { body = JSON.parse(init.body) as Record<string, unknown>; }
-      catch { return nativeFetch(input, init); }
-      if (!Array.isArray(body.products) || typeof body.filename !== 'string') return nativeFetch(input, init);
+      try {
+        const parsed = JSON.parse(init.body);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return nativeFetch(input, init);
+        body = parsed as Record<string, unknown>;
+      } catch {
+        return nativeFetch(input, init);
+      }
+
+      const products = productsFromUnknown(body.products);
+      if (!products || typeof body.filename !== 'string' || body.filename.length < 1 || body.filename.length > 120) {
+        return nativeFetch(input, init);
+      }
 
       const marketCode = typeof body.marketCode === 'string' && body.marketCode in MARKETS ? body.marketCode as MarketCode : 'EU';
-      setDraft({ filename: body.filename, marketLabel: marketDisplayFor(languageRef.current, marketCode).name, products: body.products as Product[] });
+      setDraft({ filename: body.filename, marketLabel: marketDisplayFor(languageRef.current, marketCode).name, products });
 
       return new Promise<Response>((resolve, reject) => {
         pending.current = { input, init: { ...init }, body, resolve, reject };
