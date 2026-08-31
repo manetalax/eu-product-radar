@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { RULE_VERSION, validateProducts } from '@/lib/analysis';
 import { PRIVATE_HEADERS, readJsonBody, sameOrigin } from '@/lib/http';
-import { currentUtcMonthStart, productQuota, quotaExceededMessage } from '@/lib/quota';
+import { productQuota, quotaExceededMessage } from '@/lib/quota';
 import { isActiveMarketCode, MarketCode } from '@/lib/markets';
 import { auditBillingStatus, billingStatus } from '@/lib/billing';
 
@@ -11,18 +11,19 @@ const json = (body: unknown, status = 200) => NextResponse.json(body, { status, 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 async function readQuota(supabase: SupabaseClient, userId: string) {
-  const periodStart = currentUtcMonthStart();
-  const [{ data, error }, subscription, audit] = await Promise.all([
-    supabase.from('monthly_product_usage').select('product_count').eq('user_id', userId).eq('period_start', periodStart).maybeSingle(),
+  const [subscription, audit, freeUsage] = await Promise.all([
     supabase.from('subscriptions').select('plan_id,status,current_period_end,cancel_at_period_end').eq('user_id', userId).maybeSingle(),
     supabase.from('one_time_audits').select('id,product_limit').eq('user_id', userId).eq('status', 'paid').is('consumed_at', null).order('purchased_at', { ascending: true }).limit(1).maybeSingle(),
+    supabase.from('free_account_usage').select('product_count').eq('user_id', userId).maybeSingle(),
   ]);
-  if (error) throw new Error('La cuota no está disponible. Ejecuta la migración mensual en Supabase.');
   if (subscription.error?.code && subscription.error.code !== 'PGRST116') throw new Error('La suscripción no está disponible. Ejecuta la migración de pagos en Supabase.');
-  if (audit.error?.code && audit.error.code !== 'PGRST116') throw new Error('La auditoría de pago único no está disponible. Ejecuta la migración de auditorías en Supabase.');
+  if (audit.error?.code && audit.error.code !== 'PGRST116') throw new Error('La auditoría histórica no está disponible.');
+  if (freeUsage.error?.code && freeUsage.error.code !== 'PGRST116') throw new Error('La prueba gratuita no está disponible. Ejecuta la migración de cuota por cuenta en Supabase.');
+
   const subscriptionBilling = billingStatus(subscription.data);
-  const billing = subscriptionBilling.planId === 'free' && audit.data ? auditBillingStatus() : subscriptionBilling;
-  return productQuota(billing.planId === 'audit' ? 0 : Number(data?.product_count ?? 0), new Date(), billing);
+  if (subscriptionBilling.planId !== 'free') return productQuota(0, new Date(), subscriptionBilling);
+  if (audit.data) return productQuota(0, new Date(), auditBillingStatus());
+  return productQuota(Number(freeUsage.data?.product_count ?? 0), new Date(), subscriptionBilling);
 }
 
 export async function GET(request: Request) {
@@ -68,19 +69,23 @@ export async function POST(request: Request) {
     marketCode = body.marketCode;
     products = validateProducts(body.products);
   } catch (error) { return json({ error: error instanceof Error ? error.message : 'Archivo no válido.' }, 400); }
+
   const existing = await supabase.from('analyses').select('id,filename,created_at,rule_version,market_code,products').eq('id', requestId).eq('user_id', user.id).maybeSingle();
   if (existing.error) return json({ error: 'No se ha podido comprobar la importación. Vuelve a intentarlo.' }, 503);
+
   let quota;
   try { quota = await readQuota(supabase, user.id); }
   catch (quotaError) { return json({ error: quotaError instanceof Error ? quotaError.message : 'La cuota no está disponible.' }, 503); }
   if (existing.data) return json({ analysis: existing.data, quota });
-  if (products.length > quota.remaining) return json({ error: quotaExceededMessage(products.length, quota), quota }, 429);
+  if (quota.billing.planId === 'free' && products.length > quota.remaining) return json({ error: quotaExceededMessage(products.length, quota), quota }, 429);
+  if (quota.billing.planId === 'audit' && products.length > quota.remaining) return json({ error: quotaExceededMessage(products.length, quota), quota }, 429);
+
   const { data, error } = await supabase.from('analyses').insert({ id: requestId, user_id: user.id, filename, products, market_code: marketCode, rule_version: RULE_VERSION }).select('id,filename,created_at,rule_version,market_code,products').single();
-  if (error?.message?.includes('monthly_product_limit_exceeded') || error?.message?.includes('free_monthly_product_limit_exceeded') || error?.message?.includes('one_time_audit_product_limit_exceeded') || error?.message?.includes('one_time_audit_already_consumed')) {
+  if (error?.message?.includes('free_account_product_limit_exceeded') || error?.message?.includes('monthly_product_limit_exceeded') || error?.message?.includes('free_monthly_product_limit_exceeded') || error?.message?.includes('one_time_audit_product_limit_exceeded') || error?.message?.includes('one_time_audit_already_consumed')) {
     const latestQuota = await readQuota(supabase, user.id).catch(() => quota);
     return json({ error: quotaExceededMessage(products.length, latestQuota), quota: latestQuota }, 429);
   }
   if (error) return json({ error: 'No se ha podido guardar el análisis. No se ha confirmado ningún guardado; revisa la conexión y la configuración SQL.' }, 503);
-  const updatedQuota = await readQuota(supabase, user.id).catch(() => productQuota(quota.used + products.length));
+  const updatedQuota = await readQuota(supabase, user.id).catch(() => productQuota(quota.used + products.length, new Date(), quota.billing));
   return json({ analysis: data, quota: updatedQuota }, 201);
 }
