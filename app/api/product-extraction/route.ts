@@ -10,7 +10,7 @@ import { extractLocalDocumentText } from '@/lib/local-document-text';
 import type { Language } from '@/lib/landing-i18n';
 import { productExtractionText } from '@/lib/product-extraction-i18n';
 import { requestLanguage } from '@/lib/request-language';
-import { validateImageUploadType } from '@/lib/upload-image-type';
+import { sniffSupportedImageMime, validateImageUploadType } from '@/lib/upload-image-type';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -61,12 +61,12 @@ function customerExtractionError(language: Language, error: unknown): string {
 }
 
 function parseDataUrl(dataUrl: string, language: Language): { mimeType: string; bytes: Buffer } {
-  const match = /^data:([^;,]+);base64,([A-Za-z0-9+/=\r\n]+)$/i.exec(dataUrl);
+  const match = /^data:([^;,]*);base64,([A-Za-z0-9+/=\r\n]+)$/i.exec(dataUrl);
   if (!match) throw new Error(productExtractionText(language, 'invalidFile'));
   const bytes = Buffer.from(match[2], 'base64');
   if (!bytes.length) throw new Error(productExtractionText(language, 'emptyFile'));
   if (bytes.length > MAX_FILE_BYTES) throw new Error(productExtractionText(language, 'tooLarge'));
-  return { mimeType: match[1].toLowerCase(), bytes };
+  return { mimeType: match[1] ? match[1].toLowerCase() : 'application/octet-stream', bytes };
 }
 
 function validateUploadType(filename: string, declaredMime: string, dataMime: string, bytes: Buffer, language: Language): 'image' | 'document' {
@@ -185,7 +185,10 @@ export async function POST(request: Request) {
     let products: ExtractedProduct[];
 
     if (kind === 'image') {
-      const result = await generateVisionText(dataUrl, PRODUCT_PROMPT, { maxTokens: 3500 });
+      const detectedMime = sniffSupportedImageMime(upload.bytes);
+      if (!detectedMime) throw new Error(productExtractionText(language, 'imageMime'));
+      const normalizedDataUrl = `data:${detectedMime};base64,${upload.bytes.toString('base64')}`;
+      const result = await generateVisionText(normalizedDataUrl, PRODUCT_PROMPT, { maxTokens: 3500 });
       products = parseProductsJson(result.text);
       void recordAiUsage({
         task: 'product_vision',
