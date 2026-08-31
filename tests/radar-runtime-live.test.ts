@@ -13,14 +13,16 @@ test('Radar live requires the flag, a strong ingest secret and persisted events'
 });
 
 test('both Radar schedulers use the canonical authenticated JSON refresh contract', () => {
-  assert.match(netlifyScheduler, /api\/internal\/regulatory-refresh/);
+  assert.match(netlifyScheduler, /CANONICAL_REFRESH_URL = 'https:\/\/importverifier\.netlify\.app\/api\/internal\/regulatory-refresh'/);
+  assert.match(netlifyScheduler, /fetch\(CANONICAL_REFRESH_URL/);
+  assert.doesNotMatch(netlifyScheduler, /NEXT_PUBLIC_SITE_URL/);
   assert.match(netlifyScheduler, /Authorization: `Bearer \$\{secret\}`/);
   assert.match(netlifyScheduler, /'Content-Type': 'application\/json'/);
   assert.match(netlifyScheduler, /body: '\{\}'/);
   assert.match(netlifyScheduler, /secret\.length < 32/);
   assert.match(netlifyScheduler, /AbortController/);
 
-  assert.match(githubScheduler, /api\/internal\/regulatory-refresh/);
+  assert.match(githubScheduler, /https:\/\/importverifier\.netlify\.app\/api\/internal\/regulatory-refresh/);
   assert.match(githubScheduler, /Authorization: Bearer \$REGULATORY_INGEST_SECRET/);
   assert.match(githubScheduler, /Content-Type: application\/json/);
 });
