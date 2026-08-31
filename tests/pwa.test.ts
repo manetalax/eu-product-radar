@@ -55,11 +55,14 @@ test('las actualizaciones del service worker no dejan rechazos sin gestionar al 
   assert.doesNotMatch(pwaRegister, /void registration\?\.update\(\)/);
 });
 
-test('el registro PWA se difiere fuera de la carga crítica y su temporizador se limpia', () => {
-  assert.match(pwaRegister, /const REGISTRATION_DELAY_MS = 1200/);
-  assert.match(pwaRegister, /const scheduleRegistration = \(\) =>/);
-  assert.match(pwaRegister, /window\.setTimeout\(\(\) => \{ void register\(\); \}, REGISTRATION_DELAY_MS\)/);
+test('el registro PWA espera a una ventana idle y conserva fallback/cleanup', () => {
+  assert.match(pwaRegister, /const REGISTRATION_FALLBACK_DELAY_MS = 3000/);
+  assert.match(pwaRegister, /const REGISTRATION_IDLE_TIMEOUT_MS = 5000/);
+  assert.match(pwaRegister, /requestIdleCallback/);
+  assert.match(pwaRegister, /cancelIdleCallback/);
+  assert.match(pwaRegister, /window\.setTimeout\(\(\) => \{ void register\(\); \}, REGISTRATION_FALLBACK_DELAY_MS\)/);
   assert.match(pwaRegister, /window\.addEventListener\('load', scheduleRegistration, \{ once: true \}\)/);
   assert.match(pwaRegister, /window\.clearTimeout\(registrationTimer\)/);
+  assert.doesNotMatch(pwaRegister, /await updateRegistration\(\);/);
   assert.doesNotMatch(pwaRegister, /window\.addEventListener\('load', register/);
 });
