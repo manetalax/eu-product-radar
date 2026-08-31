@@ -13,6 +13,7 @@ export function safeOfficialRegulatoryUrl(value: unknown): string {
       url.protocol !== 'https:' ||
       url.username ||
       url.password ||
+      url.port ||
       !url.hostname ||
       !OFFICIAL_REGULATORY_HOSTS.some(host => url.hostname === host || url.hostname.endsWith(`.${host}`))
     ) return '';

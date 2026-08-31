@@ -25,12 +25,13 @@ test('normaliza eventos UE y genera un fingerprint estable', () => {
   assert.equal(first.last_seen_at, '2026-08-31T10:00:00.000Z');
 });
 
-test('rechaza fuentes no oficiales, HTTP, credenciales, espacios y URLs malformadas', () => {
+test('rechaza fuentes no oficiales, HTTP, credenciales, puertos no estándar, espacios y URLs malformadas', () => {
   for (const sourceUrl of [
     'https://example.com/alerta',
     'https://eur-lex.europa.eu.evil.test/alerta',
     'http://ec.europa.eu/alerta',
     'https://user:secret@ec.europa.eu/alerta',
+    'https://ec.europa.eu:8443/alerta',
     'https://ec.europa.eu/alerta con espacios',
     'not-a-url',
   ]) {
