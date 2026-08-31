@@ -17,7 +17,8 @@ test('configured site origin accepts HTTPS and localhost but rejects unsafe or c
 
 test('Stripe checkout and portal both build redirects from configuredSiteOrigin', () => {
   assert.match(checkout, /const siteOrigin = configuredSiteOrigin\(\)/);
-  assert.match(checkout, /success_url: `\$\{siteOrigin\}\/dashboard\?checkout=success`/);
+  assert.match(checkout, /success_url: `\$\{siteOrigin\}\/dashboard\?checkout=success&session_id=\{CHECKOUT_SESSION_ID\}`/);
+  assert.match(checkout, /cancel_url: `\$\{siteOrigin\}\/dashboard\?checkout=cancelled`/);
   assert.match(portal, /const siteOrigin = configuredSiteOrigin\(\)/);
   assert.match(portal, /return_url: `\$\{siteOrigin\}\/dashboard`/);
 });
