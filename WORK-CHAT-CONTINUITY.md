@@ -62,7 +62,7 @@
 - Evidence UI, PDF traceability and Excel `Evidencia` worksheet implemented.
 - RLS enforces account isolation.
 - Composite `(analysis_id,user_id)` FK defense-in-depth prevents evidence from being linked to another account's analysis even outside RLS.
-- Security integration test now creates the analysis under the correct JWT identity and proves the composite FK rejects cross-account evidence while accepting the owner.
+- Security integration test creates the analysis under the correct JWT identity and proves the composite FK rejects cross-account evidence while accepting the owner.
 
 ## DONE — Regulatory Impact Radar foundation
 - Persistent `regulatory_change_events` store applied in production.
@@ -79,7 +79,7 @@
 - PWA manifest/service worker/registration implemented.
 - `/dashboard`, `/api`, `/auth`, reset/private content excluded from offline cache.
 - Missing `/icon.svg` bug fixed with own-brand ImportVerifier shield/check icon; no institutional/EU-certification claim.
-- Raster app assets now exist in branch: `apple-touch-icon.png` 180x180, `icon-192.png`, `icon-512.png`.
+- Raster app assets exist: `apple-touch-icon.png` 180x180, `icon-192.png`, `icon-512.png`.
 - Manifest uses 192/512 PNG plus SVG; Next metadata exposes raster icons and Apple touch icon.
 - Tests verify every manifest icon points to an existing public asset.
 - Global security headers include HSTS, frame denial, no-sniff, strict referrer, restrictive permissions, same-origin-allow-popups and conservative CSP.
@@ -90,26 +90,28 @@
 ## DONE — localization / reports
 - `report-i18n.ts` provides ES/EN/FR/DE/IT/PT structural labels.
 - PDF detects active browser language with Spanish server/test fallback.
-- PDF narrative now has explicit ES/EN/FR/DE/IT/PT branches instead of English fallback for secondary languages; visible priority is localized.
-- `guide-i18n.ts` provides documentary scope in all six supported languages; PDF uses it.
-- Excel already localizes major visible structural labels/statuses and follows active language while preserving stable internal formula references.
+- PDF narrative has explicit ES/EN/FR/DE/IT/PT branches; visible priority is localized.
+- `guide-i18n.ts` provides documentary scope in all six supported languages; PDF and Excel use it.
+- Excel localizes major visible structural labels/statuses and follows active language while preserving stable internal formula references.
 - Intelligence Suite is localized ES/EN/FR/DE/IT/PT and sends selected language to ImportVerifier AI.
 - `dashboard-copy-v2.ts` contains complete auditable ES/EN/FR/DE/IT/PT dictionaries + interpolation helper; tests verify key parity and real translations.
-- Obsolete partial `dashboard-i18n.ts` removed. Main `Dashboard.tsx` still needs structural wiring to `dashboard-copy-v2.ts`; do not use DOM translation hacks.
-- Remaining report language gap: `documentationFor(...)` action narratives and some market operator labels are still Spanish; official legal references/URLs must remain verbatim while labels/explanations are localized.
-- Remaining Excel language gap: documentary guide band still uses Spanish `GUIDE_SCOPE`; replace with `guideScopeFor(language)` when editing exporter safely.
+- Obsolete partial `dashboard-i18n.ts` removed.
+- EU `documentationFor(...)` now generates the documentary actions structurally in ES/EN/FR/DE/IT/PT, including statuses and EU operator display label, while preserving official source URLs verbatim.
+- `tests/documentation-language.test.ts` protects six-language EU guidance and unchanged HTTPS official sources.
+- Main `Dashboard.tsx` still needs structural wiring to `dashboard-copy-v2.ts`; do not use DOM translation hacks.
+- Future-market documentary narratives (US/CN/GB/JP) remain Spanish internally; those markets are not active in customer UX yet and must be localized before activation.
 
 ## DONE — auth hardening
 - OAuth callback only accepts safe internal destinations.
 - Callback validates/preserves `lang` and has canonical ImportVerifier fallback origin when site URL is missing/malformed.
-- `AuthForm.tsx` now propagates selected language through Google OAuth, email signup confirmation and password-reset callback; reset returns to localized login.
+- `AuthForm.tsx` propagates selected language through Google OAuth, email signup confirmation and password-reset callback; reset returns to localized login.
 - Regression tests protect Google/signup/reset language propagation and callback validation.
 
 ## DONE — SEO / public indexing
 - Sitemap includes canonical homepage, Privacy and Terms.
 - Production robots excludes dashboard/API/auth/login/reset surfaces; preview/branch deploys disallow all indexing.
 - Root metadata/canonical/OpenGraph branding uses ImportVerifier/Import Rules Verifier and canonical domain.
-- Social OG raster image remains a separate polish task; app/PWA raster icons are no longer blocked.
+- Dynamic 1200x630 `app/opengraph-image.tsx` exists with Import Rules Verifier branding and independent-EU-regulatory positioning.
 
 ## Production database facts last checked 2026-08-31
 - Supabase project: `hfuwwjdcyudflamwwnon`.
@@ -118,18 +120,19 @@
 - `pg_cron` and `pg_net` not enabled; do not add hidden dependencies on them.
 
 ## LATEST VERIFIED BUILD
-- Commit `bfbb6abb263684d342116763c677ab31f59f7718` completed `ImportVerifier release check` run #392 successfully: tests + typecheck + build green.
-- Later continuity-only/code-polish commits must be rechecked at their exact HEAD before claiming green.
+- Functional commit `b4676bcd4a5642c38408abbb844d66f7a5878fd2` completed `ImportVerifier release check` run #434 successfully: tests + typecheck + build green.
+- The following continuity-only commit must be checked at its exact HEAD before claiming exact-HEAD green.
 - PR #4 remains open, unmerged and mergeable.
 
 ## IN PROGRESS — execute without asking
 1. Keep exact latest HEAD CI green; fix any failure immediately.
 2. Wire `components/Dashboard.tsx` structurally to `dashboard-copy-v2.ts`: tabs, notices/errors, quota, results/history/reports/settings, date locale and `formatPrice(language, ...)`.
-3. Localize `documentationFor(...)` narratives/market operator display labels without altering official references/URLs or inventing legal meaning.
-4. Replace Excel documentary `GUIDE_SCOPE` with `guideScopeFor(language)` and continue report narrative localization.
+3. Ensure report exporters pass the selected language explicitly into documentary guidance so server/test execution does not depend on browser-language inference.
+4. Continue Excel structural localization: localize worksheet names safely while keeping formulas valid after translated sheet names.
 5. Continue security/account/billing sweep and targeted regression tests.
-6. Continue desktop/iPhone/iPad/PWA QA; add social OG image when a suitable binary/design path is used.
-7. Refresh `WORK-HANDOFF-IMPORTVERIFIER.md` after the next material architecture/release-state pass.
+6. Continue desktop/iPhone/iPad/PWA QA, especially upload/export flows and safe-area/keyboard behavior.
+7. Localize US/CN/GB/JP documentary narratives before any of those markets becomes customer-active.
+8. Refresh `WORK-HANDOFF-IMPORTVERIFIER.md` on the next material architecture/release-state pass; this localization pass did not change architecture.
 
 ## BLOCKED EXTERNAL / USER OR WORK BROWSER NEEDED
 - Netlify: deploy latest PR #4 branch to `https://importverifier.netlify.app/` and confirm production branch/env.
