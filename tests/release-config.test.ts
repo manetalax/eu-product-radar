@@ -35,19 +35,10 @@ test('producción rechaza políticas que permitan gasto de IA', () => {
   }
 });
 
-test('la política de coste cae de forma segura a free_first fuera del release guard', () => {
-  const previous = process.env.AI_COST_POLICY;
-  try {
-    delete process.env.AI_COST_POLICY;
-    assert.equal(aiCostPolicy(), 'free_first');
-    process.env.AI_COST_POLICY = 'free_only';
-    assert.equal(aiCostPolicy(), 'free_only');
-    process.env.AI_COST_POLICY = 'premium_allowed';
-    assert.equal(aiCostPolicy(), 'premium_allowed');
-    process.env.AI_COST_POLICY = 'invalid';
-    assert.equal(aiCostPolicy(), 'free_first');
-  } finally {
-    if (previous === undefined) delete process.env.AI_COST_POLICY;
-    else process.env.AI_COST_POLICY = previous;
-  }
+test('el router cae en free_only por defecto en producción y en free_first fuera de producción', () => {
+  assert.equal(aiCostPolicy({ NODE_ENV: 'production' }), 'free_only');
+  assert.equal(aiCostPolicy({ NODE_ENV: 'development' }), 'free_first');
+  assert.equal(aiCostPolicy({}), 'free_first');
+  assert.equal(aiCostPolicy({ NODE_ENV: 'production', AI_COST_POLICY: 'invalid' }), 'free_only');
+  assert.equal(aiCostPolicy({ NODE_ENV: 'production', AI_COST_POLICY: 'premium_allowed' }), 'premium_allowed');
 });
