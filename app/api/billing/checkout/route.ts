@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { billingStatus, stripePriceId } from '@/lib/billing';
 import { sameOrigin, PRIVATE_HEADERS, readJsonBody } from '@/lib/http';
+import { assertPaidCheckoutLegalReady } from '@/lib/legal-config';
 import { stripeClient } from '@/lib/stripe/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
     const body = await readJsonBody(request) as Record<string, unknown> | null;
     const candidate = body?.purchaseId ?? body?.planId;
     if (candidate !== UNLIMITED_INTERNAL_PLAN_ID) throw new Error('La única suscripción disponible es ImportVerifier Unlimited.');
+    assertPaidCheckoutLegalReady();
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : 'Solicitud no válida.' }, 400);
   }
