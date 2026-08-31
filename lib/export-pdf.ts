@@ -7,13 +7,24 @@ import { MARKETS } from './markets';
 import type { Language } from './landing-i18n';
 import { reportLabels } from './report-i18n';
 
+const LANGUAGES: Language[] = ['es','en','fr','de','it','pt'];
+function activeReportLanguage(requested?: Language): Language {
+  if (requested) return requested;
+  if (typeof document !== 'undefined') {
+    const candidate = document.documentElement.lang.slice(0, 2) as Language;
+    if (LANGUAGES.includes(candidate)) return candidate;
+  }
+  return 'es';
+}
+
 export const pdfText = (text: string) => Array.from(text).map(c => {
   const n = c.codePointAt(0)!;
   return n >= 32 && n <= 255 ? c : c === '\n' ? ' ' : `[U+${n.toString(16).toUpperCase()}]`;
 }).join('');
 
-export async function pdfBytes(analysis: Analysis, language: Language = 'es'): Promise<Uint8Array<ArrayBuffer>> {
+export async function pdfBytes(analysis: Analysis, requestedLanguage?: Language): Promise<Uint8Array<ArrayBuffer>> {
   if (!supportsRuleVersion(analysis.rule_version)) throw new Error('Versión de reglas no compatible.');
+  const language = activeReportLanguage(requestedLanguage);
   const t = reportLabels[language];
   const marketCode = analysisMarket(analysis), market = MARKETS[marketCode];
   const products = validateProducts(analysis.products), results = analyze(products, marketCode);
