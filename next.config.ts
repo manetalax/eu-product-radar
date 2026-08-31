@@ -1,4 +1,13 @@
 import type { NextConfig } from 'next';
+import { checkReleaseConfig } from './lib/release-config';
+
+if (process.env.NETLIFY === 'true' && process.env.CONTEXT === 'production') {
+  const release = checkReleaseConfig({ ...process.env, NODE_ENV: 'production' });
+  for (const warning of release.warnings) console.warn(`ImportVerifier production warning: ${warning}`);
+  if (!release.ok) {
+    throw new Error(`ImportVerifier production configuration is incomplete:\n${release.errors.map(error => `- ${error}`).join('\n')}`);
+  }
+}
 
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
