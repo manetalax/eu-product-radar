@@ -1,6 +1,6 @@
 import type { BillingStatus } from './billing';
 
-export const FREE_MONTHLY_PRODUCT_LIMIT = 5;
+export const FREE_ACCOUNT_PRODUCT_LIMIT = 5;
 
 export type ProductQuota = {
   limit: number;
@@ -10,22 +10,20 @@ export type ProductQuota = {
   billing: BillingStatus;
 };
 
-export function currentUtcMonthStart(now = new Date()): string {
-  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-01`;
-}
-
-export function productQuota(used: number, now = new Date(), billing: BillingStatus = { planId: 'free', planName: 'Gratis', status: null, productLimit: FREE_MONTHLY_PRODUCT_LIMIT, currentPeriodEnd: null, cancelAtPeriodEnd: false }): ProductQuota {
+export function productQuota(used: number, _now = new Date(), billing: BillingStatus = { planId: 'free', planName: 'Gratis', status: null, productLimit: FREE_ACCOUNT_PRODUCT_LIMIT, currentPeriodEnd: null, cancelAtPeriodEnd: false }): ProductQuota {
   const safeUsed = Number.isFinite(used) && used > 0 ? Math.floor(used) : 0;
+  const paid = billing.planId !== 'free' && billing.planId !== 'audit';
   return {
     limit: billing.productLimit,
     used: safeUsed,
-    remaining: Math.max(0, billing.productLimit - safeUsed),
-    periodStart: currentUtcMonthStart(now),
+    remaining: paid ? billing.productLimit : Math.max(0, billing.productLimit - safeUsed),
+    periodStart: billing.planId === 'free' ? 'lifetime' : 'subscription',
     billing,
   };
 }
 
 export function quotaExceededMessage(incomingProducts: number, quota: ProductQuota): string {
   if (quota.billing.planId === 'audit') return `Tu auditoría profesional permite una única carga de hasta ${quota.limit} productos. Este archivo contiene ${incomingProducts}. No se ha guardado ningún producto.`;
-  return `Tu plan ${quota.billing.planName} incluye ${quota.limit} productos al mes. Este archivo contiene ${incomingProducts} y te quedan ${quota.remaining}. No se ha guardado ningún producto.`;
+  if (quota.billing.planId === 'free') return `Tu prueba gratuita incluye 5 productos en total por cuenta. Este archivo contiene ${incomingProducts} y te quedan ${quota.remaining}. No se ha guardado ningún producto.`;
+  return 'La solicitud supera una protección técnica del servicio. Divide el catálogo en archivos más pequeños y vuelve a intentarlo.';
 }
