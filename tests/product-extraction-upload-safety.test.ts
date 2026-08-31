@@ -28,7 +28,7 @@ test('image extension, MIME metadata and magic bytes agree while missing mobile 
   assert.match(imageTypes, /\.hei\[cf\]\$\/i/);
   assert.match(imageTypes, /\['image\/heic', 'image\/heif'\]/);
   assert.match(imageTypes, /application\/octet-stream/);
-  assert.match(imageTypes, /0xff.*0xd8.*0xff/s);
+  assert.match(imageTypes, /0xff[\s\S]*0xd8[\s\S]*0xff/);
   assert.match(imageTypes, /ftyp/);
   assert.match(imageTypes, /extension-mismatch/);
   assert.match(imageTypes, /mime-mismatch/);
