@@ -71,6 +71,7 @@
 
 ## DONE — PWA/mobile/security
 - PWA manifest/service worker/registration implemented; dashboard/API/auth/reset/private content is excluded from offline caching.
+- Authenticated dashboard, reset-password, auth and API responses have explicit `private, no-store` cache headers; the regression test is ES2017-compatible with the repository TypeScript target.
 - Own-brand icon assets make no institutional/EU-certification claim.
 - HSTS, frame denial, no-sniff, strict referrer, restrictive permissions, conservative CSP and fail-closed canonical-origin checks are in place.
 - Global mobile CSS covers 44px touch targets, focus visibility, safe areas, wrapping and 16px iOS form controls.
@@ -117,19 +118,21 @@
 - Performance advisor only reports currently-unused indexes; do not remove them merely because the project has little production traffic.
 
 ## LATEST VERIFIED BUILD
-- Latest functional security commit in this pass: `e518fd782ba744f7a35fda9af97d83201df6bc35` (`Test Radar source URL safety`), following marketplace URL hardening/test commits `4bfe2fb615d70b9959eb122695bada22b699c4b1` and `c1475f3775bf26b89f5294eadc6c079706cf4ebe` plus Radar hardening `f584658214abdf766a88df64f3ba643632ed3b02`.
-- Exact-HEAD `ImportVerifier release check` run #740 was still in progress when this handoff update was written; verify its final conclusion before the next code change and fix immediately if red.
+- Security pass commits: marketplace URL hardening/test `4bfe2fb615d70b9959eb122695bada22b699c4b1` / `c1475f3775bf26b89f5294eadc6c079706cf4ebe`; Radar source URL hardening/test `f584658214abdf766a88df64f3ba643632ed3b02` / `e518fd782ba744f7a35fda9af97d83201df6bc35`.
+- A concurrent private-cache regression test initially used the ES2018 dotAll regex flag while the repository targets ES2017; exact CI caught it at typecheck. Commit `70a32d83371fb9127f78b98b436a1492dfb83611` (`Fix cache regression for current TS target`) removed the incompatible regex usage.
+- Exact-HEAD `ImportVerifier release check` run #749 for `70a32d83371fb9127f78b98b436a1492dfb83611` completed **SUCCESS** after the fix.
 - PR #4 is open, unmerged and mergeable.
 - GitHub/Netlify may still surface legacy `euproductradar` checks because multiple Netlify sites are connected to the same repository; do not treat those as the canonical ImportVerifier deployment.
 
 ## IN PROGRESS / NEXT — execute without asking
-1. Verify exact latest HEAD CI after this handoff commit and keep it green; fix any failure immediately.
+1. Verify exact latest HEAD CI after any handoff-only commit and keep it green; fix any failure immediately.
 2. Continue security/account/billing sweep, especially remaining URL-bearing/user-supplied fields and failure-recovery paths; marketplace detection and Radar source URL credentials/whitespace are now covered.
-3. Continue customer-visible i18n sweep for secondary/ancillary surfaces; future-market US/CN/GB/JP documentary narratives must be localized before activation.
-4. Continue desktop/iPhone/iPad/PWA QA, especially upload/export flows, table overflow, modal keyboard behavior and touch/safe-area edge cases.
-5. Keep all customer-visible price copy sourced from canonical plan definitions and exact EUR 9.95 formatting.
-6. Refresh `WORK-HANDOFF-IMPORTVERIFIER.md` after the next material architecture/release-state pass or when external production wiring changes.
-7. Do not remove the legacy monthly-usage table or historical plan IDs merely to simplify names; they are inert compatibility data until a deliberate cleanup pass.
+3. Localize the Intelligence Suite connector capability labels (`catalog-import`, `catalog-refresh`, `listing-import`, etc.) instead of exposing English-normalized internal capability IDs in FR/DE/IT/PT/ES.
+4. Continue customer-visible i18n sweep; future-market US/CN/GB/JP documentary narratives must be localized before activation.
+5. Continue desktop/iPhone/iPad/PWA QA, especially upload/export flows, table overflow, modal keyboard behavior and touch/safe-area edge cases.
+6. Keep all customer-visible price copy sourced from canonical plan definitions and exact EUR 9.95 formatting.
+7. Refresh `WORK-HANDOFF-IMPORTVERIFIER.md` after the next material architecture/release-state pass or when external production wiring changes.
+8. Do not remove the legacy monthly-usage table or historical plan IDs merely to simplify names; they are inert compatibility data until a deliberate cleanup pass.
 
 ## BLOCKED EXTERNAL / USER OR WORK BROWSER NEEDED
 - Netlify: confirm production site deploys latest PR #4 branch and correct production env. Direct visual browsing of the Netlify domain is not available in this session.
