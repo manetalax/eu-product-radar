@@ -1,6 +1,6 @@
 import { cookies, headers } from 'next/headers';
 import { isLanguage, type Language } from './landing-i18n';
-import { LANGUAGE_COOKIE_KEY } from './use-language';
+import { LANGUAGE_COOKIE } from './request-language';
 
 function languageFromAcceptLanguage(value: string | null): Language | null {
   if (!value) return null;
@@ -13,7 +13,7 @@ function languageFromAcceptLanguage(value: string | null): Language | null {
 
 export async function serverLanguage(): Promise<Language> {
   const cookieStore = await cookies();
-  const cookieLanguage = cookieStore.get(LANGUAGE_COOKIE_KEY)?.value;
+  const cookieLanguage = cookieStore.get(LANGUAGE_COOKIE)?.value;
   if (isLanguage(cookieLanguage)) return cookieLanguage;
   const headerStore = await headers();
   return languageFromAcceptLanguage(headerStore.get('accept-language')) ?? 'es';
