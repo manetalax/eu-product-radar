@@ -74,9 +74,27 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
-  const { error: eventError } = await admin.from('stripe_webhook_events').insert({ event_id: event.id, event_type: event.type });
-  if (eventError?.code === '23505') return NextResponse.json({ received: true, duplicate: true });
-  if (eventError) return NextResponse.json({ error: 'No se ha podido registrar el evento.' }, { status: 503 });
+  const startedAt = new Date().toISOString();
+  const { error: eventError } = await admin.from('stripe_webhook_events').insert({
+    event_id: event.id,
+    event_type: event.type,
+    status: 'processing',
+    processed_at: null,
+    updated_at: startedAt,
+  });
+  if (eventError?.code === '23505') {
+    const { data: existing, error: existingError } = await admin
+      .from('stripe_webhook_events')
+      .select('status')
+      .eq('event_id', event.id)
+      .maybeSingle();
+    if (existingError) return NextResponse.json({ error: 'No se ha podido comprobar el evento.' }, { status: 503 });
+    if (existing?.status === 'processed') return NextResponse.json({ received: true, duplicate: true });
+    // A previous attempt may have crashed after claiming the event. The downstream
+    // subscription/audit upserts are idempotent, so safely retry any processing event.
+  } else if (eventError) {
+    return NextResponse.json({ error: 'No se ha podido registrar el evento.' }, { status: 503 });
+  }
 
   try {
     if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
@@ -90,9 +108,18 @@ export async function POST(request: Request) {
     } else if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
       await syncSubscription(event.data.object as Stripe.Subscription);
     }
+
+    const completedAt = new Date().toISOString();
+    const { error: markError } = await admin.from('stripe_webhook_events').update({
+      status: 'processed',
+      processed_at: completedAt,
+      updated_at: completedAt,
+    }).eq('event_id', event.id);
+    if (markError) throw markError;
     return NextResponse.json({ received: true });
   } catch {
-    await admin.from('stripe_webhook_events').delete().eq('event_id', event.id);
+    // Keep the row in `processing`: Stripe can retry the same signed event and the
+    // idempotent downstream upserts will safely continue from the last durable state.
     return NextResponse.json({ error: 'No se ha podido aplicar el evento.' }, { status: 503 });
   }
 }
