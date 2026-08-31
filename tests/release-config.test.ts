@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkReleaseConfig, IMPORTVERIFIER_PRODUCTION_URL, IMPORTVERIFIER_UNLIMITED_PRICE_ID } from '../lib/release-config';
+import { checkReleaseConfig, IMPORTVERIFIER_PRODUCTION_URL, IMPORTVERIFIER_SUPABASE_URL, IMPORTVERIFIER_UNLIMITED_PRICE_ID } from '../lib/release-config';
 import { aiCostPolicy } from '../lib/ai-provider';
 
 const baseEnv = {
   NODE_ENV: 'production',
   NEXT_PUBLIC_SITE_URL: IMPORTVERIFIER_PRODUCTION_URL,
-  NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'public-key',
+  NEXT_PUBLIC_SUPABASE_URL: IMPORTVERIFIER_SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_example',
   SUPABASE_SECRET_KEY: 'secret-key',
   STRIPE_SECRET_KEY: 'sk_live_example',
   STRIPE_WEBHOOK_SECRET: 'whsec_example',
@@ -51,6 +51,24 @@ test('producción rechaza un Stripe price distinto del Unlimited live canónico'
   const result = checkReleaseConfig({ ...baseEnv, STRIPE_PRICE_STARTER: 'price_stale', AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key' });
   assert.equal(result.ok, false);
   assert.ok(result.errors.some(error => error.includes(IMPORTVERIFIER_UNLIMITED_PRICE_ID)));
+});
+
+test('producción rechaza claves Stripe de test, webhook malformado y proyecto Supabase equivocado', () => {
+  const stripeTest = checkReleaseConfig({ ...baseEnv, STRIPE_SECRET_KEY: 'sk_test_example', AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key' });
+  assert.equal(stripeTest.ok, false);
+  assert.ok(stripeTest.errors.some(error => /clave live de Stripe/));
+
+  const badWebhook = checkReleaseConfig({ ...baseEnv, STRIPE_WEBHOOK_SECRET: 'not-a-webhook-secret', AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key' });
+  assert.equal(badWebhook.ok, false);
+  assert.ok(badWebhook.errors.some(error => /signing secret/));
+
+  const wrongSupabase = checkReleaseConfig({ ...baseEnv, NEXT_PUBLIC_SUPABASE_URL: 'https://other.supabase.co', AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key' });
+  assert.equal(wrongSupabase.ok, false);
+  assert.ok(wrongSupabase.errors.some(error => error.includes(IMPORTVERIFIER_SUPABASE_URL)));
+
+  const leakedSecret = checkReleaseConfig({ ...baseEnv, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'service-role-looking-value', AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key' });
+  assert.equal(leakedSecret.ok, false);
+  assert.ok(leakedSecret.errors.some(error => /publishable key/));
 });
 
 test('Radar live exige un secreto de ingesta fuerte y compartible', () => {
