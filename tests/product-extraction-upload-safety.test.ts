@@ -7,7 +7,7 @@ const route = readFileSync(new URL('../app/api/product-extraction/route.ts', imp
 test('product extraction validates decoded size and MIME before rate-limited AI work', () => {
   const parseIndex = route.indexOf('upload = parseDataUrl(dataUrl)');
   const validateIndex = route.indexOf('kind = validateUploadType(filename, mimeType, upload.mimeType)');
-  const rateLimitIndex = route.indexOf('consumeApiRateLimit');
+  const rateLimitIndex = route.indexOf('const allowed = await consumeApiRateLimit');
   const visionIndex = route.indexOf('generateVisionText(dataUrl');
   assert.ok(parseIndex > 0);
   assert.ok(validateIndex > parseIndex);
