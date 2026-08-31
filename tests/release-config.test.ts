@@ -12,6 +12,11 @@ const baseEnv = {
   STRIPE_SECRET_KEY: 'sk_live_example',
   STRIPE_WEBHOOK_SECRET: 'whsec_example',
   STRIPE_PRICE_STARTER: 'price_example',
+  LEGAL_PROVIDER_NAME: 'Example Provider SL',
+  LEGAL_PROVIDER_ADDRESS: 'Example street 1, Madrid, Spain',
+  LEGAL_TAX_ID: 'B00000000',
+  LEGAL_JURISDICTION: 'Spain',
+  LEGAL_REFUND_POLICY: 'Refunds and withdrawal rights are handled according to applicable law and the published terms.',
 } as NodeJS.ProcessEnv;
 
 test('permite producción gratuita sin exigir OpenAI', () => {
@@ -33,6 +38,13 @@ test('producción rechaza políticas que permitan gasto de IA', () => {
     assert.equal(result.ok, false);
     assert.ok(result.errors.some(error => /free_only/));
   }
+});
+
+test('producción no queda lista para cobrar sin identidad legal completa', () => {
+  const incomplete = { ...baseEnv, LEGAL_PROVIDER_NAME: '' } as NodeJS.ProcessEnv;
+  const result = checkReleaseConfig({ ...incomplete, AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key' });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some(error => /información legal obligatoria/));
 });
 
 test('Radar live exige un secreto de ingesta fuerte y compartible', () => {
