@@ -7,9 +7,11 @@ import { regulatoryReadiness, type RegulatoryEvidenceLink } from '@/lib/regulato
 import styles from './IntelligenceSuite.module.css';
 
 type HistoryItem = { id: string; filename: string; product_count: number };
+type EvidenceRow = { product_index: number; evidence_key: string; status: 'available' | 'pending' | 'not_applicable'; note?: string };
 
 export default function IntelligenceSuite() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [evidenceRows, setEvidenceRows] = useState<EvidenceRow[]>([]);
   const [selected, setSelected] = useState(0);
   const [loading, setLoading] = useState(true);
   const [question, setQuestion] = useState('¿Qué me falta para poder avanzar con este producto?');
@@ -28,7 +30,13 @@ export default function IntelligenceSuite() {
         if (!latest || cancelled) return;
         const detailResponse = await fetch(`/api/analyses?id=${encodeURIComponent(latest.id)}`, { cache: 'no-store' });
         const detailBody = await detailResponse.json() as { analysis?: Analysis };
-        if (!cancelled && detailBody.analysis) setAnalysis(detailBody.analysis);
+        if (!detailBody.analysis || cancelled) return;
+        setAnalysis(detailBody.analysis);
+        const evidenceResponse = await fetch(`/api/evidence?analysisId=${encodeURIComponent(detailBody.analysis.id)}`, { cache: 'no-store' });
+        if (evidenceResponse.ok) {
+          const evidenceBody = await evidenceResponse.json() as { evidence?: EvidenceRow[] };
+          if (!cancelled) setEvidenceRows(evidenceBody.evidence ?? []);
+        }
       } catch {
         if (!cancelled) setError('No se ha podido cargar la capa de inteligencia. El resto del panel sigue disponible.');
       } finally {
@@ -46,15 +54,20 @@ export default function IntelligenceSuite() {
 
   const evidence = useMemo<RegulatoryEvidenceLink[]>(() => {
     if (!regulatory) return [];
-    return regulatory.obligations.flatMap(obligation => obligation.evidence.map((title, index) => ({
-      requirementId: `${obligation.id}-${index}`,
-      title,
-      status: 'missing' as const,
-      sourceUrl: obligation.source.url,
-    })));
-  }, [regulatory]);
+    const rowsForProduct = evidenceRows.filter(row => row.product_index === selected);
+    return regulatory.obligations.flatMap(obligation => obligation.evidence.flatMap((title, index) => {
+      const key = `${obligation.title}: ${title}`.slice(0, 120);
+      const saved = rowsForProduct.find(row => row.evidence_key === key);
+      if (saved?.status === 'not_applicable') return [];
+      const status: RegulatoryEvidenceLink['status'] = saved?.status === 'available' ? 'supplied' : saved?.status === 'pending' ? 'needs_review' : 'missing';
+      return [{ requirementId: `${obligation.id}-${index}`, title, status, sourceName: saved?.note || undefined, sourceUrl: obligation.source.url }];
+    }));
+  }, [regulatory, evidenceRows, selected]);
 
   const readiness = regulatory ? regulatoryReadiness(evidence) : 0;
+  const suppliedCount = evidence.filter(item => item.status === 'supplied').length;
+  const reviewCount = evidence.filter(item => item.status === 'needs_review').length;
+  const missingCount = evidence.filter(item => item.status === 'missing').length;
   const actions = regulatory?.obligations.map(item => item.title) ?? [];
   const impacts = useMemo(() => {
     if (!regulatory) return [];
@@ -73,6 +86,7 @@ export default function IntelligenceSuite() {
       const context = JSON.stringify({
         product,
         result,
+        evidence,
         analysis: { filename: analysis.filename, ruleVersion: analysis.rule_version, marketCode: analysis.market_code ?? 'EU' },
       });
       const response = await fetch('/api/regulatory-agent', {
@@ -109,8 +123,8 @@ export default function IntelligenceSuite() {
       </article>
 
       <article className={styles.card}>
-        <div className={styles.cardHead}><div><h3>Product Regulatory Twin</h3><p>Gemelo regulatorio del producto seleccionado.</p></div><span className={styles.status}>{regulatory ? 'VIVO' : 'SIN CLASIFICAR'}</span></div>
-        {regulatory ? <><div className={styles.meterRow}><div className={styles.meter} style={{ '--score': `${readiness}%` } as React.CSSProperties}><div className={styles.meterInner}>{readiness}%</div></div><div className={styles.facts}><div className={styles.fact}><span>Categoría</span><strong>{regulatory.category}</strong></div><div className={styles.fact}><span>Confianza</span><strong>{regulatory.confidence}</strong></div><div className={styles.fact}><span>Reglas candidatas</span><strong>{regulatory.applicableActs.length}</strong></div><div className={styles.fact}><span>Evidencias pendientes</span><strong>{evidence.length}</strong></div></div></div><ul className={styles.list}>{actions.slice(0, 4).map(action => <li key={action}>{action}</li>)}</ul></> : <div className={styles.empty}>No hay una clasificación regulatoria disponible para este producto.</div>}
+        <div className={styles.cardHead}><div><h3>Product Regulatory Twin</h3><p>Gemelo regulatorio vivo del producto seleccionado.</p></div><span className={styles.status}>{regulatory ? 'VIVO' : 'SIN CLASIFICAR'}</span></div>
+        {regulatory ? <><div className={styles.meterRow}><div className={styles.meter} style={{ '--score': `${readiness}%` } as React.CSSProperties}><div className={styles.meterInner}>{readiness}%</div></div><div className={styles.facts}><div className={styles.fact}><span>Categoría</span><strong>{regulatory.category}</strong></div><div className={styles.fact}><span>Confianza</span><strong>{regulatory.confidence}</strong></div><div className={styles.fact}><span>Evidencia disponible</span><strong>{suppliedCount}</strong></div><div className={styles.fact}><span>Pendiente / revisar</span><strong>{missingCount + reviewCount}</strong></div></div></div><ul className={styles.list}>{actions.slice(0, 4).map(action => <li key={action}>{action}</li>)}</ul><div className={styles.disclaimer}>El readiness refleja el estado de evidencia guardado por el usuario; no equivale a una certificación de conformidad.</div></> : <div className={styles.empty}>No hay una clasificación regulatoria disponible para este producto.</div>}
       </article>
 
       <article className={styles.card}>
@@ -120,9 +134,9 @@ export default function IntelligenceSuite() {
 
       <article className={`${styles.card} ${styles.wide}`}>
         <div className={styles.cardHead}><div><h3>Connect</h3><p>Base de integración preparada para importar catálogos y refrescar su estado desde las principales plataformas.</p></div><span className={styles.status}>3 CONECTORES</span></div>
-        <div className={styles.platforms}>{PLATFORM_CONNECTORS.map(connector => <div className={styles.platform} key={connector.id}><strong>{connector.name}</strong><small>{connector.capabilities.map(item => item.replaceAll('-', ' ')).join(' · ')}</small><button type="button" disabled>Autorizar {connector.name}</button></div>)}</div>
-        <div className={styles.urlRow}><input value={platformUrl} onChange={e => setPlatformUrl(e.target.value)} placeholder="Pega una URL de Shopify, Amazon o Etsy para detectar la plataforma" /><button className={styles.button} type="button" disabled={!platformUrl.trim()}>Detectar</button></div>
-        {platformUrl.trim() && <div className={styles.detected}>{detected ? `Plataforma detectada: ${PLATFORM_CONNECTORS.find(item => item.id === detected)?.name}. El conector OAuth/API está preparado para activarse con credenciales oficiales.` : 'No se ha reconocido una URL HTTPS compatible.'}</div>}
+        <div className={styles.platforms}>{PLATFORM_CONNECTORS.map(connector => <div className={styles.platform} key={connector.id}><strong>{connector.name}</strong><small>{connector.capabilities.map(item => item.replaceAll('-', ' ')).join(' · ')}</small><button type="button" disabled aria-label={`${connector.name} pendiente de autorización oficial`}>Próximamente · Autorizar {connector.name}</button></div>)}</div>
+        <div className={styles.urlRow}><input value={platformUrl} onChange={e => setPlatformUrl(e.target.value)} placeholder="Pega una URL HTTPS de Shopify, Amazon o Etsy para detectar la plataforma" /><button className={styles.button} type="button" disabled={!platformUrl.trim()}>Detectar</button></div>
+        {platformUrl.trim() && <div className={styles.detected}>{detected ? `Plataforma detectada: ${PLATFORM_CONNECTORS.find(item => item.id === detected)?.name}. La autorización se activará cuando la integración oficial esté configurada.` : 'No se ha reconocido una URL HTTPS compatible.'}</div>}
       </article>
     </div>}
   </section>;
