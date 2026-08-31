@@ -6,6 +6,7 @@ import { marketCodeOrEu, type MarketCode } from '@/lib/markets';
 import { createClient } from '@/lib/supabase/server';
 import { PRIVATE_HEADERS, readJsonBody, sameOrigin } from '@/lib/http';
 import { requestLanguage } from '@/lib/request-language';
+import type { Language } from '@/lib/landing-i18n';
 
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
@@ -18,6 +19,15 @@ function regulatoryEvidenceKeys(product: Product, marketCode: MarketCode): Set<s
     obligation.evidence.map(evidence => `${obligation.title}: ${evidence}`.slice(0, 120)),
   ) ?? [];
   return new Set(keys);
+}
+
+function customerEvidenceError(language: Language, error: unknown): string {
+  const e = (key: Parameters<typeof evidenceApiText>[1]) => evidenceApiText(language, key);
+  if (!(error instanceof Error)) return e('invalid');
+  const safeMessages = [e('invalidData'), e('validateAnalysis'), e('missingProduct'), e('wrongRequirement'), e('save')];
+  if (safeMessages.includes(error.message)) return error.message;
+  console.error('evidence_write_failed', error);
+  return e('invalid');
 }
 
 export async function GET(request: Request) {
@@ -86,6 +96,6 @@ export async function PUT(request: Request) {
     if (error) throw new Error(e('save'));
     return json({ evidence: data });
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : e('invalid') }, 400);
+    return json({ error: customerEvidenceError(language, error) }, 400);
   }
 }
