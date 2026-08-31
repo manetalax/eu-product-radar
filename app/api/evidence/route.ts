@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { analyze, type Product } from '@/lib/analysis';
 import { isValidEvidenceUrl } from '@/lib/evidence';
+import { evidenceApiText } from '@/lib/evidence-api-i18n';
 import { marketCodeOrEu, type MarketCode } from '@/lib/markets';
 import { createClient } from '@/lib/supabase/server';
 import { PRIVATE_HEADERS, readJsonBody, sameOrigin } from '@/lib/http';
+import { requestLanguage } from '@/lib/request-language';
 
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
@@ -19,21 +21,25 @@ function regulatoryEvidenceKeys(product: Product, marketCode: MarketCode): Set<s
 }
 
 export async function GET(request: Request) {
+  const language = requestLanguage(request);
+  const e = (key: Parameters<typeof evidenceApiText>[1]) => evidenceApiText(language, key);
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return json({ error: 'Inicia sesión.' }, 401);
+  if (authError || !user) return json({ error: e('signIn') }, 401);
   const analysisId = new URL(request.url).searchParams.get('analysisId') ?? '';
-  if (!uuid.test(analysisId)) return json({ error: 'Análisis no válido.' }, 400);
+  if (!uuid.test(analysisId)) return json({ error: e('invalidAnalysis') }, 400);
   const { data, error } = await supabase.from('analysis_evidence').select('id,analysis_id,product_index,evidence_key,status,note,source_document,source_page,source_url,updated_at').eq('analysis_id', analysisId).eq('user_id', user.id).order('product_index').order('evidence_key');
-  if (error) return json({ error: 'No se puede leer la evidencia.' }, 503);
+  if (error) return json({ error: e('read') }, 503);
   return json({ evidence: data ?? [] });
 }
 
 export async function PUT(request: Request) {
-  if (!sameOrigin(request)) return json({ error: 'Origen no permitido.' }, 403);
+  const language = requestLanguage(request);
+  const e = (key: Parameters<typeof evidenceApiText>[1]) => evidenceApiText(language, key);
+  if (!sameOrigin(request)) return json({ error: e('origin') }, 403);
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return json({ error: 'Inicia sesión.' }, 401);
+  if (authError || !user) return json({ error: e('signIn') }, 401);
   try {
     const body = await readJsonBody(request) as Record<string, unknown>;
     const analysisId = typeof body.analysisId === 'string' ? body.analysisId : '';
@@ -52,7 +58,7 @@ export async function PUT(request: Request) {
       || sourceDocument.length > 240
       || sourcePage.length > 80
       || sourceUrl.length > 1000
-      || (sourceUrl && !isValidEvidenceUrl(sourceUrl))) throw new Error('Datos de evidencia no válidos.');
+      || (sourceUrl && !isValidEvidenceUrl(sourceUrl))) throw new Error(e('invalidData'));
 
     const { data: analysis, error: analysisError } = await supabase
       .from('analyses')
@@ -60,12 +66,10 @@ export async function PUT(request: Request) {
       .eq('id', analysisId)
       .eq('user_id', user.id)
       .maybeSingle();
-    if (analysisError) throw new Error('No se ha podido validar el análisis.');
+    if (analysisError) throw new Error(e('validateAnalysis'));
     const products = Array.isArray(analysis?.products) ? analysis.products as Product[] : [];
-    if (!analysis || productIndex >= products.length) throw new Error('El producto no existe en este análisis.');
-    if (!regulatoryEvidenceKeys(products[productIndex], marketCodeOrEu(analysis.market_code)).has(evidenceKey)) {
-      throw new Error('La evidencia no corresponde a un requisito regulatorio de este producto.');
-    }
+    if (!analysis || productIndex >= products.length) throw new Error(e('missingProduct'));
+    if (!regulatoryEvidenceKeys(products[productIndex], marketCodeOrEu(analysis.market_code)).has(evidenceKey)) throw new Error(e('wrongRequirement'));
 
     const { data, error } = await supabase.from('analysis_evidence').upsert({
       analysis_id: analysisId,
@@ -79,9 +83,9 @@ export async function PUT(request: Request) {
       source_url: sourceUrl,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'analysis_id,product_index,evidence_key' }).select('id,analysis_id,product_index,evidence_key,status,note,source_document,source_page,source_url,updated_at').single();
-    if (error) throw new Error('No se ha podido guardar la evidencia.');
+    if (error) throw new Error(e('save'));
     return json({ evidence: data });
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'Datos no válidos.' }, 400);
+    return json({ error: error instanceof Error ? error.message : e('invalid') }, 400);
   }
 }
