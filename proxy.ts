@@ -20,4 +20,4 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-export const config = { matcher: ['/dashboard/:path*', '/api/analyses/:path*', '/api/account/:path*', '/api/billing/checkout', '/api/billing/portal', '/reset-password'] };
+export const config = { matcher: ['/dashboard/:path*', '/api/analyses/:path*', '/api/account/:path*', '/api/billing/checkout', '/api/billing/confirm', '/api/billing/portal', '/reset-password'] };
