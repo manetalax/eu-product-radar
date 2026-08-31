@@ -1,33 +1,28 @@
 import { NextResponse } from 'next/server';
 import { billingStatus, stripePriceId } from '@/lib/billing';
 import { sameOrigin, PRIVATE_HEADERS, readJsonBody } from '@/lib/http';
-import { isPurchaseId, ONE_TIME_AUDIT, PurchaseId } from '@/lib/plans';
 import { stripeClient } from '@/lib/stripe/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
-
-function auditPriceId(): string {
-  const value = process.env.STRIPE_PRICE_AUDIT;
-  if (!value || !/^price_[A-Za-z0-9]+$/.test(value)) throw new Error('Falta configurar STRIPE_PRICE_AUDIT en Netlify.');
-  return value;
-}
+const UNLIMITED_INTERNAL_PLAN_ID = 'starter' as const;
+const UNLIMITED_MONTHLY_CENTS = 995;
 
 export async function POST(request: Request) {
   if (!sameOrigin(request)) return json({ error: 'Origen de solicitud no permitido.' }, 403);
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return json({ error: 'Inicia sesión para contratar un plan.' }, 401);
+  if (authError || !user) return json({ error: 'Inicia sesión para contratar Unlimited.' }, 401);
 
-  let purchaseId: PurchaseId;
   try {
     const body = await readJsonBody(request) as Record<string, unknown> | null;
     const candidate = body?.purchaseId ?? body?.planId;
-    if (!isPurchaseId(candidate)) throw new Error('Selecciona una opción válida.');
-    purchaseId = candidate;
-  } catch (error) { return json({ error: error instanceof Error ? error.message : 'Solicitud no válida.' }, 400); }
+    if (candidate !== UNLIMITED_INTERNAL_PLAN_ID) throw new Error('La única suscripción disponible es ImportVerifier Unlimited.');
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Solicitud no válida.' }, 400);
+  }
 
   try {
     const stripe = stripeClient();
@@ -46,37 +41,32 @@ export async function POST(request: Request) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
     if (!siteUrl) throw new Error('Falta configurar NEXT_PUBLIC_SITE_URL en Netlify.');
 
-    if (purchaseId === 'audit') {
-      const session = await stripe.checkout.sessions.create({
-        mode: 'payment',
-        customer: customerId,
-        client_reference_id: user.id,
-        line_items: [{ price: auditPriceId(), quantity: 1 }],
-        allow_promotion_codes: true,
-        success_url: `${siteUrl}/dashboard?checkout=audit-success`,
-        cancel_url: `${siteUrl}/dashboard?checkout=cancelled`,
-        metadata: { user_id: user.id, purchase_type: 'audit', product_limit: String(ONE_TIME_AUDIT.productLimit) },
-      }, { idempotencyKey: `audit-checkout-${user.id}-${new Date().toISOString().slice(0, 13)}` });
-      if (!session.url) throw new Error('Stripe no ha devuelto una página de pago.');
-      return json({ url: session.url });
-    }
-
     if (billingStatus(record).planId !== 'free' && customerId) {
       const portal = await stripe.billingPortal.sessions.create({ customer: customerId, return_url: `${siteUrl}/dashboard` });
       return json({ url: portal.url });
     }
 
+    const priceId = stripePriceId(UNLIMITED_INTERNAL_PLAN_ID);
+    const price = await stripe.prices.retrieve(priceId);
+    const validUnlimitedPrice = price.active
+      && price.currency === 'eur'
+      && price.unit_amount === UNLIMITED_MONTHLY_CENTS
+      && price.type === 'recurring'
+      && price.recurring?.interval === 'month'
+      && price.recurring.interval_count === 1;
+    if (!validUnlimitedPrice) throw new Error('La configuración de Stripe no corresponde a Unlimited 9,95 €/mes. No se ha iniciado ningún cobro.');
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
       client_reference_id: user.id,
-      line_items: [{ price: stripePriceId(purchaseId), quantity: 1 }],
+      line_items: [{ price: priceId, quantity: 1 }],
       allow_promotion_codes: true,
       success_url: `${siteUrl}/dashboard?checkout=success`,
       cancel_url: `${siteUrl}/dashboard?checkout=cancelled`,
-      metadata: { user_id: user.id, plan_id: purchaseId },
-      subscription_data: { metadata: { user_id: user.id, plan_id: purchaseId } },
-    }, { idempotencyKey: `checkout-${user.id}-${purchaseId}-${new Date().toISOString().slice(0, 13)}` });
+      metadata: { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID },
+      subscription_data: { metadata: { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID } },
+    }, { idempotencyKey: `checkout-${user.id}-${UNLIMITED_INTERNAL_PLAN_ID}-${new Date().toISOString().slice(0, 13)}` });
     if (!session.url) throw new Error('Stripe no ha devuelto una página de pago.');
     return json({ url: session.url });
   } catch (error) {
