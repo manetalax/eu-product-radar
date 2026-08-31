@@ -55,10 +55,19 @@ export default function AuthForm({ initialMode = 'login', initialMessageKey, req
   };
 
   const callbackUrl = (next?: string) => {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    let origin = window.location.origin;
+    const configured = process.env.NEXT_PUBLIC_SITE_URL;
+    if (configured) {
+      try {
+        const parsed = new URL(configured);
+        if (parsed.protocol === 'https:') origin = parsed.origin;
+      } catch {
+        // Fall back to the current HTTPS origin when the public URL is malformed.
+      }
+    }
     const params = new URLSearchParams({ lang: language });
     if (next) params.set('next', next);
-    return `${siteUrl}/auth/callback?${params.toString()}`;
+    return `${origin}/auth/callback?${params.toString()}`;
   };
 
   async function signInWithGoogle() {
