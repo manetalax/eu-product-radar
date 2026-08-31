@@ -45,17 +45,18 @@
 - Auth callbacks are now pinned to `https://importverifier.netlify.app` in production across Google OAuth, signup confirmation and password recovery, with regression tests that reject the legacy domain.
 - Persisted evidence URLs are now revalidated on client read and again during Excel export through `safeEvidenceUrl`; unsafe legacy/manipulated URLs are rendered as empty text and never become active Excel hyperlinks.
 - Added `tests/evidence-export-url-hardening.test.ts` for HTTPS-only, no-credentials, no-whitespace and export-time revalidation invariants.
-- Radar now shares one client-safe official-source URL validator between ingestion and rendering (`lib/regulatory-source-url.ts`). Only HTTPS URLs on allowed official EU hosts survive; lookalikes, credentials, whitespace, HTTP and malformed values are stripped/rejected.
-- `relevantRadarChanges` sanitizes persisted `source_url` values and Intelligence Suite only renders an external link when a sanitized official URL exists. Regression coverage includes malicious historical values and hostname lookalikes.
-- Dashboard mobile import layout fixed: `.import-actions` itself now spans the full upload card below 700px; choose-file/template controls become full-width 48px touch targets instead of relying on a grid rule applied to a nested child.
+- Radar now shares one client-safe official-source URL validator between ingestion, API output and rendering (`lib/regulatory-source-url.ts`). Only HTTPS URLs on allowed official EU hosts survive; lookalikes, credentials, whitespace, HTTP and malformed values are stripped/rejected.
+- `app/api/regulatory-changes/route.ts` sanitizes persisted `source_url` before any authenticated client receives it; `relevantRadarChanges` revalidates again before rendering, and Intelligence Suite only creates a link when the sanitized official URL exists.
+- Radar regression coverage includes malicious historical values, hostname lookalikes and API-boundary sanitization.
+- Dashboard mobile import layout fixed: `.import-actions` itself spans the full upload card below 700px; choose-file/template controls are full-width 48px touch targets.
 - Added `tests/dashboard-mobile-import.test.ts` to protect mobile upload layout and accepted spreadsheet/document/photo inputs.
-- Price regression test is now bound to `UNLIMITED_PLAN.monthlyPriceEur` rather than a duplicated literal, protecting canonical EUR 9.95 locale formatting.
+- Price regression test is bound to `UNLIMITED_PLAN.monthlyPriceEur`, protecting canonical EUR 9.95 locale formatting without a duplicated test literal as the source of truth.
 - Supabase security advisor rechecked: RLS-with-no-policy INFO notices are intentional deny-all server-only tables (`ai_usage_events`, `api_rate_limits`, `regulatory_change_events`, `stripe_webhook_events`); do not add client policies merely to silence the advisor. The substantive WARN remains leaked-password protection disabled.
-- Functional HEAD `ff874016ce9d674cd4e5382d76bd500d81d81820` passed exact-head `ImportVerifier release check` run #827 **SUCCESS**: tests, typecheck and build all passed.
+- Functional HEAD `d9d405ace08fcf2a03c16ebeb1385073f522b995` passed exact-head `ImportVerifier release check` run #833 **SUCCESS**: tests, typecheck and build all passed.
 
 ## Production facts last checked 2026-08-31
 - Supabase project: `hfuwwjdcyudflamwwnon`.
-- Supabase Auth logs showed legacy-domain OAuth traffic before the code hardening; Auth Site URL / Redirect URL configuration must still be corrected externally so Supabase never falls back to the old domain.
+- Supabase Auth logs showed legacy-domain OAuth traffic before code hardening; Auth Site URL / Redirect URL configuration must still be corrected externally so Supabase never falls back to the old domain.
 - No free-usage counter checked above 5; production lifetime quota trigger/function are `analyses_enforce_free_lifetime_product_quota` / `enforce_free_lifetime_product_quota`.
 - Legacy `monthly_product_usage` remains inert compatibility/history; do not drop casually.
 - Active Stripe subscriptions at last check: 0.
@@ -68,7 +69,7 @@
 1. Verify exact latest HEAD CI after this handoff-only commit; fix any tests/typecheck/build regression immediately.
 2. Continue static + real-device desktop/iPhone/iPad/PWA QA, especially generated PDF/Excel download/save behavior, upload from Files/Photos/camera, table overflow, keyboard/modal behavior and safe-area edge cases. Real-device/browser-only checks are BLOCKED EXTERNAL; keep fixing static issues independently.
 3. Review and improve generated PDF/Excel visual hierarchy toward a premium consulting-style report system without weakening evidence, uncertainty or legal disclaimers.
-4. Continue security sweep for any remaining customer-visible external URLs or values that become hyperlinks outside Evidence/Radar/documentary official sources.
+4. Continue security sweep for remaining customer-visible external URLs or values that become hyperlinks outside Evidence/Radar/documentary official sources.
 5. Continue customer-visible i18n sweep inside Intelligence Suite/reports; branded shorthand may remain, but explanatory English copy must not leak into non-English locales.
 6. Future-market US/CN/GB/JP documentary narratives remain non-customer-active; fully localize and substantiate them before activation.
 7. Continue canonical-price audit when new surfaces are touched; all public price rendering must originate from `UNLIMITED_PLAN` and remain EUR 9.95/month.
