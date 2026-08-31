@@ -16,9 +16,12 @@ test('product extraction validates decoded size and MIME before rate-limited AI 
   assert.match(route, /bytes\.length > MAX_FILE_BYTES/);
 });
 
-test('image extension and MIME must agree and spreadsheet formats stay local', () => {
+test('image extension and MIME must agree, including HEIC/HEIF, and spreadsheet formats stay local', () => {
   assert.match(route, /IMAGE_EXTENSIONS/);
   assert.match(route, /IMAGE_MIME/);
+  assert.match(route, /heic\|heif/);
+  assert.match(route, /image\\\/(png\|jpeg\|webp\|heic\|heif)/);
+  assert.match(route, /declared === 'image\/heic' && data === 'image\/heif'/);
   assert.match(route, /productExtractionText\(language, 'imageMime'\)/);
   assert.doesNotMatch(route, /ALLOWED_EXTENSIONS = .*csv/);
   assert.doesNotMatch(route, /ALLOWED_EXTENSIONS = .*xlsx/);
