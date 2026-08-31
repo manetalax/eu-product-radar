@@ -46,7 +46,8 @@
 - Added `tests/platform-capability-i18n.test.ts` to prevent raw capability IDs/English-normalized slugs leaking into localized UI.
 - Intelligence Suite section headings/eyebrow are now language-aware through `lib/intelligence-section-i18n.ts`; Product Regulatory Twin, Regulatory Impact Radar and Connect no longer remain hardcoded English outside EN.
 - Added `tests/intelligence-section-i18n.test.ts` to protect six-language section-copy coverage and structural wiring.
-- Functional head before this handoff update: `640b4a56b7f484a17cf883e85bc0b8630627fdcc`; exact-head `ImportVerifier release check` run #773 was in progress when this handoff was written. Verify final handoff HEAD CI next and fix any failure immediately.
+- CI run #773 caught an over-strict test that rejected legitimate linguistic hyphens such as German compound labels; commit `4edd5dd38b866da02154ca1e13a8b56f34331ac7` fixed the regression without weakening the actual invariant (raw internal IDs must never be displayed).
+- Exact-head `ImportVerifier release check` run #777 for `4edd5dd38b866da02154ca1e13a8b56f34331ac7` completed **SUCCESS**: tests, typecheck and build all passed.
 
 ## Production facts last checked 2026-08-31
 - Supabase project: `hfuwwjdcyudflamwwnon`.
