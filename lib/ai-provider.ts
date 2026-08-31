@@ -12,9 +12,10 @@ function siliconFlowBaseUrl() {
   return (process.env.SILICONFLOW_BASE_URL || 'https://api.siliconflow.com/v1').replace(/\/$/, '');
 }
 
-export function aiCostPolicy(): AiCostPolicy {
-  const value = process.env.AI_COST_POLICY;
-  return value === 'free_only' || value === 'premium_allowed' ? value : 'free_first';
+export function aiCostPolicy(env: NodeJS.ProcessEnv = process.env): AiCostPolicy {
+  const value = env.AI_COST_POLICY;
+  if (value === 'free_only' || value === 'free_first' || value === 'premium_allowed') return value;
+  return env.NODE_ENV === 'production' ? 'free_only' : 'free_first';
 }
 
 export function hasFreeTextProvider() {
@@ -28,13 +29,7 @@ async function siliconFlowText(messages: TextMessage[], options?: { maxTokens?: 
   const response = await fetch(`${siliconFlowBaseUrl()}/chat/completions`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${siliconKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model,
-      messages,
-      stream: false,
-      max_tokens: options?.maxTokens ?? 1800,
-      temperature: options?.temperature ?? 0.1,
-    }),
+    body: JSON.stringify({ model, messages, stream: false, max_tokens: options?.maxTokens ?? 1800, temperature: options?.temperature ?? 0.1 }),
   });
   const body = await response.json() as { choices?: { message?: { content?: unknown } }[] };
   if (!response.ok) return null;
@@ -47,13 +42,9 @@ async function openAiText(messages: TextMessage[]): Promise<TextGenerationResult
   if (!openaiKey) throw new Error('No hay ningún proveedor de IA configurado.');
   const model = process.env.OPENAI_REGULATORY_AGENT_MODEL || process.env.OPENAI_PRODUCT_EXTRACT_MODEL || 'gpt-5.6-terra';
   const instructions = messages.filter(message => message.role === 'system').map(message => message.content).join(' ');
-  const input = messages.filter(message => message.role !== 'system').map(message => ({
-    role: message.role,
-    content: [{ type: 'input_text', text: message.content }],
-  }));
+  const input = messages.filter(message => message.role !== 'system').map(message => ({ role: message.role, content: [{ type: 'input_text', text: message.content }] }));
   const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
+    method: 'POST', headers: { Authorization: `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, store: false, instructions, input }),
   });
   const body = await response.json() as Record<string, unknown>;
@@ -65,11 +56,7 @@ async function openAiText(messages: TextMessage[]): Promise<TextGenerationResult
   for (const item of output) {
     if (!item || typeof item !== 'object') continue;
     const content = Array.isArray((item as { content?: unknown }).content) ? (item as { content: unknown[] }).content : [];
-    for (const part of content) {
-      if (part && typeof part === 'object' && (part as { type?: unknown }).type === 'output_text' && typeof (part as { text?: unknown }).text === 'string') {
-        return { text: (part as { text: string }).text.trim(), provider: 'openai', model };
-      }
-    }
+    for (const part of content) if (part && typeof part === 'object' && (part as { type?: unknown }).type === 'output_text' && typeof (part as { text?: unknown }).text === 'string') return { text: (part as { text: string }).text.trim(), provider: 'openai', model };
   }
   throw new Error('La IA no ha devuelto una respuesta utilizable.');
 }
@@ -86,21 +73,8 @@ export async function generateVisionText(dataUrl: string, prompt: string, option
   if (siliconKey) {
     const model = process.env.SILICONFLOW_VISION_MODEL || process.env.SILICONFLOW_OCR_MODEL || 'PaddlePaddle/PaddleOCR-VL-1.5';
     const response = await fetch(`${siliconFlowBaseUrl()}/chat/completions`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${siliconKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        max_tokens: options?.maxTokens ?? 3000,
-        temperature: 0.1,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } },
-            { type: 'text', text: prompt },
-          ],
-        }],
-      }),
+      method: 'POST', headers: { Authorization: `Bearer ${siliconKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, stream: false, max_tokens: options?.maxTokens ?? 3000, temperature: 0.1, messages: [{ role: 'user', content: [{ type: 'image_url', image_url: { url: dataUrl, detail: 'high' } }, { type: 'text', text: prompt }] }] }),
     });
     const body = await response.json() as { choices?: { message?: { content?: unknown } }[] };
     if (response.ok) {
@@ -108,19 +82,13 @@ export async function generateVisionText(dataUrl: string, prompt: string, option
       if (text) return { text, provider: 'siliconflow', model };
     }
   }
-
   if (aiCostPolicy() === 'free_only') throw new Error('La visión gratuita está temporalmente no disponible.');
   const openaiKey = process.env.OPENAI_API_KEY;
   if (!openaiKey) throw new Error('No hay ningún proveedor de visión configurado.');
   const model = process.env.OPENAI_PRODUCT_EXTRACT_MODEL || 'gpt-5.6-terra';
   const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model,
-      store: false,
-      input: [{ role: 'user', content: [{ type: 'input_image', image_url: dataUrl, detail: 'high' }, { type: 'input_text', text: prompt }] }],
-    }),
+    method: 'POST', headers: { Authorization: `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, store: false, input: [{ role: 'user', content: [{ type: 'input_image', image_url: dataUrl, detail: 'high' }, { type: 'input_text', text: prompt }] }] }),
   });
   const body = await response.json() as Record<string, unknown>;
   if (!response.ok) throw new Error('No se ha podido interpretar la imagen.');
@@ -128,11 +96,7 @@ export async function generateVisionText(dataUrl: string, prompt: string, option
   for (const item of output) {
     if (!item || typeof item !== 'object') continue;
     const content = Array.isArray((item as { content?: unknown }).content) ? (item as { content: unknown[] }).content : [];
-    for (const part of content) {
-      if (part && typeof part === 'object' && (part as { type?: unknown }).type === 'output_text' && typeof (part as { text?: unknown }).text === 'string') {
-        return { text: (part as { text: string }).text.trim(), provider: 'openai', model };
-      }
-    }
+    for (const part of content) if (part && typeof part === 'object' && (part as { type?: unknown }).type === 'output_text' && typeof (part as { text?: unknown }).text === 'string') return { text: (part as { text: string }).text.trim(), provider: 'openai', model };
   }
   throw new Error('La IA no ha devuelto una respuesta utilizable.');
 }
