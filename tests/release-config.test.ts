@@ -35,6 +35,25 @@ test('producción rechaza políticas que permitan gasto de IA', () => {
   }
 });
 
+test('Radar live exige un secreto de ingesta fuerte y compartible', () => {
+  const missing = checkReleaseConfig({ ...baseEnv, AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key', REGULATORY_RADAR_LIVE: 'true' });
+  assert.equal(missing.ok, false);
+  assert.ok(missing.errors.some(error => /REGULATORY_RADAR_LIVE=true/));
+
+  const short = checkReleaseConfig({ ...baseEnv, AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key', REGULATORY_RADAR_LIVE: 'true', REGULATORY_INGEST_SECRET: 'too-short' });
+  assert.equal(short.ok, false);
+  assert.ok(short.errors.some(error => /32 caracteres/));
+
+  const valid = checkReleaseConfig({ ...baseEnv, AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key', REGULATORY_RADAR_LIVE: 'true', REGULATORY_INGEST_SECRET: '0123456789abcdef0123456789abcdef' });
+  assert.equal(valid.ok, true);
+});
+
+test('Radar apagado deja advertencia explícita y no bloquea el release', () => {
+  const result = checkReleaseConfig({ ...baseEnv, AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key' });
+  assert.equal(result.ok, true);
+  assert.ok(result.warnings.some(warning => /REGULATORY_RADAR_LIVE/));
+});
+
 test('el router cae en free_only por defecto en producción y en free_first fuera de producción', () => {
   assert.equal(aiCostPolicy({ NODE_ENV: 'production' } as NodeJS.ProcessEnv), 'free_only');
   assert.equal(aiCostPolicy({ NODE_ENV: 'development' } as NodeJS.ProcessEnv), 'free_first');
