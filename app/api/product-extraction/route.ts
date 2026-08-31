@@ -131,7 +131,7 @@ async function extractDocumentWithOpenAi(filename: string, mimeType: string, dat
 
 export async function POST(request: Request) {
   const language = requestLanguage(request);
-  if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
+  if (!sameOrigin(request)) return json({ error: productExtractionText(language, 'origin') }, 403);
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return json({ error: productExtractionText(language, 'signIn') }, 401);
