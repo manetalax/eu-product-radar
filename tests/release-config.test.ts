@@ -40,6 +40,16 @@ test('producción rechaza políticas que permitan gasto de IA', () => {
   }
 });
 
+test('producción rechaza una base URL insegura o con credenciales para la IA gratuita', () => {
+  for (const baseUrl of ['http://api.siliconflow.com/v1', 'https://user:pass@api.siliconflow.com/v1', 'not-a-url']) {
+    const result = checkReleaseConfig({ ...baseEnv, AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key', SILICONFLOW_BASE_URL: baseUrl });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some(error => /SILICONFLOW_BASE_URL/));
+  }
+  const valid = checkReleaseConfig({ ...baseEnv, AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key', SILICONFLOW_BASE_URL: 'https://api.siliconflow.com/v1' });
+  assert.equal(valid.ok, true);
+});
+
 test('producción no queda lista para cobrar sin identidad legal completa', () => {
   const incomplete = { ...baseEnv, LEGAL_PROVIDER_NAME: '' } as NodeJS.ProcessEnv;
   const result = checkReleaseConfig({ ...incomplete, AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key' });
