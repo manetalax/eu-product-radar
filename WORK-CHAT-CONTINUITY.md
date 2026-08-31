@@ -30,16 +30,19 @@
 - Billing entitlement/webhook/portal/cancellation and account-deletion billing safety are implemented.
 - RLS/account isolation, evidence ownership FK, privileged-table deny-all posture and server-only privilege hardening are implemented.
 - Evidence persists canonical requirement/status/document/page/note/HTTPS URL; unsafe persisted URLs are stripped before rendering/export.
+- Evidence URL hardening now also happens at the server API boundary and before evidence enters ImportVerifier AI context, so legacy unsafe persisted URLs cannot be returned or propagated to new consumers.
 - Official Radar links are allowlisted HTTPS EU regulatory sources and are revalidated at ingestion/API/render boundaries.
 - Production AI policy is fail-closed `free_only`; CSV/XLS/XLSX stay local, supported text/doc/image inputs use free-compatible extraction when configured, unsupported scanned/legacy formats fail honestly rather than leaking premium spend.
 - External AI calls now share a 30-second abort timeout; production release validation rejects malformed, non-HTTPS or credential-bearing `SILICONFLOW_BASE_URL` values, and runtime validates the provider base URL before use.
 - Product-extraction request-body overflow handling uses typed `RequestBodyTooLargeError`; oversized uploads deterministically map to HTTP 413 and regression tests protect declared and streamed overflow cases.
+- Canonical site-origin validation is fail-closed: runtime accepts only a root HTTPS origin (or localhost HTTP for local development), rejects credentials/path/query/hash, and same-origin APIs require an exact canonical Origin header.
 - EU regulatory engine, Product Regulatory Twin, persisted evidence readiness and Regulatory Impact Radar architecture are implemented.
 - Official EUR-Lex RSS ingestion adapter, normalization, deduplication and protected internal refresh/ingest endpoints exist. RSS requests are bounded by size/time and now reject final redirect destinations outside HTTPS `eur-lex.europa.eu`. Production Radar event count last checked: 0, therefore live-monitoring claims remain disabled.
 - Shopify/Amazon/Etsy connector architecture exists; capability slugs are localized for customers and OAuth/API remains unavailable until official credentials exist.
 - Dashboard/auth/legal/intelligence/report surfaces are localized in ES/EN/FR/DE/IT/PT where customer-active.
 - Google auth button includes a visible Google mark; production code pins Google/signup/recovery return flow to `https://importverifier.netlify.app`.
 - PWA private-cache hardening, dynamic localized manifest, real own-brand icons, safe areas, 44px touch targets, iOS form sizing and review-modal keyboard/scroll behavior are covered.
+- PWA cache boundary was tightened further: the generic service-worker cache now handles only static style/script/image/font requests and refuses responses marked private/no-store/no-cache; arbitrary same-origin GET/fetch responses are no longer opportunistically cached.
 - Mobile upload control accepts spreadsheets, documents and photo/camera input; server supports HEIC/HEIF with extension/MIME agreement.
 - PDF/XLSX/template downloads use explicit filenames, browser Blob URLs, DOM click and delayed `URL.revokeObjectURL`; regression tests protect this lifecycle for mobile/PWA static QA.
 - PDF/Excel reports include premium visual hierarchy, localized regulatory narrative, evidence and source traceability.
@@ -47,10 +50,10 @@
 - US/CN/GB/JP remain structurally isolated and `ACTIVE_MARKET_CODES` remains EU-only.
 
 ## CI / HEAD last verified 2026-08-31
-- Functional/security HEAD before this handoff commit: `a9b66fb0a0c1a1f5146658efca76a9ce44f74ac2`.
-- Exact-head `ImportVerifier release check` run **#931 SUCCESS**: install, tests, typecheck and build all passed.
+- Functional/security HEAD before this handoff commit: `ed89eb8716586e46dcdff47dd7348c18e513e46c`.
+- Exact-head `ImportVerifier release check` run **#983 SUCCESS**: install, tests, typecheck and build all passed.
 - PR #4 remained **open**, **mergeable=true**, **not merged**.
-- Netlify Deploy Preview was SUCCESS on the previously exact-checked branch head; recheck the new handoff HEAD status before calling current HEAD green.
+- Netlify Deploy Preview for `ed89eb8716586e46dcdff47dd7348c18e513e46c` was still PENDING when this handoff update was written; recheck exact new handoff HEAD CI + Netlify before calling current HEAD green.
 
 ## Production facts last checked 2026-08-31
 - Supabase project: `hfuwwjdcyudflamwwnon`.
