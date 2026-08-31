@@ -5,7 +5,7 @@ import { recordAiUsage } from '@/lib/ai-telemetry';
 import { consumeApiRateLimit } from '@/lib/api-rate-limit';
 import { safeEvidenceUrl } from '@/lib/evidence';
 import { localizeEuRegulatoryAssessment } from '@/lib/eu-regulatory-i18n';
-import { readJsonBody, sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
+import { readJsonBody, RequestBodyTooLargeError, sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { isLanguage } from '@/lib/landing-i18n';
 import { relevantRadarChanges } from '@/lib/radar-match';
 import { regulatoryAgentText } from '@/lib/regulatory-agent-i18n';
@@ -29,7 +29,10 @@ export async function POST(request: Request) {
 
   let body: { question?: unknown; analysisId?: unknown; productIndex?: unknown; language?: unknown };
   try { body = await readJsonBody(request) as typeof body; }
-  catch { return json({ error: initialText('invalidRequest') }, 400); }
+  catch (error) {
+    if (error instanceof RequestBodyTooLargeError) return json({ error: initialText('invalidRequest') }, 413);
+    return json({ error: initialText('invalidRequest') }, 400);
+  }
 
   const language = isLanguage(body.language) ? body.language : initialLanguage;
   const a = (key: Parameters<typeof regulatoryAgentText>[1]) => regulatoryAgentText(language, key);
