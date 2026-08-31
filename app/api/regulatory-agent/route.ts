@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { generateText } from '@/lib/ai-provider';
+import { recordAiUsage } from '@/lib/ai-telemetry';
 import { sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { createClient } from '@/lib/supabase/server';
 
@@ -22,6 +23,7 @@ export async function POST(request: Request) {
   if (!question || question.length > 2000) return json({ error: 'Escribe una pregunta de hasta 2.000 caracteres.' }, 400);
   if (!context || context.length > 40_000) return json({ error: 'El contexto del análisis no es válido.' }, 400);
 
+  const started = Date.now();
   try {
     const result = await generateText([
       {
@@ -39,10 +41,16 @@ export async function POST(request: Request) {
       { role: 'user', content: `CONTEXTO DEL PRODUCTO/ANÁLISIS:\n${context}\n\nPREGUNTA DEL USUARIO:\n${question}` },
     ], { maxTokens: 1800, temperature: 0.1 });
 
-    return json({
-      answer: result.text,
+    void recordAiUsage({
+      task: 'regulatory_agent',
       provider: result.provider,
       model: result.model,
+      fallback: result.provider === 'openai' && Boolean(process.env.SILICONFLOW_API_KEY),
+      latencyMs: Date.now() - started,
+    });
+
+    return json({
+      answer: result.text,
       disclaimer: 'Asistencia regulatoria orientativa. No constituye certificación, dictamen jurídico ni aprobación de una autoridad.',
     });
   } catch (error) {
