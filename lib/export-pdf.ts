@@ -71,19 +71,39 @@ export async function pdfBytes(analysis: Analysis, requestedLanguage?: Language)
     es: 'INFORME REGULATORIO', en: 'REGULATORY REPORT', fr: 'RAPPORT RÉGLEMENTAIRE',
     de: 'REGULIERUNGSBERICHT', it: 'RAPPORTO NORMATIVO', pt: 'RELATÓRIO REGULAMENTAR',
   });
+  const reviewSealLabel = localized(language, {
+    es: 'REVISIÓN IMPORTVERIFIER', en: 'IMPORTVERIFIER REVIEW', fr: 'REVUE IMPORTVERIFIER',
+    de: 'IMPORTVERIFIER-PRÜFUNG', it: 'REVISIONE IMPORTVERIFIER', pt: 'REVISÃO IMPORTVERIFIER',
+  });
 
   let page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   let y = 780;
 
-  function drawMonogram(target: PDFPage, x: number, yy: number, size = 34, dark = false) {
-    target.drawRectangle({ x, y: yy, width: size, height: size, color: dark ? white : navy, borderColor: dark ? gold : purple, borderWidth: 1.3 });
-    target.drawText('IV', { x: x + size * .18, y: yy + size * .28, size: size * .34, font: bold, color: dark ? navy : white });
+  function drawBrandMark(target: PDFPage, x: number, yy: number, size = 34, inverse = false) {
+    const main = inverse ? white : navy;
+    const accent = inverse ? gold : purple;
+    const cx = x + size * .5;
+    const top = yy + size * .88;
+    const upperLeft = { x: x + size * .12, y: yy + size * .66 };
+    const upperRight = { x: x + size * .88, y: yy + size * .66 };
+    const center = { x: cx, y: yy + size * .45 };
+    const lowerLeft = { x: x + size * .12, y: yy + size * .23 };
+    const lowerRight = { x: x + size * .88, y: yy + size * .23 };
+    const bottom = { x: cx, y: yy + size * .04 };
+    const thickness = Math.max(1.2, size * .055);
+    const draw = (a: { x: number; y: number }, b: { x: number; y: number }, color = main, width = thickness) => target.drawLine({ start: a, end: b, thickness: width, color });
+    draw({ x: cx, y: top }, upperLeft); draw({ x: cx, y: top }, upperRight);
+    draw(upperLeft, center); draw(upperRight, center);
+    draw(upperLeft, lowerLeft); draw(upperRight, lowerRight);
+    draw(lowerLeft, bottom); draw(lowerRight, bottom); draw(center, bottom);
+    draw(center, { x: x + size * .78, y: yy + size * .75 }, accent, thickness * .9);
+    target.drawCircle({ x: center.x, y: center.y, size: Math.max(1.7, size * .07), color: accent });
   }
 
   function drawPageChrome(target: PDFPage) {
     target.drawRectangle({ x: LEFT, y: PAGE_HEIGHT - 18, width: CONTENT_WIDTH, height: 3, color: purple });
-    drawMonogram(target, LEFT, PAGE_HEIGHT - 52, 23);
-    target.drawText(pdfText(BRAND_NAME.toUpperCase()), { x: LEFT + 31, y: PAGE_HEIGHT - 43, size: 7.7, font: bold, color: navy });
+    drawBrandMark(target, LEFT, PAGE_HEIGHT - 54, 25);
+    target.drawText(pdfText(BRAND_NAME.toUpperCase()), { x: LEFT + 33, y: PAGE_HEIGHT - 43, size: 7.7, font: bold, color: navy });
     const site = pdfText(BRAND_SITE_URL);
     const siteWidth = regular.widthOfTextAtSize(site, 7.5);
     target.drawText(site, { x: PAGE_WIDTH - LEFT - siteWidth, y: PAGE_HEIGHT - 42, size: 7.5, font: regular, color: muted });
@@ -136,16 +156,19 @@ export async function pdfBytes(analysis: Analysis, requestedLanguage?: Language)
     const cx = PAGE_WIDTH - LEFT - 58, cy = PAGE_HEIGHT - 136;
     page.drawCircle({ x: cx, y: cy, size: 44, borderColor: red, borderWidth: 2.4, opacity: .88 });
     page.drawCircle({ x: cx, y: cy, size: 36, borderColor: red, borderWidth: .8, opacity: .75 });
-    page.drawText('VERIFIED', { x: cx - 30, y: cy - 4, size: 12, font: bold, color: red, rotate: { type: 'degrees', angle: -8 } as never, opacity: .9 });
+    page.drawText('VERIFIED', { x: cx - 30, y: cy + 2, size: 12, font: bold, color: red, rotate: { type: 'degrees', angle: -8 } as never, opacity: .9 });
+    const label = pdfText(reviewSealLabel);
+    const labelSize = 5.2;
+    page.drawText(label, { x: cx - regular.widthOfTextAtSize(label, labelSize) / 2, y: cy - 13, size: labelSize, font: bold, color: red, opacity: .86 });
   }
 
   function drawCover() {
     page.drawRectangle({ x: 0, y: PAGE_HEIGHT - 244, width: PAGE_WIDTH, height: 244, color: navy });
     page.drawRectangle({ x: 0, y: PAGE_HEIGHT - 244, width: 8, height: 244, color: purple });
     page.drawRectangle({ x: LEFT, y: PAGE_HEIGHT - 48, width: 76, height: 3, color: gold });
-    drawMonogram(page, LEFT, PAGE_HEIGHT - 101, 38, true);
-    page.drawText(pdfText(BRAND_DOCUMENT_TITLE), { x: LEFT + 52, y: PAGE_HEIGHT - 78, size: 20, font: bold, color: white });
-    page.drawText(pdfText(BRAND_TAGLINE), { x: LEFT + 52, y: PAGE_HEIGHT - 97, size: 8.5, font: regular, color: rgb(.79, .82, .9) });
+    drawBrandMark(page, LEFT, PAGE_HEIGHT - 108, 46, true);
+    page.drawText(pdfText(BRAND_DOCUMENT_TITLE), { x: LEFT + 58, y: PAGE_HEIGHT - 78, size: 20, font: bold, color: white });
+    page.drawText(pdfText(BRAND_TAGLINE), { x: LEFT + 58, y: PAGE_HEIGHT - 97, size: 8.5, font: regular, color: rgb(.79, .82, .9) });
     page.drawText(pdfText(reportClass), { x: LEFT, y: PAGE_HEIGHT - 146, size: 8, font: bold, color: gold });
     page.drawText(pdfText(`${t.catalogueReport} · ${marketDisplay.name}`), { x: LEFT, y: PAGE_HEIGHT - 173, size: 17, font: bold, color: white });
     page.drawText(pdfText(`${t.identifier}: ${analysis.id}`), { x: LEFT, y: PAGE_HEIGHT - 199, size: 7.5, font: regular, color: rgb(.7, .73, .82) });
