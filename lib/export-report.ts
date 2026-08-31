@@ -9,6 +9,7 @@ import { MARKETS } from './markets';
 import { addRegulatoryWorksheet } from './export-regulatory';
 import type { Language } from './landing-i18n';
 import { reportLabels } from './report-i18n';
+import { quoteWorksheet, reportSheetNames } from './report-sheet-i18n';
 
 const C = { navy: 'FF111827', purple: 'FF4F46E5', muted: 'FF64748B', pale: 'FFF1F5F9', white: 'FFFFFFFF', line: 'FFE2E8F0' };
 const priorityColors = { ALTA: ['FFFEE2E2', 'FF991B1B'], MEDIA: ['FFFEF3C7', 'FF92400E'], BAJA: ['FFDCFCE7', 'FF166534'] };
@@ -80,6 +81,8 @@ export async function buildReport(analysis: Analysis, requestedLanguage?: Langua
   const language = activeLanguage(requestedLanguage);
   const t = reportLabels[language];
   const pageLabel = localized(language, 'Página', 'Page', 'Page', 'Seite', 'Pagina', 'Página');
+  const names = reportSheetNames[language];
+  const productSheet = quoteWorksheet(names.products);
   const products = validateProducts(analysis.products);
   const marketCode = analysisMarket(analysis);
   const market = MARKETS[marketCode];
@@ -91,9 +94,9 @@ export async function buildReport(analysis: Analysis, requestedLanguage?: Langua
   wb.creator = BRAND_NAME; wb.title = `${BRAND_NAME} · ${t.catalogueReport} · ${marketDisplay.name}`; wb.subject = BRAND_TAGLINE;
   wb.created = new Date(analysis.created_at); wb.modified = new Date();
   wb.calcProperties.fullCalcOnLoad = true;
-  const summary = sheet(wb, 'Resumen', [38, 24, 24, 24], 0, pageLabel);
-  const details = sheet(wb, 'Productos', [46, 17, 16, 48], 4, pageLabel);
-  const technical = sheet(wb, 'Datos técnicos', [46, 32, 38, 64], 12, pageLabel);
+  const summary = sheet(wb, names.summary, [38, 24, 24, 24], 0, pageLabel);
+  const details = sheet(wb, names.products, [46, 17, 16, 48], 4, pageLabel);
+  const technical = sheet(wb, names.technical, [46, 32, 38, 64], 12, pageLabel);
   band(summary, 1, BRAND_DOCUMENT_TITLE, 4, true);
   band(summary, 2, `${BRAND_TAGLINE} · ${t.catalogueReport.toUpperCase()} · ${marketDisplay.name}`, 4);
   body(summary, 4, [t.file, analysis.filename]); summary.mergeCells('B4:D4'); summary.getRow(4).height = 42;
@@ -101,7 +104,7 @@ export async function buildReport(analysis: Analysis, requestedLanguage?: Langua
   header(summary, 7, [t.summary, t.products, localized(language,'Lectura','Reading','Lecture','Lesart','Lettura','Leitura'), '']);
   const count = (priority: string) => results.filter(r => r.priority === priority).length;
   const end = results.length + 4;
-  body(summary, 8, [localized(language,'Total de productos','Total products','Total produits','Produkte gesamt','Totale prodotti','Total de produtos'), { formula: `COUNTA('Productos'!A5:A${end})`, result: results.length }, localized(language,'Catálogo importado','Imported catalogue','Catalogue importé','Importierter Katalog','Catalogo importato','Catálogo importado')]);
+  body(summary, 8, [localized(language,'Total de productos','Total products','Total produits','Produkte gesamt','Totale prodotti','Total de produtos'), { formula: `COUNTA(${productSheet}!A5:A${end})`, result: results.length }, localized(language,'Catálogo importado','Imported catalogue','Catalogue importé','Importierter Katalog','Catalogo importato','Catálogo importado')]);
   summary.mergeCells('C8:D8'); summary.getRow(8).height = 32;
   const priorityNames = { ALTA: t.high, MEDIA: t.medium, BAJA: t.low } as const;
   for (const [i, p] of (['ALTA', 'MEDIA', 'BAJA'] as const).entries()) {
@@ -110,13 +113,13 @@ export async function buildReport(analysis: Analysis, requestedLanguage?: Langua
       : p === 'MEDIA'
         ? localized(language,'Completar campos','Complete fields','Compléter les champs','Felder vervollständigen','Completare i campi','Completar campos')
         : localized(language,'Sin campos básicos vacíos','No empty basic fields','Aucun champ de base vide','Keine leeren Grundfelder','Nessun campo base vuoto','Sem campos básicos vazios');
-    body(summary, 9 + i, [`${t.priority} ${priorityNames[p]}`, { formula: `COUNTIF('Productos'!C5:C${end},"${priorityNames[p]}")`, result: count(p) }, reading]);
+    body(summary, 9 + i, [`${t.priority} ${priorityNames[p]}`, { formula: `COUNTIF(${productSheet}!C5:C${end},"${priorityNames[p]}")`, result: count(p) }, reading]);
     summary.mergeCells(9 + i, 3, 9 + i, 4);
     summary.getRow(9 + i).height = 32;
     summary.getCell(9 + i, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: priorityColors[p][0] } };
     summary.getCell(9 + i, 1).font = { name: 'Calibri', size: 11, bold: true, color: { argb: priorityColors[p][1] } };
   }
-  body(summary, 13, [`${t.averageIndicator} / 100`, { formula: `ROUND(AVERAGE('Productos'!B5:B${end}),0)`, result: Math.round(results.reduce((n, r) => n + r.score, 0) / results.length) }]);
+  body(summary, 13, [`${t.averageIndicator} / 100`, { formula: `ROUND(AVERAGE(${productSheet}!B5:B${end}),0)`, result: Math.round(results.reduce((n, r) => n + r.score, 0) / results.length) }]);
   band(summary, 15, scope(language), 4); summary.getRow(15).height = 58;
   band(summary, 17, localized(language,
     'Productos: prioridades y campos. Evaluación regulatoria, datos técnicos, evidencia guardada y guía documental completan la trazabilidad.',
@@ -153,7 +156,7 @@ export async function buildReport(analysis: Analysis, requestedLanguage?: Langua
   products.forEach((p, i) => body(technical, i + 13, [p.name, p.manufacturer, p.responsible, p.warning]));
   technical.autoFilter = `A12:D${products.length + 12}`;
 
-  const guide = sheet(wb, 'Guía documental', [44, 32, 34, 55, 65, 65, 60], 4, pageLabel);
+  const guide = sheet(wb, names.guide, [44, 32, 34, 55, 65, 65, 60], 4, pageLabel);
   band(guide, 1, `${t.documentaryGuide} · ${t.whereToGet}`, 7, true);
   band(guide, 2, `${guideScopeFor(language)} · ${t.guide}: ${GUIDE_VERSION}`, 7);
   guide.getRow(2).height = 58;
@@ -168,7 +171,7 @@ export async function buildReport(analysis: Analysis, requestedLanguage?: Langua
   guide.pageSetup.printArea = `A1:G${guideRow - 1}`;
   guide.pageSetup.printTitlesRow = '1:4';
 
-  const evidenceSheet = sheet(wb, 'Evidencia', [34, 58, 18, 38, 20, 52, 58], 4, pageLabel);
+  const evidenceSheet = sheet(wb, names.evidence, [34, 58, 18, 38, 20, 52, 58], 4, pageLabel);
   band(evidenceSheet, 1, t.savedEvidence, 7, true);
   band(evidenceSheet, 2, localized(language,
     'Relaciona cada requisito con su estado, documento, página/sección, nota y URL. “Disponible” indica evidencia aportada, no certificación.',
