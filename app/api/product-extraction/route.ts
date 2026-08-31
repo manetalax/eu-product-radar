@@ -45,6 +45,20 @@ function parseProductsJson(text: string): ExtractedProduct[] {
   return parsed.products.filter((item): item is ExtractedProduct => Boolean(item) && typeof item === 'object' && !Array.isArray(item));
 }
 
+function customerExtractionError(language: Language, error: unknown): string {
+  const fallback = productExtractionText(language, 'interpretError');
+  if (!(error instanceof Error)) return fallback;
+  const safeMessages = [
+    productExtractionText(language, 'noProducts'),
+    productExtractionText(language, 'freeOnlyDocument'),
+    productExtractionText(language, 'backupRequired'),
+    fallback,
+  ];
+  if (safeMessages.some(message => error.message === message || error.message.startsWith(`${message} (`))) return error.message;
+  console.error('product_extraction_failed', error);
+  return fallback;
+}
+
 function parseDataUrl(dataUrl: string, language: Language): { mimeType: string; bytes: Buffer } {
   const match = /^data:([^;,]+);base64,([A-Za-z0-9+/=\r\n]+)$/i.exec(dataUrl);
   if (!match) throw new Error(productExtractionText(language, 'invalidFile'));
@@ -194,6 +208,6 @@ export async function POST(request: Request) {
     if (!products.length) throw new Error(productExtractionText(language, 'noProducts'));
     return json({ products: normalizeExtractedProducts({ kind, sourceName: filename, products }) });
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : productExtractionText(language, 'interpretError') }, 502);
+    return json({ error: customerExtractionError(language, error) }, 502);
   }
 }
