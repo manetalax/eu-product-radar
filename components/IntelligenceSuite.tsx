@@ -8,10 +8,25 @@ import styles from './IntelligenceSuite.module.css';
 
 type HistoryItem = { id: string; filename: string; product_count: number };
 type EvidenceRow = { product_index: number; evidence_key: string; status: 'available' | 'pending' | 'not_applicable'; note?: string };
+type RadarEvent = {
+  id: string;
+  source_name: string;
+  source_url: string;
+  title: string;
+  summary: string;
+  published_at: string | null;
+  effective_at: string | null;
+  severity: 'info' | 'review' | 'action';
+  affected_keywords: string[];
+  official_reference: string;
+  last_seen_at: string;
+};
 
 export default function IntelligenceSuite() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [evidenceRows, setEvidenceRows] = useState<EvidenceRow[]>([]);
+  const [radarEvents, setRadarEvents] = useState<RadarEvent[]>([]);
+  const [radarLive, setRadarLive] = useState(false);
   const [selected, setSelected] = useState(0);
   const [loading, setLoading] = useState(true);
   const [question, setQuestion] = useState('¿Qué me falta para poder avanzar con este producto?');
@@ -24,7 +39,17 @@ export default function IntelligenceSuite() {
     let cancelled = false;
     async function loadLatest() {
       try {
-        const historyResponse = await fetch('/api/analyses?page=0', { cache: 'no-store' });
+        const [historyResponse, radarResponse] = await Promise.all([
+          fetch('/api/analyses?page=0', { cache: 'no-store' }),
+          fetch('/api/regulatory-changes?limit=12', { cache: 'no-store' }),
+        ]);
+        if (radarResponse.ok) {
+          const radarBody = await radarResponse.json() as { events?: RadarEvent[]; live?: boolean };
+          if (!cancelled) {
+            setRadarEvents(Array.isArray(radarBody.events) ? radarBody.events : []);
+            setRadarLive(Boolean(radarBody.live));
+          }
+        }
         const historyBody = await historyResponse.json() as { analyses?: HistoryItem[] };
         const latest = historyBody.analyses?.[0];
         if (!latest || cancelled) return;
@@ -69,13 +94,12 @@ export default function IntelligenceSuite() {
   const reviewCount = evidence.filter(item => item.status === 'needs_review').length;
   const missingCount = evidence.filter(item => item.status === 'missing').length;
   const actions = regulatory?.obligations.map(item => item.title) ?? [];
-  const impacts = useMemo(() => {
+  const localImpacts = useMemo(() => {
     if (!regulatory) return [];
-    const items = [
+    return [
       ...regulatory.uncertainties.map(reason => ({ severity: 'review' as const, reason })),
       ...regulatory.applicableActs.slice(0, 4).map(act => ({ severity: act.applicability === 'baseline' ? 'info' as const : 'action' as const, reason: `${act.reference}: ${act.reason}` })),
-    ];
-    return items.slice(0, 6);
+    ].slice(0, 6);
   }, [regulatory]);
 
   async function askAi(event: FormEvent) {
@@ -128,8 +152,8 @@ export default function IntelligenceSuite() {
       </article>
 
       <article className={styles.card}>
-        <div className={styles.cardHead}><div><h3>Regulatory Impact Radar</h3><p>Prioriza qué merece revisión ahora. La monitorización automática de cambios se conectará a las fuentes oficiales.</p></div><span className={styles.status}>RADAR</span></div>
-        {impacts.length ? <ul className={styles.list}>{impacts.map((impact, index) => <li className={styles.impact} key={`${impact.reason}-${index}`}><span className={styles.dot} /><div><strong>{impact.severity === 'action' ? 'Acción' : impact.severity === 'review' ? 'Revisar' : 'Contexto'}</strong><br />{impact.reason}</div></li>)}</ul> : <div className={styles.empty}>Sin impactos destacados en el análisis seleccionado.</div>}
+        <div className={styles.cardHead}><div><h3>Regulatory Impact Radar</h3><p>Combina cambios regulatorios persistidos desde fuentes oficiales con los puntos de revisión del producto seleccionado.</p></div><span className={styles.status}>{radarLive ? 'FUENTES OFICIALES' : 'RADAR'}</span></div>
+        {radarEvents.length > 0 ? <ul className={styles.list}>{radarEvents.slice(0, 5).map(event => <li className={styles.impact} key={event.id}><span className={styles.dot} /><div><strong>{event.severity === 'action' ? 'Acción' : event.severity === 'review' ? 'Revisar' : 'Información'} · {event.title}</strong><br />{event.summary || event.official_reference || event.source_name}<br /><a href={event.source_url} target="_blank" rel="noopener noreferrer">Fuente oficial ↗</a></div></li>)}</ul> : localImpacts.length ? <><ul className={styles.list}>{localImpacts.map((impact, index) => <li className={styles.impact} key={`${impact.reason}-${index}`}><span className={styles.dot} /><div><strong>{impact.severity === 'action' ? 'Acción' : impact.severity === 'review' ? 'Revisar' : 'Contexto'}</strong><br />{impact.reason}</div></li>)}</ul><div className={styles.disclaimer}>Todavía no hay eventos regulatorios oficiales persistidos; estos puntos proceden del análisis actual del producto.</div></> : <div className={styles.empty}>Sin cambios oficiales persistidos ni impactos destacados para este producto.</div>}
       </article>
 
       <article className={`${styles.card} ${styles.wide}`}>
