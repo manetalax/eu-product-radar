@@ -29,6 +29,17 @@ type RadarEvent = {
   last_seen_at: string;
 };
 
+type JsonObject = Record<string, unknown>;
+
+async function jsonObject(response: Response): Promise<JsonObject> {
+  try {
+    const parsed = await response.json();
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as JsonObject : {};
+  } catch {
+    return {};
+  }
+}
+
 export default function IntelligenceSuite() {
   const { language } = useLanguage();
   const t = intelligenceCopy[language];
@@ -59,23 +70,27 @@ export default function IntelligenceSuite() {
           fetch('/api/regulatory-changes?limit=12', { cache: 'no-store' }),
         ]);
         if (radarResponse.ok) {
-          const radarBody = await radarResponse.json() as { events?: RadarEvent[]; live?: boolean };
+          const radarBody = await jsonObject(radarResponse);
           if (!cancelled) {
-            setRadarEvents(Array.isArray(radarBody.events) ? radarBody.events : []);
+            setRadarEvents(Array.isArray(radarBody.events) ? radarBody.events as RadarEvent[] : []);
             setRadarLive(Boolean(radarBody.live));
           }
         }
-        const historyBody = await historyResponse.json() as { analyses?: HistoryItem[] };
-        const latest = historyBody.analyses?.[0];
-        if (!latest || cancelled) return;
+        if (!historyResponse.ok) throw new Error('history_request_failed');
+        const historyBody = await jsonObject(historyResponse);
+        const analyses = Array.isArray(historyBody.analyses) ? historyBody.analyses as HistoryItem[] : [];
+        const latest = analyses[0];
+        if (!latest || cancelled || typeof latest.id !== 'string') return;
         const detailResponse = await fetch(`/api/analyses?id=${encodeURIComponent(latest.id)}`, { cache: 'no-store' });
-        const detailBody = await detailResponse.json() as { analysis?: Analysis };
-        if (!detailBody.analysis || cancelled) return;
-        setAnalysis(detailBody.analysis);
-        const evidenceResponse = await fetch(`/api/evidence?analysisId=${encodeURIComponent(detailBody.analysis.id)}`, { cache: 'no-store' });
+        if (!detailResponse.ok) throw new Error('analysis_request_failed');
+        const detailBody = await jsonObject(detailResponse);
+        const latestAnalysis = detailBody.analysis as Analysis | undefined;
+        if (!latestAnalysis || typeof latestAnalysis !== 'object' || typeof latestAnalysis.id !== 'string' || !Array.isArray(latestAnalysis.products) || cancelled) return;
+        setAnalysis(latestAnalysis);
+        const evidenceResponse = await fetch(`/api/evidence?analysisId=${encodeURIComponent(latestAnalysis.id)}`, { cache: 'no-store' });
         if (evidenceResponse.ok) {
-          const evidenceBody = await evidenceResponse.json() as { evidence?: EvidenceRow[] };
-          if (!cancelled) setEvidenceRows(evidenceBody.evidence ?? []);
+          const evidenceBody = await jsonObject(evidenceResponse);
+          if (!cancelled) setEvidenceRows(Array.isArray(evidenceBody.evidence) ? evidenceBody.evidence as EvidenceRow[] : []);
         }
       } catch {
         if (!cancelled) setError(t.loadError);
@@ -137,11 +152,11 @@ export default function IntelligenceSuite() {
           language,
         }),
       });
-      const body = await response.json() as { answer?: string; error?: string };
-      if (!response.ok || !body.answer) throw new Error(body.error || t.aiError);
+      const body = await jsonObject(response);
+      if (!response.ok || typeof body.answer !== 'string' || !body.answer.trim()) throw new Error(t.aiError);
       setAnswer(body.answer);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t.aiError);
+    } catch {
+      setError(t.aiError);
     } finally { setAiBusy(false); }
   }
 
