@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { safeAuthDestination } from '@/lib/http';
+import { configuredSiteOrigin, safeAuthDestination } from '@/lib/http';
 import { isLanguage } from '@/lib/landing-i18n';
 import { IMPORTVERIFIER_PRODUCTION_URL } from '@/lib/release-config';
 
 function callbackOrigin(): string {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL;
-  try {
-    return configured ? new URL(configured).origin : IMPORTVERIFIER_PRODUCTION_URL;
-  } catch {
-    return IMPORTVERIFIER_PRODUCTION_URL;
-  }
+  return configuredSiteOrigin() ?? IMPORTVERIFIER_PRODUCTION_URL;
 }
 
 export async function GET(request: NextRequest) {
