@@ -2,26 +2,16 @@ import './globals.css';
 import './premium-global.css';
 import './landing-conversion.css';
 import type { Metadata, Viewport } from 'next';
-import { BRAND_NAME } from '@/lib/brand';
+import { BRAND_NAME, BRAND_SITE_URL } from '@/lib/brand';
 import PwaRegister from '@/components/PwaRegister';
-import { IMPORTVERIFIER_PRODUCTION_URL } from '@/lib/release-config';
 import { LanguageProvider } from '@/lib/use-language';
 
-function metadataBase(): URL {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL;
-  try {
-    const parsed = configured ? new URL(configured) : new URL(IMPORTVERIFIER_PRODUCTION_URL);
-    return parsed.protocol === 'https:' ? parsed : new URL(IMPORTVERIFIER_PRODUCTION_URL);
-  } catch {
-    return new URL(IMPORTVERIFIER_PRODUCTION_URL);
-  }
-}
-
+const EARLY_LANGUAGE_SCRIPT = "(()=>{const m=location.pathname.match(/^\\/(es|en|fr|de|it|pt)(?:\\/|$)/);if(m)document.documentElement.lang=m[1]})()";
 const defaultTitle = `${BRAND_NAME} · EU product compliance intelligence`;
 const defaultDescription = 'Analyse EU product requirements, evidence and regulatory actions with ImportVerifier.';
 
 export const metadata: Metadata = {
-  metadataBase: metadataBase(),
+  metadataBase: new URL(BRAND_SITE_URL),
   title: { default: defaultTitle, template: `%s · ${BRAND_NAME}` },
   description: defaultDescription,
   applicationName: BRAND_NAME,
@@ -51,5 +41,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#f6f7fb', colorScheme: 'light' };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en" suppressHydrationWarning><body><LanguageProvider initialLanguage="en"><PwaRegister />{children}</LanguageProvider></body></html>;
+  return <html lang="en" suppressHydrationWarning>
+    <head><script dangerouslySetInnerHTML={{ __html: EARLY_LANGUAGE_SCRIPT }} /></head>
+    <body><LanguageProvider initialLanguage="en"><PwaRegister />{children}</LanguageProvider></body>
+  </html>;
 }
