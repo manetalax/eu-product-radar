@@ -14,10 +14,15 @@ test('root layout resolves language on the server and initializes one shared cli
 });
 
 test('language provider preserves explicit URL and saved preferences over browser fallback', () => {
-  assert.match(languageHook, /\[urlLanguage, storedLanguage, initialLanguage, browserLanguage\]\.find\(isLanguage\)/);
+  assert.match(languageHook, /\[urlLanguage, storedLanguage, initialLanguage, browserLanguage\]\.find\(isSupportedLanguage\)/);
   assert.match(languageHook, /document\.documentElement\.lang = language/);
   assert.match(languageHook, /LANGUAGE_COOKIE/);
   assert.match(languageHook, /LanguageContext\.Provider/);
+});
+
+test('client language provider stays decoupled from the large landing copy bundle', () => {
+  assert.match(languageHook, /SUPPORTED_LANGUAGES/);
+  assert.doesNotMatch(languageHook, /from '.\/landing-i18n'/);
 });
 
 test('root metadata follows the server language and uses a safe HTTPS metadata base', () => {
