@@ -70,9 +70,11 @@ function readZipEntry(buffer: Buffer, wantedName: string): Buffer | null {
   const totalEntries = buffer.readUInt16LE(eocd + 10);
   if (totalEntries > MAX_ZIP_ENTRIES) throw new Error('El documento contiene demasiadas entradas internas.');
   let offset = buffer.readUInt32LE(eocd + 16);
+  if (offset > eocd) throw new Error('El documento ZIP está truncado o dañado.');
 
-  for (let entry = 0; entry < totalEntries && offset + 46 <= buffer.length; entry++) {
-    if (buffer.readUInt32LE(offset) !== 0x02014b50) break;
+  for (let entry = 0; entry < totalEntries; entry++) {
+    if (offset + 46 > eocd || offset + 46 > buffer.length) throw new Error('El documento ZIP está truncado o dañado.');
+    if (buffer.readUInt32LE(offset) !== 0x02014b50) throw new Error('El directorio ZIP no es válido.');
     const method = buffer.readUInt16LE(offset + 10);
     const compressedSize = buffer.readUInt32LE(offset + 20);
     const uncompressedSize = buffer.readUInt32LE(offset + 24);
@@ -80,21 +82,26 @@ function readZipEntry(buffer: Buffer, wantedName: string): Buffer | null {
     const extraLength = buffer.readUInt16LE(offset + 30);
     const commentLength = buffer.readUInt16LE(offset + 32);
     const localHeaderOffset = buffer.readUInt32LE(offset + 42);
-    const name = buffer.subarray(offset + 46, offset + 46 + nameLength).toString('utf8');
+    const centralEnd = offset + 46 + nameLength + extraLength + commentLength;
+    const nameEnd = offset + 46 + nameLength;
+    if (centralEnd > eocd || centralEnd > buffer.length || nameEnd > buffer.length) throw new Error('El documento ZIP está truncado o dañado.');
+    const name = buffer.subarray(offset + 46, nameEnd).toString('utf8');
 
     if (name === wantedName) {
       if (uncompressedSize > MAX_ZIP_ENTRY_BYTES || compressedSize > MAX_ZIP_ENTRY_BYTES) throw new Error('El documento interno es demasiado grande.');
-      if (localHeaderOffset + 30 > buffer.length || buffer.readUInt32LE(localHeaderOffset) !== 0x04034b50) return null;
+      if (localHeaderOffset + 30 > buffer.length || buffer.readUInt32LE(localHeaderOffset) !== 0x04034b50) throw new Error('La entrada ZIP no tiene una cabecera local válida.');
       const localNameLength = buffer.readUInt16LE(localHeaderOffset + 26);
       const localExtraLength = buffer.readUInt16LE(localHeaderOffset + 28);
       const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
-      const compressed = buffer.subarray(dataStart, dataStart + compressedSize);
+      const dataEnd = dataStart + compressedSize;
+      if (dataStart > buffer.length || dataEnd > buffer.length || dataEnd < dataStart) throw new Error('La entrada ZIP está truncada o dañada.');
+      const compressed = buffer.subarray(dataStart, dataEnd);
       if (method === 0) return Buffer.from(compressed);
       if (method === 8) return inflateRawSync(compressed, { maxOutputLength: MAX_ZIP_ENTRY_BYTES });
       throw new Error('El documento usa una compresión ZIP no compatible.');
     }
 
-    offset += 46 + nameLength + extraLength + commentLength;
+    offset = centralEnd;
   }
   return null;
 }
