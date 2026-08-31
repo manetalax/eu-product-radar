@@ -20,6 +20,8 @@ const copy = {
 } as const;
 const CONFIRM_TIMEOUT_MS = 20_000;
 
+class CheckoutConfirmationError extends Error {}
+
 export default function CheckoutReturnSync({ checkout, sessionId, synced = false }: Props) {
   const { language } = useLanguage();
   const [busy, setBusy] = useState(checkout === 'success' && Boolean(sessionId) && !synced);
@@ -40,14 +42,11 @@ export default function CheckoutReturnSync({ checkout, sessionId, synced = false
         });
         let body: { confirmed?: boolean; error?: string } = {};
         try { body = await response.json() as typeof body; } catch { /* Never expose parser errors to customers. */ }
-        if (!response.ok || !body.confirmed) throw new Error(body.error || billingText(language, 'paymentOpen'));
+        if (!response.ok || !body.confirmed) throw new CheckoutConfirmationError(body.error || billingText(language, 'paymentOpen'));
         if (!cancelled) window.location.replace('/dashboard?checkout=success&synced=1');
       } catch (confirmError) {
         if (!cancelled) {
-          const safeMessage = confirmError instanceof Error && confirmError.name !== 'AbortError' && !confirmError.name.includes('Syntax')
-            ? confirmError.message
-            : billingText(language, 'paymentOpen');
-          setError(safeMessage || billingText(language, 'paymentOpen'));
+          setError(confirmError instanceof CheckoutConfirmationError ? confirmError.message : billingText(language, 'paymentOpen'));
           setBusy(false);
         }
       } finally {
