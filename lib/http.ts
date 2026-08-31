@@ -12,7 +12,9 @@ export function configuredSiteOrigin(value: string | undefined = process.env.NEX
   if (!value) return null;
   try {
     const parsed = new URL(value);
-    if (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost') return null;
+    const secure = parsed.protocol === 'https:';
+    const localHttp = parsed.protocol === 'http:' && parsed.hostname === 'localhost';
+    if (!secure && !localHttp) return null;
     if (parsed.username || parsed.password) return null;
     return parsed.origin;
   } catch {
