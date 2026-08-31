@@ -9,20 +9,30 @@ export type TextGenerationResult = {
 export type AiCostPolicy = 'free_only' | 'free_first' | 'premium_allowed';
 
 const AI_PROVIDER_TIMEOUT_MS = 30_000;
-const DEFAULT_SILICONFLOW_BASE_URL = 'https://api.siliconflow.com/v1';
+export const SILICONFLOW_CANONICAL_BASE_URL = 'https://api.siliconflow.com/v1';
+
+export function isTrustedSiliconFlowBaseUrl(value: string | undefined): boolean {
+  if (!value) return true;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'https:'
+      && parsed.origin === 'https://api.siliconflow.com'
+      && !parsed.username
+      && !parsed.password
+      && (parsed.pathname === '/v1' || parsed.pathname === '/v1/')
+      && !parsed.search
+      && !parsed.hash;
+  } catch {
+    return false;
+  }
+}
 
 function siliconFlowBaseUrl() {
-  const value = process.env.SILICONFLOW_BASE_URL || DEFAULT_SILICONFLOW_BASE_URL;
-  let parsed: URL;
-  try {
-    parsed = new URL(value);
-  } catch {
-    throw new Error('La URL del proveedor gratuito no es válida.');
+  const value = process.env.SILICONFLOW_BASE_URL || SILICONFLOW_CANONICAL_BASE_URL;
+  if (!isTrustedSiliconFlowBaseUrl(value)) {
+    throw new Error('La URL del proveedor gratuito no coincide con el endpoint oficial permitido.');
   }
-  if (parsed.protocol !== 'https:' || parsed.username || parsed.password || !parsed.hostname) {
-    throw new Error('La URL del proveedor gratuito debe usar HTTPS y no incluir credenciales.');
-  }
-  return parsed.href.replace(/\/$/, '');
+  return SILICONFLOW_CANONICAL_BASE_URL;
 }
 
 async function providerFetch(input: string, init: RequestInit): Promise<Response> {
