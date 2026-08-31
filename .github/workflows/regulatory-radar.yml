@@ -1,0 +1,22 @@
+name: ImportVerifier regulatory radar
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 */6 * * *'
+
+jobs:
+  ingest-eurlex:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsx scripts/fetch-eurlex-radar.ts
+        env:
+          IMPORTVERIFIER_SITE_URL: https://importverifier.netlify.app
+          REGULATORY_INGEST_SECRET: ${{ secrets.REGULATORY_INGEST_SECRET }}
