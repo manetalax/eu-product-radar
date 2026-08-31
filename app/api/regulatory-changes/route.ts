@@ -26,6 +26,7 @@ export async function GET(request: Request) {
 
   if (error) return json({ error: 'No se puede cargar el Radar regulatorio.' }, 503);
   const events = data ?? [];
-  const live = process.env.REGULATORY_RADAR_LIVE === 'true' && events.length > 0;
+  const ingestSecretReady = (process.env.REGULATORY_INGEST_SECRET?.trim().length ?? 0) >= 32;
+  const live = process.env.REGULATORY_RADAR_LIVE === 'true' && ingestSecretReady && events.length > 0;
   return json({ events, live, sourcePolicy: 'official-only' });
 }
