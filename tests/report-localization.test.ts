@@ -22,7 +22,7 @@ test('el Excel en inglés traduce superficies visibles y narrativa regulatoria s
   const technical = wb.getWorksheet('Datos técnicos')!;
   const evidence = wb.getWorksheet('Evidencia')!;
   const guide = wb.getWorksheet('Guía documental')!;
-  const regulatory = wb.getWorksheet('Evaluación regulatoria')!;
+  const regulatory = wb.getWorksheet('Regulatory assessment')!;
 
   assert.match(String(summary.getCell('A2').value), /CATALOGUE REPORT/i);
   assert.match(String(summary.getCell('A2').value), /European Union/i);
@@ -49,4 +49,5 @@ test('el Excel por defecto conserva español para servidor y compatibilidad hist
   const wb = await buildReport(analysis);
   assert.equal(wb.getWorksheet('Resumen')!.getCell('A4').value, 'Archivo');
   assert.equal(wb.getWorksheet('Productos')!.getCell('C5').value, 'Alta');
+  assert.ok(wb.getWorksheet('Evaluación regulatoria'));
 });
