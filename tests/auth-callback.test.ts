@@ -10,9 +10,9 @@ test('el callback OAuth conserva solo destinos internos y el idioma validado', (
   assert.match(callback, /searchParams\.set\('lang'/);
 });
 
-test('el callback usa el origen validado y fallback canónico', () => {
-  assert.match(callback, /configuredSiteOrigin/);
-  assert.match(callback, /IMPORTVERIFIER_PRODUCTION_URL/);
+test('el callback OAuth fija producción al dominio canónico', () => {
+  assert.match(callback, /process\.env\.NODE_ENV === 'production'/);
+  assert.match(callback, /return IMPORTVERIFIER_PRODUCTION_URL/);
   assert.match(callback, /configuredSiteOrigin\(\) \?\? IMPORTVERIFIER_PRODUCTION_URL/);
-  assert.doesNotMatch(callback, /new URL\(configured\)\.origin/);
+  assert.doesNotMatch(callback, /euproductradar\.netlify\.app/);
 });
