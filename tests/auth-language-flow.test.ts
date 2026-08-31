@@ -3,8 +3,15 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const authForm = readFileSync(new URL('../components/AuthForm.tsx', import.meta.url), 'utf8');
+const loginPage = readFileSync(new URL('../app/login/page.tsx', import.meta.url), 'utf8');
 const callback = readFileSync(new URL('../app/auth/callback/route.ts', import.meta.url), 'utf8');
 const resetPage = readFileSync(new URL('../app/reset-password/page.tsx', import.meta.url), 'utf8');
+
+test('login seeds the requested or detected language before AuthForm hydration', () => {
+  assert.match(loginPage, /lang\?: string/);
+  assert.match(loginPage, /const language = await serverLanguage\(lang\)/);
+  assert.match(loginPage, /<LanguageProvider initialLanguage=\{language\}>/);
+});
 
 test('Google, signup and password reset preserve the selected language', () => {
   assert.match(authForm, /new URLSearchParams\(\{ lang: language \}\)/);
