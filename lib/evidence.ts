@@ -27,13 +27,19 @@ export function isValidEvidenceUrl(value: string): boolean {
   }
 }
 
+export function safeEvidenceUrl(value: string | null | undefined): string {
+  return typeof value === 'string' && isValidEvidenceUrl(value) ? value : '';
+}
+
 export async function fetchEvidenceForAnalysis(analysisId: string): Promise<PersistedEvidence[]> {
   if (typeof window === 'undefined' || !analysisId) return [];
   try {
     const response = await fetch(`/api/evidence?analysisId=${encodeURIComponent(analysisId)}`, { cache: 'no-store' });
     if (!response.ok) return [];
     const body = await response.json() as { evidence?: PersistedEvidence[] };
-    return Array.isArray(body.evidence) ? body.evidence : [];
+    return Array.isArray(body.evidence)
+      ? body.evidence.map(item => ({ ...item, source_url: safeEvidenceUrl(item.source_url) }))
+      : [];
   } catch {
     return [];
   }
