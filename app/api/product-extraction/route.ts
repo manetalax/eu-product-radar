@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { MAX_FILE_BYTES } from '@/lib/analysis';
 import { normalizeExtractedProducts, type ExtractedProduct } from '@/lib/product-ingestion';
-import { sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
+import { readJsonBody, sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { createClient } from '@/lib/supabase/server';
 import { aiCostPolicy, generateText, generateVisionText } from '@/lib/ai-provider';
 import { recordAiUsage } from '@/lib/ai-telemetry';
@@ -18,6 +18,7 @@ const ALLOWED_EXTENSIONS = /\.(pdf|doc|docx|rtf|odt|txt|md|json|png|jpe?g|webp|h
 const IMAGE_EXTENSIONS = /\.(png|jpe?g|webp|heic)$/i;
 const LOCALLY_EXTRACTABLE = /\.(pdf|docx|rtf|odt|txt|md|json)$/i;
 const IMAGE_MIME = /^image\/(png|jpeg|webp|heic|heif)$/i;
+const PRODUCT_EXTRACTION_BODY_MAX_BYTES = 8 * 1024 * 1024;
 const PRODUCT_PROMPT = `Identifica todos los productos reales presentes en el material. No inventes. Devuelve exclusivamente JSON válido con esta forma: {"products":[{"name":"","manufacturer":"","responsible":"","warning":"","description":"","materials":"","intendedUse":"","audience":"","power":"","connectivity":"","composition":""}]}. Usa cadena vacía cuando un dato no esté explícito o claramente sustentado. Conserva el idioma original. Los campos responsible/importador UE, advertencias, materiales, alimentación, conectividad y composición se usarán para clasificar normativa: no los completes por suposición.`;
 
 function outputText(response: Record<string, unknown>) {
@@ -136,12 +137,13 @@ export async function POST(request: Request) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return json({ error: productExtractionText(language, 'signIn') }, 401);
 
-  const contentLength = Number(request.headers.get('content-length') || 0);
-  if (contentLength > 7.5 * 1024 * 1024) return json({ error: productExtractionText(language, 'tooLarge') }, 413);
-
   let body: { filename?: unknown; mimeType?: unknown; dataUrl?: unknown };
-  try { body = await request.json(); }
-  catch { return json({ error: productExtractionText(language, 'readError') }, 400); }
+  try {
+    body = await readJsonBody(request, PRODUCT_EXTRACTION_BODY_MAX_BYTES) as typeof body;
+  } catch (error) {
+    const oversized = error instanceof Error && error.message.includes('límite');
+    return json({ error: productExtractionText(language, oversized ? 'tooLarge' : 'readError') }, oversized ? 413 : 400);
+  }
 
   const filename = typeof body.filename === 'string' ? body.filename.trim() : '';
   const mimeType = typeof body.mimeType === 'string' ? body.mimeType.trim().toLowerCase() : 'application/octet-stream';
