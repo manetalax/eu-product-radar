@@ -14,7 +14,10 @@ export default function LandingLanguagePicker({ language, label }: { language: s
       window.localStorage.setItem(STORAGE_KEY, next);
       document.cookie = `${COOKIE_NAME}=${encodeURIComponent(next)}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`;
       const url = new URL(window.location.href);
-      url.searchParams.set('lang', next);
+      const segments = url.pathname.split('/').filter(Boolean);
+      if (segments.length === 1 && OPTIONS.some(([code]) => code === segments[0])) url.pathname = `/${next}`;
+      else url.pathname = `/${next}`;
+      url.searchParams.delete('lang');
       window.location.assign(url.toString());
     }}>
       {OPTIONS.map(([code, shortLabel]) => <option key={code} value={code}>{shortLabel}</option>)}
