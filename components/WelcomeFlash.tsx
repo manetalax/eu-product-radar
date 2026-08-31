@@ -1,8 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Language } from '@/lib/landing-i18n';
+import { useLanguage } from '@/lib/use-language';
+
+const welcomeCopy: Record<Language, { title: string; detail: string; close: string }> = {
+  es: { title: 'Cuenta creada correctamente', detail: 'Tu correo ha sido confirmado. Ya puedes utilizar ImportVerifier.', close: 'Cerrar mensaje' },
+  en: { title: 'Account created successfully', detail: 'Your email has been confirmed. You can now use ImportVerifier.', close: 'Close message' },
+  fr: { title: 'Compte créé avec succès', detail: 'Votre adresse e-mail a été confirmée. Vous pouvez maintenant utiliser ImportVerifier.', close: 'Fermer le message' },
+  de: { title: 'Konto erfolgreich erstellt', detail: 'Deine E-Mail-Adresse wurde bestätigt. Du kannst ImportVerifier jetzt verwenden.', close: 'Nachricht schließen' },
+  it: { title: 'Account creato correttamente', detail: 'La tua email è stata confermata. Ora puoi utilizzare ImportVerifier.', close: 'Chiudi messaggio' },
+  pt: { title: 'Conta criada com sucesso', detail: 'O seu e-mail foi confirmado. Já pode utilizar o ImportVerifier.', close: 'Fechar mensagem' },
+};
 
 export default function WelcomeFlash({ show }: { show: boolean }) {
+  const { language } = useLanguage();
+  const t = welcomeCopy[language];
   const [visible, setVisible] = useState(show);
 
   useEffect(() => {
@@ -54,14 +67,12 @@ export default function WelcomeFlash({ show }: { show: boolean }) {
         ✓
       </div>
       <div style={{ flex: 1 }}>
-        <strong style={{ display: 'block', marginBottom: 3 }}>Cuenta creada correctamente</strong>
-        <span style={{ color: '#475467', lineHeight: 1.45 }}>
-          Tu correo ha sido confirmado. Ya puedes utilizar Import Rules Verifier.
-        </span>
+        <strong style={{ display: 'block', marginBottom: 3 }}>{t.title}</strong>
+        <span style={{ color: '#475467', lineHeight: 1.45 }}>{t.detail}</span>
       </div>
       <button
         type="button"
-        aria-label="Cerrar mensaje"
+        aria-label={t.close}
         onClick={() => setVisible(false)}
         style={{
           border: 0,
