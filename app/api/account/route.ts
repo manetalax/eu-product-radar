@@ -10,6 +10,7 @@ export const runtime = 'nodejs';
 
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
 const failure = (errorCode: AccountDeletionErrorCode, status: number) => json({ errorCode }, status);
+const ACCOUNT_DELETE_BODY_MAX_BYTES = 4 * 1024;
 
 export async function DELETE(request: Request) {
   if (!sameOrigin(request)) return failure('origin_not_allowed', 403);
@@ -20,7 +21,7 @@ export async function DELETE(request: Request) {
 
   let confirmation;
   try {
-    confirmation = accountDeletionRequest(await readJsonBody(request), user.email);
+    confirmation = accountDeletionRequest(await readJsonBody(request, ACCOUNT_DELETE_BODY_MAX_BYTES), user.email);
   } catch (error) {
     return failure(error instanceof AccountDeletionError ? error.code : 'invalid_confirmation', 400);
   }
