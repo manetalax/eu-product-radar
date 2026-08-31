@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { evidenceForProduct, type PersistedEvidence } from '../lib/evidence';
+import { evidenceForProduct, isValidEvidenceUrl, type PersistedEvidence } from '../lib/evidence';
 import { regulatoryReadiness } from '../lib/regulatory-twin';
 
 test('separa evidencia por producto sin mezclar cuentas del análisis', () => {
@@ -22,4 +22,14 @@ test('readiness pondera evidencia verificada por encima de evidencia solo aporta
     { requirementId: 'd', title: 'D', status: 'missing' },
   ]);
   assert.equal(readiness, 44);
+});
+
+test('evidence URLs require well-formed HTTPS without embedded credentials', () => {
+  assert.equal(isValidEvidenceUrl('https://ec.europa.eu/safety-gate/alerts'), true);
+  assert.equal(isValidEvidenceUrl('https://example.com/path?document=1#page=2'), true);
+  assert.equal(isValidEvidenceUrl('http://example.com/evidence'), false);
+  assert.equal(isValidEvidenceUrl('https://'), false);
+  assert.equal(isValidEvidenceUrl('https://user:secret@example.com/evidence'), false);
+  assert.equal(isValidEvidenceUrl('javascript:alert(1)'), false);
+  assert.equal(isValidEvidenceUrl('https://example.com/space here'), false);
 });
