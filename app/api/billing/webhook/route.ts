@@ -22,6 +22,16 @@ async function syncSubscription(subscription: Stripe.Subscription) {
   }
   const planId = isPlanId(subscription.metadata.plan_id) ? subscription.metadata.plan_id : planIdForStripePrice(priceId);
   if (!userId || !planId || !customerId) throw new Error('La suscripción no contiene una cuenta y un plan reconocibles.');
+
+  // Account deletion cancels Stripe first and then removes the Supabase user. Stripe can
+  // deliver the cancellation webhook after the user row has disappeared; acknowledge that
+  // terminal event instead of retrying forever against a foreign-key that can no longer exist.
+  const { data: userLookup, error: userLookupError } = await admin.auth.admin.getUserById(userId);
+  if (userLookupError || !userLookup.user) {
+    if (subscription.status === 'canceled') return;
+    throw new Error('La cuenta asociada a la suscripción no existe.');
+  }
+
   const ends = subscription.items.data.map(item => item.current_period_end).filter(Number.isFinite);
   const periodEnd = ends.length ? new Date(Math.max(...ends) * 1000).toISOString() : null;
   const { error } = await admin.from('subscriptions').upsert({
@@ -38,7 +48,6 @@ async function syncSubscription(subscription: Stripe.Subscription) {
   }, { onConflict: 'user_id' });
   if (error) throw error;
 }
-
 
 async function syncAudit(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.user_id || session.client_reference_id;
