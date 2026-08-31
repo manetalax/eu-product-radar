@@ -2,6 +2,7 @@ import Dashboard from '@/components/Dashboard';
 import AnalysisReviewGate from '@/components/AnalysisReviewGate';
 import IntelligenceSuite from '@/components/IntelligenceSuite';
 import LatestRegulatoryAssessment from '@/components/LatestRegulatoryAssessment';
+import UnlimitedExperience from '@/components/UnlimitedExperience';
 import WelcomeFlash from '@/components/WelcomeFlash';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
@@ -11,5 +12,5 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) redirect('/login');
   const params = await searchParams;
-  return <><WelcomeFlash show={params.welcome === 'registered'} /><AnalysisReviewGate /><Dashboard email={user.email ?? ''} /><IntelligenceSuite /><LatestRegulatoryAssessment /></>;
+  return <><WelcomeFlash show={params.welcome === 'registered'} /><UnlimitedExperience /><AnalysisReviewGate /><Dashboard email={user.email ?? ''} /><IntelligenceSuite /><LatestRegulatoryAssessment /></>;
 }
