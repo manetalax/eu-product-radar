@@ -50,9 +50,9 @@ export function stripePriceId(planId: PlanId): string {
 
 export function planIdForStripePrice(priceId: string | null | undefined): PlanId | null {
   if (!priceId) return null;
-  if (process.env.NODE_ENV === 'production' && priceId === IMPORTVERIFIER_UNLIMITED_PRICE_ID) return 'starter';
+  const production = process.env.NODE_ENV === 'production';
   const entries = [
-    ['starter', process.env.STRIPE_PRICE_STARTER],
+    ['starter', production ? IMPORTVERIFIER_UNLIMITED_PRICE_ID : process.env.STRIPE_PRICE_STARTER],
     ['growth', process.env.STRIPE_PRICE_GROWTH],
     ['pro', process.env.STRIPE_PRICE_PRO],
     ['business', process.env.STRIPE_PRICE_BUSINESS],
