@@ -123,6 +123,7 @@ export async function POST(request: Request) {
 
     return json({ answer: resultAi.text, disclaimer: a('disclaimer') });
   } catch (error) {
-    return json({ error: error instanceof Error && error.message ? error.message : a('assistantFailure') }, 502);
+    console.error('regulatory_agent_failed', error);
+    return json({ error: a('assistantFailure') }, 502);
   }
 }
