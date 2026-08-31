@@ -44,10 +44,13 @@
 - Added `lib/platform-capability-i18n.ts` with explicit ES/EN/FR/DE/IT/PT labels while preserving canonical internal connector capability IDs.
 - `components/IntelligenceSuite.tsx` now renders capabilities through `platformCapabilityLabel(language, item)`.
 - Added `tests/platform-capability-i18n.test.ts` to prevent raw capability IDs/English-normalized slugs leaking into localized UI.
-- Intelligence Suite section headings/eyebrow are now language-aware through `lib/intelligence-section-i18n.ts`; Product Regulatory Twin, Regulatory Impact Radar and Connect no longer remain hardcoded English outside EN.
-- Added `tests/intelligence-section-i18n.test.ts` to protect six-language section-copy coverage and structural wiring.
-- CI run #773 caught an over-strict test that rejected legitimate linguistic hyphens such as German compound labels; commit `4edd5dd38b866da02154ca1e13a8b56f34331ac7` fixed the regression without weakening the actual invariant (raw internal IDs must never be displayed).
-- Exact-head `ImportVerifier release check` run #777 for `4edd5dd38b866da02154ca1e13a8b56f34331ac7` completed **SUCCESS**: tests, typecheck and build all passed.
+- Intelligence Suite section headings/eyebrow are now language-aware; Product Regulatory Twin, Regulatory Impact Radar and Connect no longer remain hardcoded English outside EN.
+- Auth redirect hardening now uses central `configuredSiteOrigin()` in both OAuth callback and email/signup/recovery confirmation routes.
+- `/auth/confirm` no longer trusts `process.env.NEXT_PUBLIC_SITE_URL!` directly; malformed, missing, credential-bearing or insecure configured origins fail safely to `IMPORTVERIFIER_PRODUCTION_URL`.
+- OAuth callback origin construction was also simplified to the same validated origin helper, eliminating divergent redirect validation logic.
+- Added `tests/auth-confirm-origin.test.ts` and updated `tests/auth-callback.test.ts` to protect the shared origin invariant and fixed internal destinations.
+- Billing Checkout and Portal were inspected in this sweep and already use `configuredSiteOrigin()` plus same-origin request protection; no duplicate change required.
+- Exact-head functional `ImportVerifier release check` run #787 for `5a51252d9b781ca6e9857c6e96791c6d91809c7a` completed **SUCCESS**: tests, typecheck and build all passed.
 
 ## Production facts last checked 2026-08-31
 - Supabase project: `hfuwwjdcyudflamwwnon`.
@@ -61,10 +64,10 @@
 
 ## IN PROGRESS / NEXT — execute without asking
 1. Verify exact latest HEAD CI after this handoff-only commit; fix tests/typecheck/build regressions immediately.
-2. Continue security/account/billing sweep for remaining user-supplied URL-like fields, redirects, exported links and failure-recovery paths.
-3. Continue customer-visible i18n sweep inside Intelligence Suite and reports; the feature badge `AI · TWIN · RADAR · CONNECT` may remain branded shorthand, but no explanatory English copy should leak into non-English locales.
-4. Future-market US/CN/GB/JP documentary narratives remain non-customer-active; fully localize them before activation.
-5. Continue desktop/iPhone/iPad/PWA QA, especially upload/export flows, table overflow, keyboard/modal behavior, touch targets and safe-area edge cases.
+2. Continue security/account/billing sweep for remaining user-controlled or persisted links rendered in UI/exports, especially external document/source links and recovery/failure paths not already covered.
+3. Continue desktop/iPhone/iPad/PWA QA, especially upload/export flows, table overflow, keyboard/modal behavior, touch targets and safe-area edge cases.
+4. Continue customer-visible i18n sweep inside Intelligence Suite and reports; branded shorthand may remain, but explanatory English copy must not leak into non-English locales.
+5. Future-market US/CN/GB/JP documentary narratives remain non-customer-active; fully localize them before activation.
 6. Audit every customer-visible price surface to remain sourced from canonical plan definitions and exact locale-aware EUR 9.95 formatting.
 7. Review generated PDF/Excel visual hierarchy for a more premium consulting-style report system without weakening evidence/uncertainty/legal disclaimers.
 8. Refresh `WORK-HANDOFF-IMPORTVERIFIER.md` only after a material architecture/release-state change or external production wiring change; this pass did not alter architecture.
