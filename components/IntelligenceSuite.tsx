@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Analysis, analyze } from '@/lib/analysis';
+import { localizeEuRegulatoryAssessment } from '@/lib/eu-regulatory-i18n';
 import { intelligenceCopy } from '@/lib/intelligence-i18n';
 import { PLATFORM_CONNECTORS, detectPlatform } from '@/lib/platform-connectors';
 import { relevantRadarChanges } from '@/lib/radar-match';
@@ -84,26 +85,30 @@ export default function IntelligenceSuite() {
   const results = useMemo(() => analysis ? analyze(analysis.products, analysis.market_code ?? 'EU') : [], [analysis]);
   const result = results[selected];
   const product = analysis?.products[selected];
-  const regulatory = result?.regulatory;
+  const rawRegulatory = result?.regulatory;
+  const regulatory = useMemo(() => rawRegulatory ? localizeEuRegulatoryAssessment(rawRegulatory, language) : undefined, [rawRegulatory, language]);
 
   const evidence = useMemo<RegulatoryEvidenceLink[]>(() => {
-    if (!regulatory) return [];
+    if (!rawRegulatory || !regulatory) return [];
     const rowsForProduct = evidenceRows.filter(row => row.product_index === selected);
-    return regulatory.obligations.flatMap(obligation => obligation.evidence.flatMap((title, index) => {
-      const key = `${obligation.title}: ${title}`.slice(0, 120);
-      const saved = rowsForProduct.find(row => row.evidence_key === key);
-      if (saved?.status === 'not_applicable') return [];
-      const status: RegulatoryEvidenceLink['status'] = saved?.status === 'available' ? 'supplied' : saved?.status === 'pending' ? 'needs_review' : 'missing';
-      return [{ requirementId: `${obligation.id}-${index}`, title, status, sourceName: saved?.note || undefined, sourceUrl: obligation.source.url }];
-    }));
-  }, [regulatory, evidenceRows, selected]);
+    return rawRegulatory.obligations.flatMap(rawObligation => {
+      const displayed = regulatory.obligations.find(item => item.id === rawObligation.id) ?? rawObligation;
+      return rawObligation.evidence.flatMap((rawTitle, index) => {
+        const key = `${rawObligation.title}: ${rawTitle}`.slice(0, 120);
+        const saved = rowsForProduct.find(row => row.evidence_key === key);
+        if (saved?.status === 'not_applicable') return [];
+        const status: RegulatoryEvidenceLink['status'] = saved?.status === 'available' ? 'supplied' : saved?.status === 'pending' ? 'needs_review' : 'missing';
+        return [{ requirementId: `${rawObligation.id}-${index}`, title: displayed.evidence[index] ?? rawTitle, status, sourceName: saved?.note || undefined, sourceUrl: rawObligation.source.url }];
+      });
+    });
+  }, [rawRegulatory, regulatory, evidenceRows, selected]);
 
   const readiness = regulatory ? regulatoryReadiness(evidence) : 0;
   const suppliedCount = evidence.filter(item => item.status === 'supplied').length;
   const reviewCount = evidence.filter(item => item.status === 'needs_review').length;
   const missingCount = evidence.filter(item => item.status === 'missing').length;
   const actions = regulatory?.obligations.map(item => item.title) ?? [];
-  const relevantOfficialEvents = useMemo(() => product ? relevantRadarChanges(radarEvents, product, regulatory?.category ?? '') : [], [radarEvents, product, regulatory?.category]);
+  const relevantOfficialEvents = useMemo(() => product ? relevantRadarChanges(radarEvents, product, rawRegulatory?.category ?? '') : [], [radarEvents, product, rawRegulatory?.category]);
   const localImpacts = useMemo(() => {
     if (!regulatory) return [];
     return [
