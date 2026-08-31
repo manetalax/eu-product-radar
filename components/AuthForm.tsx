@@ -98,12 +98,12 @@ export default function AuthForm({ initialMode = 'login', initialMessageKey, req
         if (error) setErrorKey(authErrorKey(error));
         else {
           if (requestedPlan) savePlanIntent(requestedPlan);
-          window.location.assign('/dashboard');
+          window.location.assign(`/dashboard?lang=${language}`);
         }
       } else if (mode === 'signup') {
         const { data, error } = await authService.signUp(email.trim(), password, callbackUrl(), requestedPlan ? planInterestMetadata(requestedPlan) : undefined);
         if (error) setErrorKey(authErrorKey(error));
-        else if (data.session) window.location.assign('/dashboard');
+        else if (data.session) window.location.assign(`/dashboard?lang=${language}`);
         else {
           if (requestedPlan) savePlanIntent(requestedPlan);
           setNoticeKey('signupConfirmation');
@@ -130,7 +130,7 @@ export default function AuthForm({ initialMode = 'login', initialMessageKey, req
 
   return <main className="shell"><section className="login card auth-card">
     <div className="auth-brand-row">
-      <Brand market="EU" />
+      <Brand market="EU" href={`/${language}`} />
       <label className="language-picker auth-language-picker">
         <span className="sr-only">{t.language}</span>
         <select value={language} aria-label={t.language} disabled={busy} onChange={event => setLanguage(event.target.value as Language)}>
