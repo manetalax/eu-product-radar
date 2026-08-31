@@ -15,5 +15,5 @@ test('localized CSV template uses a BOM, explicit filename and delayed object UR
   assert.match(dashboard, /const csv = `\\uFEFFname,manufacturer,eu_operator,warning\\n\$\{samples\[language\]\}\\n`/);
   assert.match(dashboard, /new Blob\(\[csv\], \{ type: 'text\/csv;charset=utf-8' \}\)/);
   assert.match(dashboard, /link\.download = `importverifier-eu-template-\$\{language\}\.csv`/);
-  assert.match(dashboard, /window\.setTimeout\(\(\) => URL\.revokeObjectURL\(url\), 1000\)/);
+  assert.match(dashboard, /window\.setTimeout\(\(\) => URL\.revokeObjectURL\(url\), 60000\)/);
 });
