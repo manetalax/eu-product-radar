@@ -41,11 +41,12 @@ Continue autonomously through every actionable task. Never stop because one task
 - External AI calls have bounded abort timeouts; provider/model details stay server-side.
 - EU regulatory engine, Product Regulatory Twin, persisted Evidence and Regulatory Impact Radar architecture are implemented.
 - Official EUR-Lex RSS adapter, normalization, deduplication and protected ingest/refresh endpoints exist. Production Radar event count remains **0**, therefore live Radar claims remain disabled.
+- Radar publication now uses one centralized fail-closed runtime gate: live flag + strong shared ingest secret + persisted events. Pre-live persisted events are never returned to customers or inserted into ImportVerifier AI context. When Radar is disabled, customer retrieval and the AI assistant also skip Radar storage reads, so an inactive subsystem cannot add avoidable latency or make AI fail.
 - Radar schedulers are pinned to canonical `https://importverifier.netlify.app/api/internal/regulatory-refresh`; neither can redirect the Bearer secret through mutable site configuration. Both send `{}` JSON. Internal refresh authenticates first, requires `application/json`, accepts only an empty JSON object, caps body at 1 KiB, preserves 413/415 semantics and redacts internal errors.
 - Shopify/Amazon/Etsy connector architecture exists; direct OAuth/API remains inactive until official credentials exist.
 - Dashboard/auth/legal/intelligence/report surfaces are localized in ES/EN/FR/DE/IT/PT where customer-active.
 - Google OAuth button has visible Google identity; code pins auth returns to canonical ImportVerifier and validates SDK-returned Supabase OAuth destinations. Latest observed Supabase Auth flow uses `https://importverifier.netlify.app` / canonical callback; earlier `euproductradar` entries are historical traffic.
-- PWA private-cache hardening, language-keyed offline landing cache, own-brand icons, safe areas, touch targets and iOS form/modal behavior are covered.
+- PWA private-cache hardening, language-keyed offline landing cache, own-brand icons, safe areas, touch targets and iOS form/modal behavior are covered. Installed PWA start URLs now launch directly on the selected static locale route (`/es`, `/en`, `/fr`, `/de`, `/it`, `/pt`) instead of routing through `/?lang=...`.
 - Universal uploads support spreadsheets/documents/photos including HEIC/HEIF; binary signatures are validated and spoofing fails closed.
 - Dedicated mobile camera capture uses `capture="environment"` without breaking the broad picker; cancellation/multi-file ambiguity do not consume quota.
 - PDF/XLSX/template browser downloads use delayed object-URL revocation for Safari/iPad save-to-Files robustness.
@@ -67,10 +68,10 @@ Continue autonomously through every actionable task. Never stop because one task
 - Service Worker public cache remains language-keyed and private/authenticated routes remain excluded.
 - Latest measured Netlify Lighthouse aggregate before the security-only pass was roughly **Performance 16–17 / Accessibility 100 / Best Practices 92 / SEO 100**. The detailed audit breakdown is unavailable through current connectors. Do not continue speculative React/CSS rewrites without TTFB/LCP/TBT/CLS/resource-level evidence.
 
-## Latest exact functional verification — 2026-08-31
-- Functional HEAD before this handoff update: **`3ddae099eb15b6fac8ed27004cf4b336e881eb36`** (`fix: test Stripe mapping without mutating NODE_ENV`).
-- GitHub `ImportVerifier release check` **#1331 SUCCESS** on exact `3ddae09...`: **306 tests passed**, typecheck passed and production build passed.
-- Netlify bot confirms Deploy Preview **READY** on exact `3ddae09...` for the correct project `importverifier`: `https://deploy-preview-4--importverifier.netlify.app`.
+## Latest exact functional verification — 2026-09-01
+- Functional HEAD before this handoff update: **`7d6a3fd87db9b31bf90cea696ee3a466110b94e6`** (`test: keep disabled Radar out of storage paths`).
+- GitHub `ImportVerifier release check` **#1367 SUCCESS** on exact `7d6a3fd...`: **307 tests passed**, typecheck passed and production build passed.
+- Netlify Deploy Preview for exact `7d6a3fd...` was still **PENDING** at the last check on the correct project `importverifier`; recheck it before treating this head as fully preview-verified.
 - PR #4 is **open, mergeable and not merged**.
 - This documentation update creates a newer docs-only HEAD. Reconfirm exact CI/preview for that docs head before calling it the final release head.
 
