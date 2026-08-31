@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
     const session = await stripeClient().billingPortal.sessions.create({ customer: data.stripe_customer_id, return_url: `${siteOrigin}/dashboard` });
     return json({ url: session.url });
-  } catch (portalError) {
-    return json({ error: portalError instanceof Error ? portalError.message : b('portalOpen') }, 503);
+  } catch {
+    return json({ error: b('portalOpen') }, 503);
   }
 }
