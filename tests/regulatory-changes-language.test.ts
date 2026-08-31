@@ -21,3 +21,8 @@ test('Radar live remains gated by explicit flag, strong secret and persisted eve
   assert.match(route, /ingestSecretReady && events\.length > 0/);
   assert.match(route, /sourcePolicy: 'official-only'/);
 });
+
+test('Radar API sanitizes persisted official-source URLs before returning them to clients', () => {
+  assert.match(route, /safeOfficialRegulatoryUrl/);
+  assert.match(route, /source_url: safeOfficialRegulatoryUrl\(event\.source_url\)/);
+});
