@@ -32,6 +32,6 @@ export async function GET(request: Request) {
 
   if (error) return json({ error: t('loadError') }, 503);
   const events = (data ?? []).map(event => ({ ...event, source_url: safeOfficialRegulatoryUrl(event.source_url) }));
-  const live = radarRuntimeEnabled(process.env, events.length);
+  const live = radarRuntimeEnabled(process.env.REGULATORY_RADAR_LIVE, process.env.REGULATORY_INGEST_SECRET, events.length);
   return json({ events: live ? events : [], live, sourcePolicy: 'official-only' });
 }
