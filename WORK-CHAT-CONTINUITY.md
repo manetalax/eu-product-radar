@@ -28,6 +28,7 @@
 - Public launch acceptance sample `public/importverifier-sample-5-products.csv` contains exactly five distinct EU products; regression coverage parses it and verifies five engine results.
 - Stripe live canonical offer verified: `ImportVerifier Unlimited`, EUR 9.95/month, price `price_1UAJy5HJnO8odw1Mn4jMVjFt`; checkout revalidates active price/currency/amount/month interval and only accepts internal `starter`.
 - Checkout and customer portal no longer return raw Stripe/Supabase exception messages to customers; regression tests protect provider-error privacy.
+- Stripe Checkout and Billing Portal navigation now fail closed at the server boundary: only HTTPS `checkout.stripe.com` is accepted for checkout and only HTTPS `billing.stripe.com` for portal, with credentials, non-default ports, lookalike hosts and cross-surface URLs rejected before they can reach client navigation.
 - Stripe subscription synchronization fails closed for unknown prices, metadata/price mismatches, unexpected multi-item subscriptions and customer/user identity mismatches; persisted `stripe_customer_id` is authoritative when present. Subscription webhook events re-fetch current Stripe state before persistence to avoid out-of-order regressions.
 - Billing entitlement/webhook/portal/cancellation and account-deletion billing safety are implemented.
 - Checkout return confirmation is bounded and defensive: 20-second client timeout, defensive JSON parsing and localized safe failure messaging rather than browser/parser details.
@@ -35,6 +36,7 @@
 - Evidence persists canonical requirement/status/document/page/note/HTTPS URL; unsafe persisted URLs are stripped before rendering/export.
 - Evidence URL hardening now also happens at the server API boundary and before evidence enters ImportVerifier AI context, so legacy unsafe persisted URLs cannot be returned or propagated to new consumers.
 - Official Radar links are allowlisted HTTPS EU regulatory sources and are revalidated at ingestion/API/render boundaries. Explicit non-default HTTPS ports are rejected, reducing the official-source fetch surface without affecting canonical EU endpoints.
+- EU regulatory assessment links are revalidated again at the final React render boundary using the official-source allowlist; unsafe or legacy URLs are omitted rather than rendered as external anchors.
 - Radar source URLs are revalidated again immediately before persisted Radar events enter ImportVerifier AI context, so legacy or altered rows cannot propagate an unsafe source URL into model context.
 - Production AI policy is fail-closed `free_only`; CSV/XLS/XLSX stay local, supported text/doc/image inputs use free-compatible extraction when configured, unsupported scanned/legacy formats fail honestly rather than leaking premium spend.
 - External AI calls are bounded by 30-second abort timeouts, including the direct premium document fallback path that is unreachable under production `free_only`; production release validation rejects malformed, non-HTTPS or credential-bearing `SILICONFLOW_BASE_URL` values, and runtime validates the provider base URL before use.
@@ -50,6 +52,7 @@
 - PWA private-cache hardening, dynamic localized manifest, real own-brand icons, safe areas, 44px touch targets, iOS form sizing and review-modal keyboard/scroll behavior are covered.
 - PWA cache boundary is restricted to static style/script/image/font requests and refuses responses marked private/no-store/no-cache; arbitrary same-origin GET/fetch responses are not opportunistically cached.
 - Mobile upload control accepts spreadsheets, documents and photo/camera input; server supports HEIC/HEIF with extension/MIME agreement and the Dashboard picker now declares `.heic`, `.heif` and `image/*` explicitly.
+- Mobile Dashboard cards now constrain flex children and wrap long unbroken filenames in selected-analysis, history and content headings, preventing up-to-120-character accepted filenames from overflowing narrow iPhone/iPad layouts; regression coverage protects the CSS boundary.
 - PDF/XLSX/template downloads use explicit filenames, browser Blob URLs, DOM click and a 60-second delayed `URL.revokeObjectURL`; the CSV template window is aligned with PDF/XLSX for Safari/iPadOS save-to-Files robustness. Regression coverage protects the lifecycle.
 - Dashboard API response parsing is defensive: malformed/non-object upstream JSON can no longer surface browser/parser exception details to customers and falls back to localized application errors.
 - PDF/Excel reports include premium visual hierarchy, localized regulatory narrative, evidence and source traceability. ExcelJS formulas are created only from application-owned formula objects; user strings are written as string cell values.
@@ -57,11 +60,10 @@
 - US/CN/GB/JP remain structurally isolated and `ACTIVE_MARKET_CODES` remains EU-only.
 
 ## CI / HEAD last verified 2026-08-31
-- Functional/mobile head `7ab0d489504c65a00669ec241d2c6f3580cdb478` initially produced release check **#1023 FAILURE** because one pre-existing CSV download regression test still asserted the obsolete 1-second Blob URL cleanup. The application behavior itself was intentional at 60 seconds.
-- Regression test repaired at `d56a4891317479527547710c133bae10f05892a5` to assert the same 60-second cleanup used by CSV/PDF/XLSX.
-- Exact-head `ImportVerifier release check` **#1027 SUCCESS** for `d56a4891317479527547710c133bae10f05892a5`: install, all tests, typecheck and build passed.
+- Functional/security/mobile head `a59f9f448585900c617cf396ad538456db7b449e` includes the Stripe external-navigation allowlist, final-render EU regulatory URL sanitization and long-filename mobile wrapping regressions.
+- Exact-head `ImportVerifier release check` **#1044 SUCCESS** for `a59f9f448585900c617cf396ad538456db7b449e`: install, all tests, typecheck and build passed.
 - PR #4 remained **open** and **not merged**.
-- Netlify Deploy Preview for the new HEAD still requires recheck; do not call the exact handoff HEAD production-verified until Netlify confirms it.
+- Netlify Deploy Preview for the new HEAD still requires recheck; GitHub commit-status endpoint did not expose a Netlify status for the latest commit, so do not call this HEAD production-verified without a Netlify-side confirmation.
 
 ## Production facts last checked 2026-08-31
 - Supabase project: `hfuwwjdcyudflamwwnon`.
@@ -75,8 +77,8 @@
 
 ## NEXT — execute without asking
 1. Reconfirm exact new handoff HEAD CI and Netlify Deploy Preview; repair any regression immediately.
-2. Continue security sweep for unsafe external URL/render/fetch boundaries and customer-facing non-structured API responses; direct `error.message` → `NextResponse.json` leakage was re-searched after #1027 and no new match was found.
-3. Continue static mobile/iPhone/iPad/PWA QA around drag/drop, camera/photo selection, very long filenames, report downloads and save-to-Files; real-device/browser execution remains BLOCKED EXTERNAL.
+2. Continue security sweep of remaining external links, especially the market guidance/documentation source layer, and keep future-market official domains explicit rather than broad; customer-facing URLs must remain HTTPS and provenance-bound.
+3. Continue static mobile/iPhone/iPad/PWA QA around drag/drop multiple-file behavior, camera/photo selection, report downloads and save-to-Files; real-device/browser execution remains BLOCKED EXTERNAL.
 4. Recheck production auth logs after Supabase/Netlify domain wiring is corrected; canonical Google login must never return to the old domain.
 5. Use `/importverifier-sample-5-products.csv` for final new-account acceptance once canonical auth works; then prove history/PDF/XLSX end-to-end from that account.
 6. Keep EU as the only active market; US/CN/GB/JP must not activate before legally substantiated market documentation and localization are complete.
