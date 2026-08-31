@@ -25,7 +25,11 @@ export function checkReleaseConfig(env: NodeJS.ProcessEnv = process.env): Releas
   if (costPolicy === 'free_only' && !env.SILICONFLOW_API_KEY) errors.push('AI_COST_POLICY=free_only requiere SILICONFLOW_API_KEY.');
   if (!env.SILICONFLOW_API_KEY) warnings.push('SiliconFlow no configurado: no habrá ruta de IA gratuita.');
   if (!env.OPENAI_API_KEY) warnings.push('OpenAI no configurado: PDF/Word complejos no tendrán fallback documental hasta disponer de parser local.');
-  if (!env.REGULATORY_INGEST_SECRET) warnings.push('REGULATORY_INGEST_SECRET no configurado: el Radar podrá leerse pero no recibir ingesta automática.');
+
+  const ingestSecret = env.REGULATORY_INGEST_SECRET?.trim() ?? '';
+  if (!ingestSecret) warnings.push('REGULATORY_INGEST_SECRET no configurado: el Radar podrá leerse pero no recibir ingesta automática.');
+  else if (ingestSecret.length < 32) errors.push('REGULATORY_INGEST_SECRET debe tener al menos 32 caracteres.');
+
   if (!env.RESEND_API_KEY) warnings.push('RESEND_API_KEY no configurado: verifica el proveedor SMTP/transaccional usado por Supabase Auth.');
   if (!env.NEXT_PUBLIC_POSTHOG_KEY) warnings.push('PostHog no configurado: analítica de producto desactivada.');
   return { ok: errors.length === 0, errors, warnings };
