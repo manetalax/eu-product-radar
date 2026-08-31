@@ -1,15 +1,14 @@
-'use client';
-
 import Link from 'next/link';
 import Brand from '@/components/Brand';
 import BrandLogos from '@/components/BrandLogos';
 import EURegulatoryIdentity from '@/components/EURegulatoryIdentity';
+import LandingLanguagePicker from '@/components/LandingLanguagePicker';
 import TrustMark from '@/components/TrustMark';
 import { BRAND_NAME } from '@/lib/brand';
-import { landingCopy, Language, LANGUAGE_OPTIONS, localeFor } from '@/lib/landing-i18n';
+import { isLanguage, landingCopy, Language, localeFor } from '@/lib/landing-i18n';
 import { MARKETS_BY_RANK } from '@/lib/markets';
 import { FREE_TRIAL_PRODUCT_LIMIT, UNLIMITED_PLAN } from '@/lib/plans';
-import { useLanguage } from '@/lib/use-language';
+import { serverLanguage } from '@/lib/server-language';
 
 const unlimitedCopy: Record<Language, { title: string; body: string; features: string[]; cta: string; fairUse: string }> = {
   es: { title: 'Unlimited', body: 'Una sola suscripción. Analiza todo tu catálogo, usa ImportVerifier AI y genera informes sin contar productos.', features: ['Análisis de productos ilimitados*', 'ImportVerifier AI', 'PDF y Excel con tu historial', 'Regulatory Twin + espacio Radar (monitorización oficial cuando esté activada)', 'Compatible con exportaciones de Shopify, Amazon y Etsy'], cta: 'Elegir Unlimited', fairUse: '*Uso ilimitado sujeto a medidas técnicas razonables contra abuso automatizado.' },
@@ -43,8 +42,9 @@ const landingExtras: Record<Language, {
   pt: { previewKicker: 'IMPORTVERIFIER AI · EUROPA', intelligenceEyebrow: 'IMPORTVERIFIER INTELLIGENCE', intelligenceTitle: 'AI + Twin + Radar num único produto.', intelligenceLead: 'Pergunte ao ImportVerifier AI, mantenha um gémeo regulamentar por produto e priorize impactos sem sair do catálogo.', aiBody: 'Pergunte o que falta, porque uma regra pode aplicar-se e o que pedir ao fornecedor.', twinBody: 'Estado vivo por produto: categoria, regras, evidências, incertezas e ações.', radarBody: 'Priorize as alterações e obrigações que devem ser revistas primeiro.', pricingEyebrow: 'UM PLANO. TUDO INCLUÍDO.', pricingTitle: price => `${price} por mês.`, planLabel: 'TUDO INCLUÍDO', verifiedReview: 'REVISÃO IMPORTVERIFIER', trialProof: `${FREE_TRIAL_PRODUCT_LIMIT} produtos grátis · sem cartão`, unlimitedProof: price => `Depois Unlimited por ${price}/mês` },
 };
 
-export default function Home() {
-  const { language, setLanguage } = useLanguage();
+export default async function Home({ searchParams }: { searchParams: Promise<{ lang?: string }> }) {
+  const params = await searchParams;
+  const language: Language = isLanguage(params.lang) ? params.lang : await serverLanguage();
   const t = landingCopy[language];
   const unlimited = unlimitedCopy[language];
   const extra = landingExtras[language];
@@ -66,10 +66,10 @@ export default function Home() {
     <nav className="nav landing-nav" aria-label={BRAND_NAME}>
       <Brand market="EU" />
       <div className="navlinks">
-        <button className="nav-link-button" onClick={() => document.getElementById('como-funciona')?.scrollIntoView({ behavior: 'smooth' })}>{t.nav.how}</button>
-        <button className="nav-link-button" onClick={() => document.getElementById('mercados')?.scrollIntoView({ behavior: 'smooth' })}>{t.nav.markets}</button>
-        <button className="nav-link-button" onClick={() => document.getElementById('planes')?.scrollIntoView({ behavior: 'smooth' })}>{t.nav.pricing}</button>
-        <label className="language-picker"><span className="sr-only">{t.nav.language}</span><select value={language} aria-label={t.nav.language} onChange={event => setLanguage(event.target.value as Language)}>{LANGUAGE_OPTIONS.map(option => <option key={option.code} value={option.code}>{option.shortLabel}</option>)}</select></label>
+        <a className="nav-link-button" href="#como-funciona">{t.nav.how}</a>
+        <a className="nav-link-button" href="#mercados">{t.nav.markets}</a>
+        <a className="nav-link-button" href="#planes">{t.nav.pricing}</a>
+        <LandingLanguagePicker language={language} label={t.nav.language} />
         <Link className="btn primary nav-cta" href={`/login?lang=${language}`}>{t.nav.login}</Link>
       </div>
     </nav>
@@ -78,7 +78,7 @@ export default function Home() {
       <div className="hero-copy">
         <EURegulatoryIdentity label={t.hero.eyebrow} detail={t.hero.independent} />
         <h1>{t.hero.title}</h1><p className="lead">{t.hero.lead}</p>
-        <div className="hero-actions"><Link className="btn primary hero-primary" href={`/login?lang=${language}`}>{t.hero.primary}</Link><button className="btn ghost hero-secondary" onClick={() => document.getElementById('producto')?.scrollIntoView({ behavior: 'smooth' })}>{t.hero.secondary}</button></div>
+        <div className="hero-actions"><Link className="btn primary hero-primary" href={`/login?lang=${language}`}>{t.hero.primary}</Link><a className="btn ghost hero-secondary" href="#producto">{t.hero.secondary}</a></div>
         <div className="hero-offer-proof" aria-label={`${extra.trialProof}. ${extra.unlimitedProof(price)}`}><span>✓ {extra.trialProof}</span><span>{extra.unlimitedProof(price)}</span><span>PDF + Excel</span></div>
         <div className="trust-row" aria-label={t.hero.trust.join(', ')}>{t.hero.trust.map(item => <span key={item}>{item}</span>)}</div><p className="legal-note">{t.hero.legal}</p>
       </div>
