@@ -20,18 +20,24 @@ test('PDF keeps a premium consulting-style cover, executive metrics and section 
   assert.match(pdf, /function drawCover\(\)/);
   assert.match(pdf, /function sectionTitle\(text: string\)/);
   assert.match(pdf, /function metricCard\(label: string, value: string/);
-  assert.match(pdf, /page\.drawRectangle\(\{ x: 0, y: PAGE_HEIGHT - 226/);
+  assert.match(pdf, /page\.drawRectangle\(\{ x: 0, y: PAGE_HEIGHT - \d+, width: PAGE_WIDTH, height: \d+, color: navy \}\)/);
+  assert.match(pdf, /drawMonogram\(page/);
+  assert.match(pdf, /page\.drawText\(pdfText\(reportClass\)/);
   assert.match(pdf, /metricCard\(t\.products/);
   assert.match(pdf, /sectionTitle\(t\.regulatoryAssessment\)/);
   assert.match(pdf, /sectionTitle\(t\.savedEvidence\)/);
   assert.match(pdf, /sectionTitle\(t\.documentaryGuide\)/);
 });
 
-test('PDF retains legal traceability and footer separation while upgrading visuals', () => {
+test('PDF retains legal traceability and repeated footer separation while upgrading visuals', () => {
   assert.match(pdf, /lineBlock\(BRAND_INDEPENDENCE_NOTICE, 9\)/);
   assert.match(pdf, /regulatory\.disclaimer/);
   assert.match(pdf, /obligation\.source\.reference/);
   assert.match(pdf, /item\.source_document/);
-  assert.match(pdf, /p\.drawRectangle\(\{ x: LEFT, y: 46/);
+  assert.match(pdf, /pages\.forEach\(\(p, i\) =>/);
+  assert.match(pdf, /p\.drawRectangle\(\{ x: LEFT, y: \d+, width: CONTENT_WIDTH, height: \.7, color: line \}\)/);
+  assert.match(pdf, /p\.drawText\('EU'/);
+  assert.match(pdf, /\$\{i \+ 1\} \/ \$\{pages\.length\}/);
+  assert.match(pdf, /p\.drawText\(pdfText\(BRAND_DOCUMENT_FOOTER\)/);
   assert.match(pdf, /t\.advisoryAssessment/);
 });
