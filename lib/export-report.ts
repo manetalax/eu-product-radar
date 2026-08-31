@@ -3,7 +3,7 @@ import { documentationFor, GUIDE_VERSION } from './documentation';
 import { guideScopeFor } from './guide-i18n';
 import { Analysis, analysisMarket, analyze, supportsRuleVersion, validateProducts } from './analysis';
 import { BRAND_DOCUMENT_FOOTER, BRAND_DOCUMENT_TITLE, BRAND_NAME, BRAND_TAGLINE } from './brand';
-import { fetchEvidenceForAnalysis } from './evidence';
+import { fetchEvidenceForAnalysis, safeEvidenceUrl } from './evidence';
 import { marketDisplayFor } from './market-i18n';
 import { MARKETS } from './markets';
 import { addRegulatoryWorksheet } from './export-regulatory';
@@ -185,8 +185,9 @@ export async function buildReport(analysis: Analysis, requestedLanguage?: Langua
   persistedEvidence.forEach(item => {
     const productName = products[item.product_index]?.name ?? `${t.product} ${item.product_index + 1}`;
     const status = item.status === 'available' ? t.available : item.status === 'not_applicable' ? t.notApplicable : t.pending;
-    body(evidenceSheet, evidenceRow, [productName, item.evidence_key, status, item.source_document, item.source_page, item.note, item.source_url]);
-    if (item.source_url) evidenceSheet.getCell(evidenceRow, 7).value = { text: item.source_url, hyperlink: item.source_url };
+    const safeUrl = safeEvidenceUrl(item.source_url);
+    body(evidenceSheet, evidenceRow, [productName, item.evidence_key, status, item.source_document, item.source_page, item.note, safeUrl]);
+    if (safeUrl) evidenceSheet.getCell(evidenceRow, 7).value = { text: safeUrl, hyperlink: safeUrl };
     evidenceRow++;
   });
   if (evidenceRow === 5) {
