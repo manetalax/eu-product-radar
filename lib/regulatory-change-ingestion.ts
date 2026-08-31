@@ -47,12 +47,28 @@ function isoOrNull(value: unknown): string | null {
 }
 
 function officialUrl(value: unknown): string {
-  const raw = compact(value, 2000);
-  if (!raw) throw new Error('Falta la URL oficial del evento regulatorio.');
-  const url = new URL(raw);
-  if (url.protocol !== 'https:' || !OFFICIAL_HOSTS.some(host => url.hostname === host || url.hostname.endsWith(`.${host}`))) {
-    throw new Error('La fuente regulatoria no pertenece a un dominio oficial UE permitido.');
+  if (typeof value !== 'string' || !value || /\s/.test(value)) {
+    throw new Error('Falta la URL oficial del evento regulatorio o su formato no es válido.');
   }
+
+  const raw = value.slice(0, 2000);
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error('La URL oficial del evento regulatorio no es válida.');
+  }
+
+  if (
+    url.protocol !== 'https:' ||
+    url.username ||
+    url.password ||
+    !url.hostname ||
+    !OFFICIAL_HOSTS.some(host => url.hostname === host || url.hostname.endsWith(`.${host}`))
+  ) {
+    throw new Error('La fuente regulatoria no pertenece a un dominio oficial UE permitido o no es una URL HTTPS segura.');
+  }
+
   url.hash = '';
   return url.toString();
 }
