@@ -18,6 +18,12 @@ test('only confirmation sends the intercepted analysis through native fetch', ()
   assert.doesNotMatch(cancel, /originalFetch\.current/);
 });
 
+test('review gate validates parsed products and bounded filenames before rendering user-controlled data', () => {
+  assert.match(gate, /productsFromUnknown\(body\.products\)/);
+  assert.match(gate, /body\.filename\.length > 120/);
+  assert.doesNotMatch(gate, /body\.products as Product\[\]/);
+});
+
 test('review UI states explicitly that quota is consumed only after confirmation', () => {
   assert.match(review, /La cuota todavía no se ha consumido/);
   assert.match(review, /Your quota has not been consumed yet/);
