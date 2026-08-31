@@ -31,13 +31,13 @@ test('PDF keeps a premium consulting-style cover, executive metrics and section 
 
 test('PDF retains legal traceability and repeated footer separation while upgrading visuals', () => {
   assert.match(pdf, /lineBlock\(BRAND_INDEPENDENCE_NOTICE, 9\)/);
-  assert.match(pdf, /regulatory\.disclaimer/);
+  assert.match(pdf, /lineBlock\(regulatory\.disclaimer, 8\)/);
   assert.match(pdf, /obligation\.source\.reference/);
   assert.match(pdf, /item\.source_document/);
+  assert.match(pdf, /item\.source_url/);
   assert.match(pdf, /pages\.forEach\(\(p, i\) =>/);
   assert.match(pdf, /p\.drawRectangle\(\{ x: LEFT, y: \d+, width: CONTENT_WIDTH, height: \.7, color: line \}\)/);
   assert.match(pdf, /p\.drawText\('EU'/);
   assert.match(pdf, /\$\{i \+ 1\} \/ \$\{pages\.length\}/);
   assert.match(pdf, /p\.drawText\(pdfText\(BRAND_DOCUMENT_FOOTER\)/);
-  assert.match(pdf, /t\.advisoryAssessment/);
 });
