@@ -11,6 +11,8 @@ const securityHeaders = [
   { key: 'Content-Security-Policy', value: "object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" },
 ] as const;
 
+const privateNoStore = { key: 'Cache-Control', value: 'private, no-store' } as const;
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   async headers() {
@@ -19,11 +21,13 @@ const nextConfig: NextConfig = {
         source: '/auth/:path*',
         headers: [
           ...securityHeaders,
-          { key: 'Cache-Control', value: 'private, no-store' },
+          privateNoStore,
           { key: 'Referrer-Policy', value: 'no-referrer' },
         ],
       },
-      { source: '/api/:path*', headers: [...securityHeaders, { key: 'Cache-Control', value: 'private, no-store' }] },
+      { source: '/api/:path*', headers: [...securityHeaders, privateNoStore] },
+      { source: '/dashboard/:path*', headers: [...securityHeaders, privateNoStore] },
+      { source: '/reset-password', headers: [...securityHeaders, privateNoStore, { key: 'Referrer-Policy', value: 'no-referrer' }] },
       { source: '/:path*', headers: [...securityHeaders] },
     ];
   },
