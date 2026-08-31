@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   const description = hero.lead;
 
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: {
       canonical: `/${rawLanguage}`,
