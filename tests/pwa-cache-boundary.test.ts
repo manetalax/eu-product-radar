@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-test('service worker caches only public static asset destinations outside explicit public navigations', async () => {
+test('service worker caches only public static asset destinations outside explicit localized landing navigations', async () => {
   const source = await readFile(new URL('../public/sw.js', import.meta.url), 'utf8');
   assert.match(source, /CACHEABLE_ASSET_DESTINATIONS = new Set\(\['style', 'script', 'image', 'font'\]\)/);
   assert.match(source, /if \(!CACHEABLE_ASSET_DESTINATIONS\.has\(request\.destination\)\) return;/);
   assert.match(source, /PRIVATE_PREFIXES = \['\/api\/', '\/auth\/', '\/dashboard', '\/reset-password'\]/);
+  assert.match(source, /CACHEABLE_NAVIGATIONS = new Set\(\['\/es', '\/en', '\/fr', '\/de', '\/it', '\/pt'\]\)/);
 });
 
 test('service worker refuses private, no-store and authentication-varying responses', async () => {
@@ -20,9 +21,21 @@ test('service worker refuses private, no-store and authentication-varying respon
   assert.match(source, /responseAllowsCaching\(response\)/);
 });
 
-test('public shell precache omits credentials and query navigations cannot poison canonical cache keys', async () => {
+test('public shell precache omits credentials and never stores dynamic login/legal pages', async () => {
   const source = await readFile(new URL('../public/sw.js', import.meta.url), 'utf8');
   assert.match(source, /new Request\(path, \{ credentials: 'omit', cache: 'reload' \}\)/);
-  assert.match(source, /if \(!CACHEABLE_NAVIGATIONS\.has\(url\.pathname\) \|\| url\.search\) return;/);
+  assert.doesNotMatch(source, /const SHELL = \[[^\]]*'\/login'/);
+  assert.doesNotMatch(source, /const SHELL = \[[^\]]*'\/privacy'/);
+  assert.doesNotMatch(source, /const SHELL = \[[^\]]*'\/terms'/);
   assert.match(source, /key\.startsWith\('importverifier-shell-'\)/);
+});
+
+test('root offline fallback is keyed by an allowlisted lang query instead of poisoning one shared slash cache', async () => {
+  const source = await readFile(new URL('../public/sw.js', import.meta.url), 'utf8');
+  assert.match(source, /function requestedLandingLanguage\(url\)/);
+  assert.match(source, /LANDING_LANGUAGES\.has\(value\)/);
+  assert.match(source, /request\.mode === 'navigate' && url\.pathname === '\/'/);
+  assert.match(source, /cache\.put\(`\/\$\{language\}`/);
+  assert.match(source, /caches\.match\(`\/\$\{language\}`\)/);
+  assert.doesNotMatch(source, /cache\.put\('\/',/);
 });
