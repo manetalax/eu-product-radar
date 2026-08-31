@@ -1,16 +1,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { radarRuntimeEnabled } from '../lib/radar-runtime';
 
 const route = readFileSync(new URL('../app/api/regulatory-changes/route.ts', import.meta.url), 'utf8');
+const agentRoute = readFileSync(new URL('../app/api/regulatory-agent/route.ts', import.meta.url), 'utf8');
 const refreshRoute = readFileSync(new URL('../app/api/internal/regulatory-refresh/route.ts', import.meta.url), 'utf8');
 const netlifyScheduler = readFileSync(new URL('../netlify/functions/regulatory-radar.mjs', import.meta.url), 'utf8');
 const githubScheduler = readFileSync(new URL('../.github/workflows/regulatory-radar.yml', import.meta.url), 'utf8');
 
 test('Radar live requires the flag, a strong ingest secret and persisted events', () => {
-  assert.match(route, /REGULATORY_INGEST_SECRET/);
-  assert.match(route, />= 32/);
-  assert.match(route, /REGULATORY_RADAR_LIVE === 'true' && ingestSecretReady && events\.length > 0/);
+  const strongSecret = 'x'.repeat(32);
+  assert.equal(radarRuntimeEnabled({ REGULATORY_RADAR_LIVE: 'true', REGULATORY_INGEST_SECRET: strongSecret }, 1), true);
+  assert.equal(radarRuntimeEnabled({ REGULATORY_RADAR_LIVE: 'false', REGULATORY_INGEST_SECRET: strongSecret }, 1), false);
+  assert.equal(radarRuntimeEnabled({ REGULATORY_RADAR_LIVE: 'true', REGULATORY_INGEST_SECRET: 'short' }, 1), false);
+  assert.equal(radarRuntimeEnabled({ REGULATORY_RADAR_LIVE: 'true', REGULATORY_INGEST_SECRET: strongSecret }, 0), false);
+});
+
+test('pre-live Radar events are not exposed to clients or ImportVerifier AI', () => {
+  assert.match(route, /radarRuntimeEnabled\(process\.env, events\.length\)/);
+  assert.match(route, /events: live \? events : \[\]/);
+  assert.match(agentRoute, /radarRuntimeEnabled\(process\.env, radarRows\.length\)/);
+  assert.match(agentRoute, /: \[\];/);
 });
 
 test('both Radar schedulers use the canonical authenticated JSON refresh contract', () => {
