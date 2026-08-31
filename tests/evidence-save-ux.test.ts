@@ -5,11 +5,22 @@ import { readFileSync } from 'node:fs';
 const panel = readFileSync(new URL('../components/ReadinessEvidencePanel.tsx', import.meta.url), 'utf8');
 
 test('failed evidence saves roll back optimistic state and surface an alert', () => {
+  assert.match(panel, /async function saveEvidence[^]*Promise<boolean>/);
   assert.match(panel, /if \(!response\.ok\) throw new Error\('evidence_save_failed'\)/);
   assert.match(panel, /catch \{/);
   assert.match(panel, /setRows\(current => \[\.\.\.current\.filter/);
   assert.match(panel, /setSaveError\(t\.saveError\)/);
+  assert.match(panel, /return false/);
   assert.match(panel, /role="alert" className="message error"/);
+});
+
+test('unsaved evidence text fields visibly restore the last confirmed value', () => {
+  assert.match(panel, /async function saveTextField/);
+  assert.match(panel, /const saved = await saveEvidence/);
+  assert.match(panel, /if \(!saved\) input\.value = previous/);
+  for (const field of ['source_document', 'source_page', 'source_url', 'note']) {
+    assert.ok(panel.includes(`'${field}'`), field);
+  }
 });
 
 test('evidence save failure copy exists in all six supported languages', () => {
