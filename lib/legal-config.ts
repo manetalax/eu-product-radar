@@ -14,9 +14,11 @@ export type LegalConfig = {
   refundPolicy: string;
 };
 
+const PLACEHOLDER = /^(?:todo|tbd|pending|pendiente|n\/a|na|none|null|change[-_ ]?me|replace[-_ ]?me|your\s+(?:company|address|tax|jurisdiction|policy)|por\s+completar)$/i;
+
 export function legalConfig(env: NodeJS.ProcessEnv = process.env): LegalConfig | null {
   const values = LEGAL_ENV_KEYS.map(key => env[key]?.trim() ?? '');
-  if (values.some(value => value.length < 2)) return null;
+  if (values.some(value => value.length < 2 || PLACEHOLDER.test(value))) return null;
   const [providerName, providerAddress, taxId, jurisdiction, refundPolicy] = values;
   return { providerName, providerAddress, taxId, jurisdiction, refundPolicy };
 }
