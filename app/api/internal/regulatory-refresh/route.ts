@@ -32,6 +32,7 @@ export async function POST(request: Request) {
     const result = await persistRegulatoryEvents(events);
     return json({ source: 'EUR-Lex RSS', fetched: events.length, stored: result.stored, refreshedAt: new Date().toISOString() });
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'No se ha podido actualizar el Radar.' }, 502);
+    console.error('regulatory_refresh_failed', error);
+    return json({ error: 'No se ha podido actualizar el Radar.' }, 502);
   }
 }
