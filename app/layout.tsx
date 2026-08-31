@@ -1,5 +1,6 @@
 import './globals.css';
 import './premium-global.css';
+import './landing-conversion.css';
 import type { Metadata, Viewport } from 'next';
 import { BRAND_NAME } from '@/lib/brand';
 import PwaRegister from '@/components/PwaRegister';
