@@ -18,7 +18,7 @@ test('el informe exportado conserva datos, resumen y formato después de abrir e
   const source = reportFixture();
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(await reportBytes(source) as unknown as ExcelJS.Buffer);
-  assert.deepEqual(wb.worksheets.map(s => s.name), ['Resumen', 'Productos', 'Datos técnicos', 'Guía documental', 'Evaluación regulatoria']);
+  assert.deepEqual(wb.worksheets.map(s => s.name), ['Resumen', 'Productos', 'Datos técnicos', 'Guía documental', 'Evidencia', 'Evaluación regulatoria']);
   const summary = wb.getWorksheet('Resumen')!, products = wb.getWorksheet('Productos')!, technical = wb.getWorksheet('Datos técnicos')!, regulatory = wb.getWorksheet('Evaluación regulatoria')!;
   assert.deepEqual([8,9,10,11,13].map(row => summary.getCell(row, 2).result), [5,2,2,1,47]);
   assert.deepEqual([5,6,7,8,9].map(row => products.getCell(row, 2).value), [92,64,36,36,8]);
