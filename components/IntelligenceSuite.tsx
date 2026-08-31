@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Analysis, analyze } from '@/lib/analysis';
 import { PLATFORM_CONNECTORS, detectPlatform } from '@/lib/platform-connectors';
+import { relevantRadarChanges } from '@/lib/radar-match';
 import { regulatoryReadiness, type RegulatoryEvidenceLink } from '@/lib/regulatory-twin';
 import styles from './IntelligenceSuite.module.css';
 
@@ -94,6 +95,7 @@ export default function IntelligenceSuite() {
   const reviewCount = evidence.filter(item => item.status === 'needs_review').length;
   const missingCount = evidence.filter(item => item.status === 'missing').length;
   const actions = regulatory?.obligations.map(item => item.title) ?? [];
+  const relevantOfficialEvents = useMemo(() => product ? relevantRadarChanges(radarEvents, product, regulatory?.category ?? '') : [], [radarEvents, product, regulatory?.category]);
   const localImpacts = useMemo(() => {
     if (!regulatory) return [];
     return [
@@ -111,6 +113,7 @@ export default function IntelligenceSuite() {
         product,
         result,
         evidence,
+        radar: relevantOfficialEvents.slice(0, 5),
         analysis: { filename: analysis.filename, ruleVersion: analysis.rule_version, marketCode: analysis.market_code ?? 'EU' },
       });
       const response = await fetch('/api/regulatory-agent', {
@@ -152,8 +155,8 @@ export default function IntelligenceSuite() {
       </article>
 
       <article className={styles.card}>
-        <div className={styles.cardHead}><div><h3>Regulatory Impact Radar</h3><p>Combina cambios regulatorios persistidos desde fuentes oficiales con los puntos de revisión del producto seleccionado.</p></div><span className={styles.status}>{radarLive ? 'FUENTES OFICIALES' : 'RADAR'}</span></div>
-        {radarEvents.length > 0 ? <ul className={styles.list}>{radarEvents.slice(0, 5).map(event => <li className={styles.impact} key={event.id}><span className={styles.dot} /><div><strong>{event.severity === 'action' ? 'Acción' : event.severity === 'review' ? 'Revisar' : 'Información'} · {event.title}</strong><br />{event.summary || event.official_reference || event.source_name}<br /><a href={event.source_url} target="_blank" rel="noopener noreferrer">Fuente oficial ↗</a></div></li>)}</ul> : localImpacts.length ? <><ul className={styles.list}>{localImpacts.map((impact, index) => <li className={styles.impact} key={`${impact.reason}-${index}`}><span className={styles.dot} /><div><strong>{impact.severity === 'action' ? 'Acción' : impact.severity === 'review' ? 'Revisar' : 'Contexto'}</strong><br />{impact.reason}</div></li>)}</ul><div className={styles.disclaimer}>Todavía no hay eventos regulatorios oficiales persistidos; estos puntos proceden del análisis actual del producto.</div></> : <div className={styles.empty}>Sin cambios oficiales persistidos ni impactos destacados para este producto.</div>}
+        <div className={styles.cardHead}><div><h3>Regulatory Impact Radar</h3><p>Prioriza cambios oficiales que coinciden con las características del producto seleccionado.</p></div><span className={styles.status}>{radarLive ? 'FUENTES OFICIALES' : 'RADAR'}</span></div>
+        {relevantOfficialEvents.length > 0 ? <ul className={styles.list}>{relevantOfficialEvents.slice(0, 5).map(event => <li className={styles.impact} key={event.id}><span className={styles.dot} /><div><strong>{event.severity === 'action' ? 'Acción' : event.severity === 'review' ? 'Revisar' : 'Información'} · {event.title}</strong><br />{event.summary || event.official_reference || event.source_name}<br /><a href={event.source_url} target="_blank" rel="noopener noreferrer">Fuente oficial ↗</a></div></li>)}</ul> : localImpacts.length ? <><ul className={styles.list}>{localImpacts.map((impact, index) => <li className={styles.impact} key={`${impact.reason}-${index}`}><span className={styles.dot} /><div><strong>{impact.severity === 'action' ? 'Acción' : impact.severity === 'review' ? 'Revisar' : 'Contexto'}</strong><br />{impact.reason}</div></li>)}</ul><div className={styles.disclaimer}>{radarEvents.length ? 'Hay cambios oficiales guardados, pero ninguno coincide todavía con las palabras clave del producto seleccionado.' : 'Todavía no hay eventos regulatorios oficiales persistidos; estos puntos proceden del análisis actual del producto.'}</div></> : <div className={styles.empty}>Sin cambios oficiales relevantes ni impactos destacados para este producto.</div>}
       </article>
 
       <article className={`${styles.card} ${styles.wide}`}>
