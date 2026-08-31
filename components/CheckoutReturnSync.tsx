@@ -40,9 +40,14 @@ export default function CheckoutReturnSync({ checkout, sessionId, synced = false
           body: JSON.stringify({ sessionId }),
           signal: controller.signal,
         });
-        let body: { confirmed?: boolean; error?: string } = {};
-        try { body = await response.json() as typeof body; } catch { /* Never expose parser errors to customers. */ }
-        if (!response.ok || !body.confirmed) throw new CheckoutConfirmationError(body.error || billingText(language, 'paymentOpen'));
+        let confirmed = false;
+        try {
+          const parsed = await response.json();
+          confirmed = Boolean(parsed && typeof parsed === 'object' && !Array.isArray(parsed) && (parsed as Record<string, unknown>).confirmed === true);
+        } catch {
+          // Never expose parser/proxy details to customers.
+        }
+        if (!response.ok || !confirmed) throw new CheckoutConfirmationError(billingText(language, 'paymentOpen'));
         if (!cancelled) window.location.replace('/dashboard?checkout=success&synced=1');
       } catch (confirmError) {
         if (!cancelled) {

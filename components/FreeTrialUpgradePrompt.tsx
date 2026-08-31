@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { localeFor } from '@/lib/landing-i18n';
 import { UNLIMITED_PLAN } from '@/lib/plans';
+import { trustedStripeNavigationUrl } from '@/lib/stripe-navigation';
 import { useLanguage } from '@/lib/use-language';
 
 type QuotaResponse = { quota?: { remaining?: number; billing?: { planId?: string } } };
@@ -43,11 +44,18 @@ export default function FreeTrialUpgradePrompt() {
       const response = await fetch('/api/billing/checkout', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ purchaseId: 'starter' }),
       });
-      const body = await response.json() as { url?: string; error?: string };
-      if (!response.ok || !body.url) throw new Error(body.error || t.error);
-      window.location.assign(body.url);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t.error);
+      let body: Record<string, unknown> = {};
+      try {
+        const parsed = await response.json();
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) body = parsed as Record<string, unknown>;
+      } catch {
+        // Parser/proxy details are intentionally not exposed to customers.
+      }
+      const navigationUrl = trustedStripeNavigationUrl(body.url, 'checkout');
+      if (!response.ok || !navigationUrl) throw new Error(t.error);
+      window.location.assign(navigationUrl);
+    } catch {
+      setError(t.error);
       setBusy(false);
     }
   }
