@@ -16,10 +16,12 @@ test('root layout stays static and initializes one shared client provider', () =
   assert.match(layout, /<LanguageProvider initialLanguage="en">/);
 });
 
-test('localized static paths set the document language synchronously before body content', () => {
+test('supported path or query locale sets document language synchronously before body content', () => {
   assert.match(layout, /const EARLY_LANGUAGE_SCRIPT =/);
-  assert.match(layout, /location\.pathname\.match\(\/\^\\\\\/\(es\|en\|fr\|de\|it\|pt\)/);
-  assert.match(layout, /document\.documentElement\.lang=m\[1\]/);
+  assert.ok(layout.includes("const ok=/^(es|en|fr|de|it|pt)$/"));
+  assert.ok(layout.includes("location.pathname.split('/').filter(Boolean)[0]"));
+  assert.ok(layout.includes("new URLSearchParams(location.search).get('lang')"));
+  assert.ok(layout.includes("document.documentElement.lang=lang"));
   assert.match(layout, /<head><script dangerouslySetInnerHTML=\{\{ __html: EARLY_LANGUAGE_SCRIPT \}\} \/><\/head>/);
   assert.ok(layout.indexOf('<head><script') < layout.indexOf('<body>'));
 });
