@@ -5,6 +5,7 @@ import { sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { createClient } from '@/lib/supabase/server';
 import { aiCostPolicy, generateText, generateVisionText } from '@/lib/ai-provider';
 import { recordAiUsage } from '@/lib/ai-telemetry';
+import { consumeApiRateLimit } from '@/lib/api-rate-limit';
 import { extractLocalDocumentText } from '@/lib/local-document-text';
 
 export const dynamic = 'force-dynamic';
@@ -117,6 +118,9 @@ export async function POST(request: Request) {
   const dataUrl = typeof body.dataUrl === 'string' ? body.dataUrl : '';
   if (!filename || filename.length > 120 || !ALLOWED_EXTENSIONS.test(filename)) return json({ error: 'Formato no compatible. Usa foto, PDF, Word, texto, CSV o Excel.' }, 400);
   if (!dataUrl.startsWith('data:') || !dataUrl.includes(';base64,') || dataUrl.length > Math.ceil(MAX_FILE_BYTES * 4 / 3) + 500) return json({ error: 'El archivo está vacío o supera el límite de 5 MB.' }, 400);
+
+  const allowed = await consumeApiRateLimit({ userId: user.id, route: 'product_extraction', limit: 30, windowSeconds: 3600 });
+  if (!allowed) return json({ error: 'Hay demasiados documentos procesándose desde esta cuenta. Vuelve a intentarlo más tarde.' }, 429);
 
   const started = Date.now();
   try {
