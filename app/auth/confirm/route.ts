@@ -4,6 +4,7 @@ import { configuredSiteOrigin } from '@/lib/http';
 import { IMPORTVERIFIER_PRODUCTION_URL } from '@/lib/release-config';
 
 function confirmationOrigin(): string {
+  if (process.env.NODE_ENV === 'production') return IMPORTVERIFIER_PRODUCTION_URL;
   return configuredSiteOrigin() ?? IMPORTVERIFIER_PRODUCTION_URL;
 }
 
