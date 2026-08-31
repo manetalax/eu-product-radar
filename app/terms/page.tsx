@@ -18,6 +18,6 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
     <h2>{t.refundTitle}</h2><p>{legal ? legal.refundPolicy : t.refundFallback}</p>
     <h2>{t.providerTitle}</h2>{legal ? <p><strong>{legal.providerName}</strong><br />{legal.providerAddress}<br />{t.taxId}: {legal.taxId}<br />{t.jurisdiction}: {legal.jurisdiction}</p> : <p><strong>{t.prerelease}</strong></p>}
     <h2>{t.contactTitle}</h2><p>{t.support}: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</p>
-    <p><Link href={`/privacy?lang=${language}`}>{t.privacy}</Link> · <Link href={`/?lang=${language}`}>{t.back}</Link></p>
+    <p><Link href={`/privacy?lang=${language}`}>{t.privacy}</Link> · <Link href={`/${language}`}>{t.back}</Link></p>
   </main>;
 }
