@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { extractLocalDocumentText, extractPdfText, rtfToPlainText } from '../lib/local-document-text';
+
+const parserSource = readFileSync(new URL('../lib/local-document-text.ts', import.meta.url), 'utf8');
 
 function storedZip(name: string, content: string): Buffer {
   const nameBytes = Buffer.from(name);
@@ -54,6 +57,16 @@ test('extrae texto útil de un PDF con capa de texto', () => {
   const text = extractPdfText(pdf);
   assert.match(text, /Producto Lampara LED/);
   assert.match(text, /Marca Norte/);
+});
+
+test('PDF limita streams, bytes descomprimidos y fragmentos de texto de forma acumulada', () => {
+  assert.match(parserSource, /const MAX_PDF_STREAMS = 256/);
+  assert.match(parserSource, /const MAX_PDF_DECODED_BYTES = 16 \* 1024 \* 1024/);
+  assert.match(parserSource, /const MAX_PDF_PIECES = 20_000/);
+  assert.match(parserSource, /streamCount >= MAX_PDF_STREAMS/);
+  assert.match(parserSource, /decodedBytes >= MAX_PDF_DECODED_BYTES/);
+  assert.match(parserSource, /pieces\.length >= MAX_PDF_PIECES/);
+  assert.match(parserSource, /maxOutputLength: Math\.min\(MAX_ZIP_ENTRY_BYTES, remainingBytes\)/);
 });
 
 test('extrae texto de DOCX y ODT sin dependencias externas', () => {
