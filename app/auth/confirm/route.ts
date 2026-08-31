@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { configuredSiteOrigin } from '@/lib/http';
+import { isLanguage } from '@/lib/landing-i18n';
 import { IMPORTVERIFIER_PRODUCTION_URL } from '@/lib/release-config';
 
 function confirmationOrigin(): string {
@@ -8,17 +9,25 @@ function confirmationOrigin(): string {
   return configuredSiteOrigin() ?? IMPORTVERIFIER_PRODUCTION_URL;
 }
 
+function localizedDestination(path: string, origin: string, language: string | null): URL {
+  const target = new URL(path, origin);
+  if (language) target.searchParams.set('lang', language);
+  return target;
+}
+
 export async function GET(request: NextRequest) {
   const hash = request.nextUrl.searchParams.get('token_hash');
   const type = request.nextUrl.searchParams.get('type');
+  const requestedLanguage = request.nextUrl.searchParams.get('lang');
+  const language = isLanguage(requestedLanguage) ? requestedLanguage : null;
   const origin = confirmationOrigin();
   if (hash && (type === 'email' || type === 'signup' || type === 'recovery')) {
     const supabase = await createClient();
     const { error } = await supabase.auth.verifyOtp({ token_hash: hash, type });
     if (!error) {
       const destination = type === 'recovery' ? '/reset-password' : '/dashboard?welcome=registered';
-      return NextResponse.redirect(new URL(destination, origin));
+      return NextResponse.redirect(localizedDestination(destination, origin, language));
     }
   }
-  return NextResponse.redirect(new URL('/login?message=link_error', origin));
+  return NextResponse.redirect(localizedDestination('/login?message=link_error', origin, language));
 }
