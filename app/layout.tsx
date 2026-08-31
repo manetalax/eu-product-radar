@@ -5,6 +5,8 @@ import './account-security.css';
 import type { Metadata, Viewport } from 'next';
 import { BRAND_DESCRIPTION, BRAND_NAME } from '@/lib/brand';
 import PwaRegister from '@/components/PwaRegister';
+import { LanguageProvider } from '@/lib/use-language';
+import { serverLanguage } from '@/lib/server-language';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://importverifier.netlify.app';
 
@@ -37,6 +39,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#f6f7fb', colorScheme: 'light' };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="es"><body><PwaRegister />{children}</body></html>;
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const language = await serverLanguage();
+  return <html lang={language}><body><LanguageProvider initialLanguage={language}><PwaRegister />{children}</LanguageProvider></body></html>;
 }
