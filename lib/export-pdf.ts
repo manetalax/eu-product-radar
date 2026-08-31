@@ -48,28 +48,51 @@ export async function pdfBytes(analysis: Analysis, requestedLanguage?: Language)
 
   const regular = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const ink = rgb(.07, .1, .17);
-  const navy = rgb(.055, .075, .13);
-  const purple = rgb(.31, .27, .9);
-  const muted = rgb(.39, .43, .51);
+  const ink = rgb(.045, .065, .105);
+  const navy = rgb(.035, .055, .11);
+  const purple = rgb(.27, .22, .82);
+  const gold = rgb(.83, .67, .25);
+  const muted = rgb(.37, .41, .48);
   const pale = rgb(.965, .97, .985);
   const white = rgb(1, 1, 1);
-  const line = rgb(.88, .9, .94);
+  const line = rgb(.86, .88, .92);
+  const red = rgb(.72, .09, .11);
+  const euBlue = rgb(.02, .2, .48);
+
+  const authorityContext = localized(language, {
+    es: 'Contexto regulatorio UE · Fuentes oficiales y trazabilidad documental',
+    en: 'EU regulatory context · Official sources and document traceability',
+    fr: 'Contexte réglementaire UE · Sources officielles et traçabilité documentaire',
+    de: 'EU-Regulierungskontext · Offizielle Quellen und Dokumentennachweis',
+    it: 'Contesto normativo UE · Fonti ufficiali e tracciabilità documentale',
+    pt: 'Contexto regulamentar UE · Fontes oficiais e rastreabilidade documental',
+  });
+  const reportClass = localized(language, {
+    es: 'INFORME REGULATORIO', en: 'REGULATORY REPORT', fr: 'RAPPORT RÉGLEMENTAIRE',
+    de: 'REGULIERUNGSBERICHT', it: 'RAPPORTO NORMATIVO', pt: 'RELATÓRIO REGULAMENTAR',
+  });
 
   let page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   let y = 780;
 
+  function drawMonogram(target: PDFPage, x: number, yy: number, size = 34, dark = false) {
+    target.drawRectangle({ x, y: yy, width: size, height: size, color: dark ? white : navy, borderColor: dark ? gold : purple, borderWidth: 1.3 });
+    target.drawText('IV', { x: x + size * .18, y: yy + size * .28, size: size * .34, font: bold, color: dark ? navy : white });
+  }
+
   function drawPageChrome(target: PDFPage) {
     target.drawRectangle({ x: LEFT, y: PAGE_HEIGHT - 18, width: CONTENT_WIDTH, height: 3, color: purple });
+    drawMonogram(target, LEFT, PAGE_HEIGHT - 52, 23);
+    target.drawText(pdfText(BRAND_NAME.toUpperCase()), { x: LEFT + 31, y: PAGE_HEIGHT - 43, size: 7.7, font: bold, color: navy });
     const site = pdfText(BRAND_SITE_URL);
     const siteWidth = regular.widthOfTextAtSize(site, 7.5);
-    target.drawText(site, { x: PAGE_WIDTH - LEFT - siteWidth, y: PAGE_HEIGHT - 34, size: 7.5, font: regular, color: muted });
+    target.drawText(site, { x: PAGE_WIDTH - LEFT - siteWidth, y: PAGE_HEIGHT - 42, size: 7.5, font: regular, color: muted });
   }
 
   function newPage() {
     page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
     drawPageChrome(page);
-    y = 780;
+    y = 758;
   }
 
   function lineBlock(text: string, size = 10, strong = false) {
@@ -77,7 +100,7 @@ export async function pdfBytes(analysis: Analysis, requestedLanguage?: Language)
     const words = pdfText(text).split(/\s+/);
     let currentLine = '';
     const emit = () => {
-      if (y < 64) newPage();
+      if (y < 72) newPage();
       page.drawText(currentLine, { x: LEFT, y, size, font, color: strong ? purple : ink });
       y -= size * 1.45;
       currentLine = '';
@@ -94,29 +117,41 @@ export async function pdfBytes(analysis: Analysis, requestedLanguage?: Language)
   }
 
   function sectionTitle(text: string) {
-    if (y < 105) newPage();
-    page.drawRectangle({ x: LEFT, y: y - 7, width: CONTENT_WIDTH, height: 29, color: pale, borderColor: line, borderWidth: .6 });
-    page.drawRectangle({ x: LEFT, y: y - 7, width: 4, height: 29, color: purple });
+    if (y < 110) newPage();
+    page.drawRectangle({ x: LEFT, y: y - 7, width: CONTENT_WIDTH, height: 30, color: pale, borderColor: line, borderWidth: .6 });
+    page.drawRectangle({ x: LEFT, y: y - 7, width: 4, height: 30, color: purple });
     page.drawText(pdfText(text), { x: LEFT + 14, y: y + 2, size: 11, font: bold, color: ink });
-    y -= 42;
+    y -= 43;
   }
 
   function metricCard(label: string, value: string, x: number, width: number) {
-    page.drawRectangle({ x, y: y - 52, width, height: 52, color: pale, borderColor: line, borderWidth: .6 });
-    page.drawText(pdfText(value), { x: x + 11, y: y - 24, size: 18, font: bold, color: purple });
+    page.drawRectangle({ x, y: y - 54, width, height: 54, color: pale, borderColor: line, borderWidth: .6 });
+    page.drawText(pdfText(value), { x: x + 11, y: y - 25, size: 18, font: bold, color: purple });
     const safeLabel = pdfText(label);
     const fitted = safeLabel.length > 26 ? `${safeLabel.slice(0, 25)}…` : safeLabel;
-    page.drawText(fitted, { x: x + 11, y: y - 42, size: 7.5, font: regular, color: muted });
+    page.drawText(fitted, { x: x + 11, y: y - 43, size: 7.5, font: regular, color: muted });
+  }
+
+  function drawVerifiedSeal() {
+    const cx = PAGE_WIDTH - LEFT - 58, cy = PAGE_HEIGHT - 136;
+    page.drawCircle({ x: cx, y: cy, size: 44, borderColor: red, borderWidth: 2.4, opacity: .88 });
+    page.drawCircle({ x: cx, y: cy, size: 36, borderColor: red, borderWidth: .8, opacity: .75 });
+    page.drawText('VERIFIED', { x: cx - 30, y: cy - 4, size: 12, font: bold, color: red, rotate: { type: 'degrees', angle: -8 } as never, opacity: .9 });
   }
 
   function drawCover() {
-    page.drawRectangle({ x: 0, y: PAGE_HEIGHT - 226, width: PAGE_WIDTH, height: 226, color: navy });
-    page.drawRectangle({ x: LEFT, y: PAGE_HEIGHT - 47, width: 54, height: 4, color: purple });
-    page.drawText(pdfText(BRAND_DOCUMENT_TITLE), { x: LEFT, y: PAGE_HEIGHT - 92, size: 25, font: bold, color: white });
-    page.drawText(pdfText(BRAND_TAGLINE), { x: LEFT, y: PAGE_HEIGHT - 116, size: 10, font: regular, color: rgb(.79, .82, .9) });
-    page.drawText(pdfText(`${t.catalogueReport} · ${marketDisplay.name}`), { x: LEFT, y: PAGE_HEIGHT - 164, size: 16, font: bold, color: white });
-    page.drawText(pdfText(BRAND_SITE_URL), { x: LEFT, y: PAGE_HEIGHT - 188, size: 8.5, font: regular, color: rgb(.7, .73, .82) });
-    y = PAGE_HEIGHT - 266;
+    page.drawRectangle({ x: 0, y: PAGE_HEIGHT - 244, width: PAGE_WIDTH, height: 244, color: navy });
+    page.drawRectangle({ x: 0, y: PAGE_HEIGHT - 244, width: 8, height: 244, color: purple });
+    page.drawRectangle({ x: LEFT, y: PAGE_HEIGHT - 48, width: 76, height: 3, color: gold });
+    drawMonogram(page, LEFT, PAGE_HEIGHT - 101, 38, true);
+    page.drawText(pdfText(BRAND_DOCUMENT_TITLE), { x: LEFT + 52, y: PAGE_HEIGHT - 78, size: 20, font: bold, color: white });
+    page.drawText(pdfText(BRAND_TAGLINE), { x: LEFT + 52, y: PAGE_HEIGHT - 97, size: 8.5, font: regular, color: rgb(.79, .82, .9) });
+    page.drawText(pdfText(reportClass), { x: LEFT, y: PAGE_HEIGHT - 146, size: 8, font: bold, color: gold });
+    page.drawText(pdfText(`${t.catalogueReport} · ${marketDisplay.name}`), { x: LEFT, y: PAGE_HEIGHT - 173, size: 17, font: bold, color: white });
+    page.drawText(pdfText(`${t.identifier}: ${analysis.id}`), { x: LEFT, y: PAGE_HEIGHT - 199, size: 7.5, font: regular, color: rgb(.7, .73, .82) });
+    page.drawText(pdfText(BRAND_SITE_URL), { x: LEFT, y: PAGE_HEIGHT - 217, size: 7.5, font: regular, color: rgb(.7, .73, .82) });
+    drawVerifiedSeal();
+    y = PAGE_HEIGHT - 284;
   }
 
   drawCover();
@@ -136,7 +171,7 @@ export async function pdfBytes(analysis: Analysis, requestedLanguage?: Language)
   metricCard(t.high, String(high), LEFT + (cardWidth + cardGap), cardWidth);
   metricCard(t.medium, String(medium), LEFT + (cardWidth + cardGap) * 2, cardWidth);
   metricCard(t.low, String(low), LEFT + (cardWidth + cardGap) * 3, cardWidth);
-  y -= 68;
+  y -= 70;
   lineBlock(`${t.averageIndicator}: ${Math.round(results.reduce((n, r) => n + r.score, 0) / results.length)}/100. ${t.incompleteFieldsNote}`);
 
   if (marketCode === 'EU') lineBlock(localized(language, {
@@ -173,7 +208,6 @@ export async function pdfBytes(analysis: Analysis, requestedLanguage?: Language)
     const result = results[i];
     const priorityLabel = result.priority === 'ALTA' ? t.high : result.priority === 'MEDIA' ? t.medium : t.low;
     const missingFields = result.missing.map(field => field === 'Fabricante' ? t.manufacturer : field === 'Seguridad/advertencias' ? t.warnings : field === 'Operador responsable UE' ? marketDisplay.operator : field);
-
     page.drawText(pdfText(`${t.product} ${i + 1} / ${products.length}`), { x: LEFT, y, size: 8.5, font: bold, color: purple });
     y -= 25;
     lineBlock(p.name, 18, true);
@@ -191,23 +225,13 @@ export async function pdfBytes(analysis: Analysis, requestedLanguage?: Language)
       const confidence = regulatory.confidence === 'high' ? t.confidenceHigh : regulatory.confidence === 'medium' ? t.confidenceMedium : t.confidenceLow;
       lineBlock(`${t.candidateCategory}: ${regulatory.category} | ${t.confidence}: ${confidence}${regulatory.requiresCategoryConfirmation ? ` | ${t.requiresConfirmation}` : ''}`);
       sectionTitle(t.identifiedRules);
-      regulatory.applicableActs.forEach(act => {
-        lineBlock(`${act.title} (${act.reference})`, 10, true);
-        lineBlock(act.reason, 9);
-        lineBlock(`${t.officialSource}: ${act.url}`, 8);
-      });
+      regulatory.applicableActs.forEach(act => { lineBlock(`${act.title} (${act.reference})`, 10, true); lineBlock(act.reason, 9); lineBlock(`${t.officialSource}: ${act.url}`, 8); });
       sectionTitle(t.actionsEvidence);
       regulatory.obligations.forEach(obligation => {
         if (y < 170) newPage();
-        lineBlock(obligation.title, 10, true);
-        lineBlock(obligation.reason, 9);
-        lineBlock(`${t.evidence}: ${obligation.evidence.join('; ')}`, 9);
-        lineBlock(`${t.source}: ${obligation.source.reference} · ${obligation.source.url}`, 8);
+        lineBlock(obligation.title, 10, true); lineBlock(obligation.reason, 9); lineBlock(`${t.evidence}: ${obligation.evidence.join('; ')}`, 9); lineBlock(`${t.source}: ${obligation.source.reference} · ${obligation.source.url}`, 8);
       });
-      if (regulatory.uncertainties.length) {
-        sectionTitle(t.confirmations);
-        regulatory.uncertainties.forEach(item => lineBlock('• ' + item, 9));
-      }
+      if (regulatory.uncertainties.length) { sectionTitle(t.confirmations); regulatory.uncertainties.forEach(item => lineBlock('• ' + item, 9)); }
       lineBlock(regulatory.disclaimer, 8);
     }
 
@@ -229,18 +253,19 @@ export async function pdfBytes(analysis: Analysis, requestedLanguage?: Language)
     documentationFor(p, marketCode, language).forEach(a => {
       if (y < 210) newPage();
       lineBlock(a.title + ' - ' + a.status, 12, true);
-      lineBlock(`${t.applicability}: ${a.condition}`);
-      lineBlock(`${t.whereToGet}: ${a.obtain}`);
-      lineBlock(`${t.whatToCheck}: ${a.check}`);
-      lineBlock(`${t.officialSource}: ${a.source}`, 8);
+      lineBlock(`${t.applicability}: ${a.condition}`); lineBlock(`${t.whereToGet}: ${a.obtain}`); lineBlock(`${t.whatToCheck}: ${a.check}`); lineBlock(`${t.officialSource}: ${a.source}`, 8);
     });
   });
 
   const pages = doc.getPages();
   pages.forEach((p, i) => {
-    const footer = pdfText(`${BRAND_DOCUMENT_FOOTER} | ${marketDisplay.shortName} · ${t.advisoryAssessment} | ${i + 1} / ${pages.length}`);
-    p.drawRectangle({ x: LEFT, y: 46, width: CONTENT_WIDTH, height: .7, color: line });
-    p.drawText(footer, { x: LEFT, y: 30, size: 8, font: regular, color: muted });
+    p.drawRectangle({ x: LEFT, y: 49, width: CONTENT_WIDTH, height: .7, color: line });
+    p.drawCircle({ x: LEFT + 7, y: 34, size: 6.5, color: euBlue });
+    p.drawText('EU', { x: LEFT + 2.8, y: 31.6, size: 5.3, font: bold, color: white });
+    p.drawText(pdfText(authorityContext), { x: LEFT + 18, y: 31, size: 6.7, font: regular, color: muted });
+    const pageNumber = pdfText(`${i + 1} / ${pages.length}`);
+    p.drawText(pageNumber, { x: PAGE_WIDTH - LEFT - regular.widthOfTextAtSize(pageNumber, 7), y: 31, size: 7, font: bold, color: navy });
+    p.drawText(pdfText(BRAND_DOCUMENT_FOOTER), { x: LEFT, y: 18, size: 6.2, font: regular, color: muted });
   });
   return new Uint8Array(await doc.save());
 }
