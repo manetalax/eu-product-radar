@@ -7,6 +7,10 @@ on:
       - feat/importverifier-release-prep-final3
       - feat/import-rules-verifier-branding
 
+concurrency:
+  group: importverifier-release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
