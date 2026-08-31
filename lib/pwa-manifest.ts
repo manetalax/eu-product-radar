@@ -19,7 +19,7 @@ export function manifestFor(language: Language): MetadataRoute.Manifest {
     description: landingCopy[language].hero.lead,
     lang: language,
     dir: 'ltr',
-    start_url: `/?lang=${language}`,
+    start_url: `/${language}`,
     scope: '/',
     display: 'standalone',
     display_override: ['standalone', 'minimal-ui'],
