@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Product } from '@/lib/analysis';
+import { marketDisplayFor } from '@/lib/market-i18n';
 import { MARKETS, type MarketCode } from '@/lib/markets';
+import { useLanguage } from '@/lib/use-language';
 import ProductReview, { type ReviewDraft } from './ProductReview';
 
 type PendingRequest = {
@@ -24,14 +26,26 @@ function isAnalysisCreate(input: RequestInfo | URL, init?: RequestInit) {
   }
 }
 
-function cancelledResponse() {
-  return new Response(JSON.stringify({ error: 'Análisis cancelado. No se ha consumido cuota ni guardado ningún producto.' }), {
+function cancelledResponse(message: string) {
+  return new Response(JSON.stringify({ error: message }), {
     status: 409,
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   });
 }
 
+const cancelled = {
+  es:'Análisis cancelado. No se ha consumido cuota ni guardado ningún producto.',
+  en:'Analysis cancelled. No quota was consumed and no product was saved.',
+  fr:'Analyse annulée. Aucun quota n’a été consommé et aucun produit n’a été enregistré.',
+  de:'Analyse abgebrochen. Es wurde kein Kontingent verbraucht und kein Produkt gespeichert.',
+  it:'Analisi annullata. Non è stata consumata alcuna quota e nessun prodotto è stato salvato.',
+  pt:'Análise cancelada. Não foi consumida quota nem guardado qualquer produto.',
+} as const;
+
 export default function AnalysisReviewGate() {
+  const { language } = useLanguage();
+  const languageRef = useRef(language);
+  languageRef.current = language;
   const [draft, setDraft] = useState<ReviewDraft | null>(null);
   const [busy, setBusy] = useState(false);
   const pending = useRef<PendingRequest | null>(null);
@@ -52,7 +66,7 @@ export default function AnalysisReviewGate() {
       if (!Array.isArray(body.products) || typeof body.filename !== 'string') return nativeFetch(input, init);
 
       const marketCode = typeof body.marketCode === 'string' && body.marketCode in MARKETS ? body.marketCode as MarketCode : 'EU';
-      setDraft({ filename: body.filename, marketLabel: MARKETS[marketCode].name, products: body.products as Product[] });
+      setDraft({ filename: body.filename, marketLabel: marketDisplayFor(languageRef.current, marketCode).name, products: body.products as Product[] });
 
       return new Promise<Response>((resolve, reject) => {
         pending.current = { input, init: { ...init }, body, resolve, reject };
@@ -63,7 +77,7 @@ export default function AnalysisReviewGate() {
       window.fetch = nativeFetch;
       originalFetch.current = null;
       if (pending.current) {
-        pending.current.resolve(cancelledResponse());
+        pending.current.resolve(cancelledResponse(cancelled[languageRef.current]));
         pending.current = null;
       }
     };
@@ -74,7 +88,7 @@ export default function AnalysisReviewGate() {
     if (!request) return;
     pending.current = null;
     setDraft(null);
-    request.resolve(cancelledResponse());
+    request.resolve(cancelledResponse(cancelled[language]));
   };
 
   const confirm = async () => {
@@ -97,11 +111,5 @@ export default function AnalysisReviewGate() {
   };
 
   if (!draft) return null;
-  return <ProductReview
-    draft={draft}
-    busy={busy}
-    onChange={products => setDraft(current => current ? { ...current, products } : current)}
-    onCancel={cancel}
-    onConfirm={() => void confirm()}
-  />;
+  return <ProductReview draft={draft} busy={busy} onChange={products => setDraft(current => current ? { ...current, products } : current)} onCancel={cancel} onConfirm={() => void confirm()} />;
 }
