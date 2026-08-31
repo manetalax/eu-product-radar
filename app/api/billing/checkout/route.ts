@@ -4,6 +4,7 @@ import { billingText } from '@/lib/billing-i18n';
 import { configuredSiteOrigin, sameOrigin, PRIVATE_HEADERS, readJsonBody } from '@/lib/http';
 import { legalConfig } from '@/lib/legal-config';
 import { requestLanguage } from '@/lib/request-language';
+import { trustedStripeNavigationUrl } from '@/lib/stripe/navigation';
 import { stripeClient } from '@/lib/stripe/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
@@ -49,7 +50,9 @@ export async function POST(request: Request) {
 
     if (billingStatus(record).planId !== 'free' && customerId) {
       const portal = await stripe.billingPortal.sessions.create({ customer: customerId, return_url: `${siteOrigin}/dashboard` });
-      return json({ url: portal.url });
+      const portalUrl = trustedStripeNavigationUrl(portal.url, 'portal');
+      if (!portalUrl) throw new Error(b('stripePage'));
+      return json({ url: portalUrl });
     }
 
     const priceId = stripePriceId(UNLIMITED_INTERNAL_PLAN_ID);
@@ -73,8 +76,9 @@ export async function POST(request: Request) {
       metadata: { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID },
       subscription_data: { metadata: { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID } },
     }, { idempotencyKey: `checkout-${user.id}-${UNLIMITED_INTERNAL_PLAN_ID}-${new Date().toISOString().slice(0, 13)}` });
-    if (!session.url) throw new Error(b('stripePage'));
-    return json({ url: session.url });
+    const checkoutUrl = trustedStripeNavigationUrl(session.url, 'checkout');
+    if (!checkoutUrl) throw new Error(b('stripePage'));
+    return json({ url: checkoutUrl });
   } catch {
     return json({ error: b('paymentOpen') }, 503);
   }
