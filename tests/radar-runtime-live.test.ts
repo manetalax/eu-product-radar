@@ -11,16 +11,16 @@ const githubScheduler = readFileSync(new URL('../.github/workflows/regulatory-ra
 
 test('Radar live requires the flag, a strong ingest secret and persisted events', () => {
   const strongSecret = 'x'.repeat(32);
-  assert.equal(radarRuntimeEnabled({ REGULATORY_RADAR_LIVE: 'true', REGULATORY_INGEST_SECRET: strongSecret }, 1), true);
-  assert.equal(radarRuntimeEnabled({ REGULATORY_RADAR_LIVE: 'false', REGULATORY_INGEST_SECRET: strongSecret }, 1), false);
-  assert.equal(radarRuntimeEnabled({ REGULATORY_RADAR_LIVE: 'true', REGULATORY_INGEST_SECRET: 'short' }, 1), false);
-  assert.equal(radarRuntimeEnabled({ REGULATORY_RADAR_LIVE: 'true', REGULATORY_INGEST_SECRET: strongSecret }, 0), false);
+  assert.equal(radarRuntimeEnabled('true', strongSecret, 1), true);
+  assert.equal(radarRuntimeEnabled('false', strongSecret, 1), false);
+  assert.equal(radarRuntimeEnabled('true', 'short', 1), false);
+  assert.equal(radarRuntimeEnabled('true', strongSecret, 0), false);
 });
 
 test('pre-live Radar events are not exposed to clients or ImportVerifier AI', () => {
-  assert.match(route, /radarRuntimeEnabled\(process\.env, events\.length\)/);
+  assert.match(route, /radarRuntimeEnabled\(process\.env\.REGULATORY_RADAR_LIVE, process\.env\.REGULATORY_INGEST_SECRET, events\.length\)/);
   assert.match(route, /events: live \? events : \[\]/);
-  assert.match(agentRoute, /radarRuntimeEnabled\(process\.env, radarRows\.length\)/);
+  assert.match(agentRoute, /radarRuntimeEnabled\(process\.env\.REGULATORY_RADAR_LIVE, process\.env\.REGULATORY_INGEST_SECRET, radarRows\.length\)/);
   assert.match(agentRoute, /: \[\];/);
 });
 
