@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { Analysis, analysisMarket, analyze, supportsRuleVersion, validateProducts } from './analysis';
-import { documentationFor, GUIDE_SCOPE, GUIDE_VERSION } from './documentation';
+import { documentationFor, GUIDE_VERSION } from './documentation';
+import { guideScopeFor } from './guide-i18n';
 import { BRAND_DOCUMENT_FOOTER, BRAND_DOCUMENT_TITLE, BRAND_INDEPENDENCE_NOTICE, BRAND_NAME, BRAND_SITE_URL, BRAND_TAGLINE } from './brand';
 import { fetchEvidenceForAnalysis, evidenceForProduct } from './evidence';
 import { MARKETS } from './markets';
@@ -82,7 +83,7 @@ export async function pdfBytes(analysis: Analysis, requestedLanguage?: Language)
     it: 'Il rapporto include una valutazione normativa automatizzata con categoria candidata, normativa potenzialmente applicabile, obblighi, evidenze e punti da confermare.',
     pt: 'O relatório inclui uma avaliação regulamentar automatizada com categoria candidata, legislação potencialmente aplicável, obrigações, evidências e pontos que exigem confirmação.',
   }));
-  lineBlock(GUIDE_SCOPE);
+  lineBlock(guideScopeFor(language));
   lineBlock(t.howToUse, 14, true);
   lineBlock(localized(language, {
     es: '1. Completar datos ausentes. 2. Confirmar categoría, características y uso previsto. 3. Revisar normativa candidata y obligaciones. 4. Solicitar la documentación y evidencia técnica aplicable. 5. Validar contenido y aplicabilidad antes de concluir cumplimiento.',
