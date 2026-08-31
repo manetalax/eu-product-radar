@@ -1,5 +1,5 @@
-const CACHE = 'importverifier-shell-v2';
-const SHELL = ['/', '/login', '/privacy', '/terms', '/manifest.webmanifest', '/icon.svg'];
+const CACHE = 'importverifier-shell-v3';
+const SHELL = ['/', '/login', '/privacy', '/terms', '/icon.svg'];
 const PRIVATE_PREFIXES = ['/api/', '/auth/', '/dashboard', '/reset-password'];
 const CACHEABLE_NAVIGATIONS = new Set(['/', '/login', '/privacy', '/terms']);
 
@@ -21,6 +21,7 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (PRIVATE_PREFIXES.some(prefix => url.pathname.startsWith(prefix))) return;
+  if (url.pathname === '/manifest.webmanifest') return;
 
   if (request.mode === 'navigate') {
     if (!CACHEABLE_NAVIGATIONS.has(url.pathname)) return;
