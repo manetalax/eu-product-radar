@@ -8,6 +8,7 @@ import { intelligenceSectionCopy } from '@/lib/intelligence-section-i18n';
 import { platformCapabilityLabel } from '@/lib/platform-capability-i18n';
 import { PLATFORM_CONNECTORS, detectPlatform } from '@/lib/platform-connectors';
 import { relevantRadarChanges } from '@/lib/radar-match';
+import { reportLabels } from '@/lib/report-i18n';
 import { regulatoryReadiness, type RegulatoryEvidenceLink } from '@/lib/regulatory-twin';
 import { useLanguage } from '@/lib/use-language';
 import styles from './IntelligenceSuite.module.css';
@@ -32,6 +33,7 @@ export default function IntelligenceSuite() {
   const { language } = useLanguage();
   const t = intelligenceCopy[language];
   const section = intelligenceSectionCopy[language];
+  const report = reportLabels[language];
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [evidenceRows, setEvidenceRows] = useState<EvidenceRow[]>([]);
   const [radarEvents, setRadarEvents] = useState<RadarEvent[]>([]);
@@ -145,6 +147,7 @@ export default function IntelligenceSuite() {
 
   const detected = platformUrl.trim() ? detectPlatform(platformUrl.trim()) : null;
   const severityLabel = (severity: 'info' | 'review' | 'action') => severity === 'action' ? t.action : severity === 'review' ? t.review : t.information;
+  const confidenceLabel = (confidence: 'high' | 'medium' | 'low') => confidence === 'high' ? report.confidenceHigh : confidence === 'medium' ? report.confidenceMedium : report.confidenceLow;
 
   return <section className={styles.suite} aria-label={t.aria}>
     <div className={styles.hero}>
@@ -166,7 +169,7 @@ export default function IntelligenceSuite() {
 
       <article className={styles.card}>
         <div className={styles.cardHead}><div><h3>{section.twinTitle}</h3><p>{t.twinLead}</p></div><span className={styles.status}>{regulatory ? t.live : t.unclassified}</span></div>
-        {regulatory ? <><div className={styles.meterRow}><div className={styles.meter} style={{ '--score': `${readiness}%` } as React.CSSProperties}><div className={styles.meterInner}>{readiness}%</div></div><div className={styles.facts}><div className={styles.fact}><span>{t.category}</span><strong>{regulatory.category}</strong></div><div className={styles.fact}><span>{t.confidence}</span><strong>{regulatory.confidence}</strong></div><div className={styles.fact}><span>{t.evidenceAvailable}</span><strong>{suppliedCount}</strong></div><div className={styles.fact}><span>{t.pendingReview}</span><strong>{missingCount + reviewCount}</strong></div></div></div><ul className={styles.list}>{actions.slice(0, 4).map(action => <li key={action}>{action}</li>)}</ul><div className={styles.disclaimer}>{t.readinessDisclaimer}</div></> : <div className={styles.empty}>{t.noClassification}</div>}
+        {regulatory ? <><div className={styles.meterRow}><div className={styles.meter} style={{ '--score': `${readiness}%` } as React.CSSProperties}><div className={styles.meterInner}>{readiness}%</div></div><div className={styles.facts}><div className={styles.fact}><span>{t.category}</span><strong>{regulatory.category}</strong></div><div className={styles.fact}><span>{t.confidence}</span><strong>{confidenceLabel(regulatory.confidence)}</strong></div><div className={styles.fact}><span>{t.evidenceAvailable}</span><strong>{suppliedCount}</strong></div><div className={styles.fact}><span>{t.pendingReview}</span><strong>{missingCount + reviewCount}</strong></div></div></div><ul className={styles.list}>{actions.slice(0, 4).map(action => <li key={action}>{action}</li>)}</ul><div className={styles.disclaimer}>{t.readinessDisclaimer}</div></> : <div className={styles.empty}>{t.noClassification}</div>}
       </article>
 
       <article className={styles.card}>
