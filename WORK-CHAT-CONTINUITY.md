@@ -38,6 +38,7 @@
 - Relevant SECURITY DEFINER functions are not executable by default PUBLIC.
 - Evidence traceability is persisted as requirement → status → document → page/section → note → HTTPS URL.
 - Evidence keys remain canonical/stable across UI language changes so saved evidence is not orphaned by localization.
+- Evidence source URLs now require a well-formed HTTPS URL with a real hostname, no whitespace and no embedded username/password; malformed schemes/credential-bearing links are rejected server-side with regression tests.
 
 ## DONE — zero-cost AI / upload controls
 - Production policy is fail-closed `AI_COST_POLICY=free_only`; production config rejects policies permitting premium AI spend.
@@ -75,7 +76,7 @@
 - `RegulatoryAssessment` and latest-regulatory wrapper use selected UI language instead of hardcoded Spanish.
 - Readiness/evidence UI is localized in six languages. Localized obligation/evidence text is displayed while persistence continues to use canonical evidence keys, preventing language-switch data loss.
 - Deterministic readiness labels/blockers/actions are localized with regression coverage.
-- Pre-analysis product-review gate is localized in six languages, including cancellation response and market display name; quota is still not consumed until explicit confirm/save.
+- Pre-analysis product-review UI and market display are localized in six languages; cancellation aborts locally with `AbortError` rather than returning a fake HTTP error, only explicit confirmation reaches native fetch, and quota remains unconsumed before confirmation. Regression tests protect these semantics.
 - `market-i18n.ts` provides market display names/short names/operator labels for EU/US/CN/GB/JP in all six languages and is used by current PDF/Excel market/operator surfaces.
 - Stable worksheet tab names remain Spanish for formula/backward compatibility at present.
 - Future-market documentary narratives (US/CN/GB/JP) remain Spanish internally; those markets are not customer-active and must be localized before activation.
@@ -94,13 +95,13 @@
 - `pg_cron` and `pg_net` are not enabled; do not add hidden dependencies on them.
 
 ## LATEST VERIFIED BUILD
-- Functional HEAD `a6d9d677e0a01a18805eb2b6edd894830c4912c0` completed `ImportVerifier release check` run #534 successfully: tests + typecheck + build green.
-- The continuity commit created after that functional HEAD must be checked at its exact SHA before ending the execution.
-- PR #4 remains open, unmerged and mergeable.
+- Functional HEAD `fa09354e7f57063e9b1054ec7f65838c8fd86532` completed `ImportVerifier release check` run #550 successfully: tests + typecheck + build green.
+- This continuity-only commit must be checked at its exact SHA before claiming exact-current-HEAD green.
+- PR #4 remains open and unmerged; recheck GitHub mergeability at final exact HEAD because it was transiently reported false during active branch updates.
 
 ## IN PROGRESS / NEXT — execute without asking
 1. Keep exact latest HEAD CI green; fix any failure immediately.
-2. Continue security/account/billing sweep; harden evidence/source URL validation and add focused regression coverage if current parsing accepts malformed HTTPS values or credentials.
+2. Continue security/account/billing sweep: audit exported/user-supplied hyperlinks and any remaining URL-bearing fields for equivalent trust-boundary validation without weakening legitimate official references.
 3. Audit ImportVerifier AI/Twin/Radar and remaining ancillary dashboard components for Spanish leakage in EN/FR/DE/IT/PT.
 4. Continue desktop/iPhone/iPad/PWA QA, especially upload/export flows, table overflow, modal keyboard behavior and touch/safe-area edge cases.
 5. Audit any remaining customer-visible price copy to ensure EUR 9.95 always comes from the canonical plan definition and never rounds to 10.
