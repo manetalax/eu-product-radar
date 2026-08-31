@@ -1,7 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { Analysis, analysisMarket, analyze, supportsRuleVersion, validateProducts } from './analysis';
 import { documentationFor, GUIDE_SCOPE, GUIDE_VERSION } from './documentation';
-import { BRAND_NAME } from './brand';
+import { BRAND_DOCUMENT_FOOTER, BRAND_DOCUMENT_TITLE, BRAND_INDEPENDENCE_NOTICE, BRAND_NAME, BRAND_SITE_URL, BRAND_TAGLINE } from './brand';
 import { MARKETS } from './markets';
 
 export const pdfText = (text: string) => Array.from(text).map(c => {
@@ -15,7 +15,11 @@ export async function pdfBytes(analysis: Analysis): Promise<Uint8Array<ArrayBuff
   const products = validateProducts(analysis.products), results = analyze(products, marketCode);
   const doc = await PDFDocument.create();
   doc.setTitle(`${BRAND_NAME} - Informe regulatorio orientativo · ${market.name}`);
+  doc.setAuthor(BRAND_NAME);
   doc.setCreator(BRAND_NAME);
+  doc.setProducer(BRAND_DOCUMENT_FOOTER);
+  doc.setSubject(BRAND_TAGLINE);
+  doc.setKeywords([BRAND_NAME, 'regulación UE', 'cumplimiento de producto', 'informe regulatorio']);
   const regular = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const ink = rgb(.07, .1, .17), purple = rgb(.31, .27, .9);
@@ -40,7 +44,9 @@ export async function pdfBytes(analysis: Analysis): Promise<Uint8Array<ArrayBuff
     if (line) emit();
     y -= 7;
   }
-  lineBlock('IMPORT RULES VERIFIER', 24, true);
+  lineBlock(BRAND_DOCUMENT_TITLE, 24, true);
+  lineBlock(BRAND_TAGLINE, 10);
+  lineBlock(BRAND_SITE_URL, 9);
   lineBlock(`Informe del catálogo · ${market.name}`, 16, true);
   lineBlock('Archivo: ' + analysis.filename);
   lineBlock('Análisis (UTC): ' + new Date(analysis.created_at).toISOString());
@@ -54,7 +60,7 @@ export async function pdfBytes(analysis: Analysis): Promise<Uint8Array<ArrayBuff
   lineBlock(GUIDE_SCOPE);
   lineBlock('Cómo usarlo', 14, true);
   lineBlock('1. Completar datos ausentes. 2. Confirmar categoría, características y uso previsto. 3. Revisar normativa candidata y obligaciones. 4. Solicitar la documentación y evidencia técnica aplicable. 5. Validar contenido y aplicabilidad antes de concluir cumplimiento.');
-  lineBlock('Import Rules Verifier no emite certificados de conformidad, no representa a una autoridad de la UE y no sustituye asesoramiento jurídico o evaluación técnica especializada.', 9);
+  lineBlock(BRAND_INDEPENDENCE_NOTICE, 9);
   lineBlock('Los caracteres fuera del alfabeto latino se representan como códigos [U+...]. Los datos originales completos permanecen en el Excel.', 9);
   products.forEach((p, i) => {
     newPage();
@@ -102,7 +108,7 @@ export async function pdfBytes(analysis: Analysis): Promise<Uint8Array<ArrayBuff
   });
   const pages = doc.getPages();
   pages.forEach((p, i) => {
-    p.drawText(`${BRAND_NAME} | ${market.shortName} · Evaluación orientativa | ${i + 1} / ${pages.length}`, { x: 48, y: 30, size: 8, font: regular, color: ink });
+    p.drawText(`${BRAND_DOCUMENT_FOOTER} | ${market.shortName} · Evaluación orientativa | ${i + 1} / ${pages.length}`, { x: 48, y: 30, size: 8, font: regular, color: ink });
   });
   return new Uint8Array(await doc.save());
 }
