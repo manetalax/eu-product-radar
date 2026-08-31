@@ -1,7 +1,7 @@
 import ExcelJS from 'exceljs';
 import { documentationFor, GUIDE_SCOPE, GUIDE_VERSION } from './documentation';
 import { Analysis, analysisMarket, analyze, supportsRuleVersion, validateProducts } from './analysis';
-import { BRAND_NAME } from './brand';
+import { BRAND_DOCUMENT_FOOTER, BRAND_DOCUMENT_TITLE, BRAND_NAME, BRAND_TAGLINE } from './brand';
 import { MARKETS } from './markets';
 import { addRegulatoryWorksheet } from './export-regulatory';
 
@@ -13,7 +13,7 @@ function sheet(wb: ExcelJS.Workbook, name: string, widths: number[], frozen = 0)
   const ws = wb.addWorksheet(name, { views: [{ state: frozen ? 'frozen' : 'normal', ySplit: frozen, showGridLines: false }], properties: { defaultRowHeight: 24 } });
   ws.columns = widths.map(width => ({ width }));
   ws.pageSetup = { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: .3, right: .3, top: .4, bottom: .4, header: .2, footer: .2 } };
-  ws.headerFooter.oddFooter = `${BRAND_NAME} | Página &P de &N`;
+  ws.headerFooter.oddFooter = `${BRAND_DOCUMENT_FOOTER} | Página &P de &N`;
   return ws;
 }
 function band(ws: ExcelJS.Worksheet, row: number, text: string, end: number, title = false) {
@@ -56,14 +56,14 @@ export async function buildReport(analysis: Analysis): Promise<ExcelJS.Workbook>
   const market = MARKETS[marketCode];
   const results = analyze(products, marketCode);
   const wb = new ExcelJS.Workbook();
-  wb.creator = BRAND_NAME; wb.title = `Informe de preparación · ${market.name}`;
+  wb.creator = BRAND_NAME; wb.title = `${BRAND_NAME} · Informe de preparación · ${market.name}`; wb.subject = BRAND_TAGLINE;
   wb.created = new Date(analysis.created_at); wb.modified = new Date();
   wb.calcProperties.fullCalcOnLoad = true;
   const summary = sheet(wb, 'Resumen', [38, 24, 24, 24]);
   const details = sheet(wb, 'Productos', [46, 17, 16, 48], 4);
   const technical = sheet(wb, 'Datos técnicos', [46, 32, 38, 64], 12);
-  band(summary, 1, 'IMPORT RULES VERIFIER', 4, true);
-  band(summary, 2, `INFORME DEL CATÁLOGO · Mercado: ${market.name}`, 4);
+  band(summary, 1, BRAND_DOCUMENT_TITLE, 4, true);
+  band(summary, 2, `${BRAND_TAGLINE} · INFORME DEL CATÁLOGO · Mercado: ${market.name}`, 4);
   body(summary, 4, ['Archivo', analysis.filename]); summary.mergeCells('B4:D4'); summary.getRow(4).height = 42;
   body(summary, 5, ['Fecha del análisis (UTC)', new Date(analysis.created_at)]); summary.getCell('B5').numFmt = 'dd/mm/yyyy hh:mm';
   header(summary, 7, ['Resumen', 'Productos', 'Lectura', '']);
