@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { requireOfficialRegulatoryUrl } from './regulatory-source-url';
 
 export type RegulatorySeverity = 'info' | 'review' | 'action';
 
@@ -29,13 +30,6 @@ export type NormalizedRegulatoryEvent = {
   last_seen_at: string;
 };
 
-const OFFICIAL_HOSTS = [
-  'eur-lex.europa.eu',
-  'ec.europa.eu',
-  'commission.europa.eu',
-  'webgate.ec.europa.eu',
-] as const;
-
 function compact(value: unknown, max: number): string {
   return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : '';
 }
@@ -46,36 +40,9 @@ function isoOrNull(value: unknown): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-function officialUrl(value: unknown): string {
-  if (typeof value !== 'string' || !value || /\s/.test(value)) {
-    throw new Error('Falta la URL oficial del evento regulatorio o su formato no es válido.');
-  }
-
-  const raw = value.slice(0, 2000);
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    throw new Error('La URL oficial del evento regulatorio no es válida.');
-  }
-
-  if (
-    url.protocol !== 'https:' ||
-    url.username ||
-    url.password ||
-    !url.hostname ||
-    !OFFICIAL_HOSTS.some(host => url.hostname === host || url.hostname.endsWith(`.${host}`))
-  ) {
-    throw new Error('La fuente regulatoria no pertenece a un dominio oficial UE permitido o no es una URL HTTPS segura.');
-  }
-
-  url.hash = '';
-  return url.toString();
-}
-
 export function normalizeRegulatoryEvent(input: RawRegulatoryEvent, now = new Date()): NormalizedRegulatoryEvent {
   const sourceName = compact(input.sourceName, 160);
-  const sourceUrl = officialUrl(input.sourceUrl);
+  const sourceUrl = requireOfficialRegulatoryUrl(input.sourceUrl);
   const title = compact(input.title, 500);
   if (!sourceName || !title) throw new Error('La fuente y el título del evento regulatorio son obligatorios.');
 
