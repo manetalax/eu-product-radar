@@ -7,6 +7,7 @@ import TrustMark from '@/components/TrustMark';
 import { authCopy, authErrorKey, AuthErrorKey, AuthMode, AuthNoticeKey, LoginNoticeKey } from '@/lib/auth-i18n';
 import { landingCopy, Language, LANGUAGE_OPTIONS } from '@/lib/landing-i18n';
 import { PurchaseId, purchaseName } from '@/lib/plans';
+import { IMPORTVERIFIER_PRODUCTION_URL } from '@/lib/release-config';
 import { authService } from '@/lib/services/auth-client';
 import { planInterestMetadata, savePlanIntent } from '@/lib/services/plan-interest';
 import { useLanguage } from '@/lib/use-language';
@@ -55,16 +56,9 @@ export default function AuthForm({ initialMode = 'login', initialMessageKey, req
   };
 
   const callbackUrl = (next?: string) => {
-    let origin = window.location.origin;
-    const configured = process.env.NEXT_PUBLIC_SITE_URL;
-    if (configured) {
-      try {
-        const parsed = new URL(configured);
-        if (parsed.protocol === 'https:') origin = parsed.origin;
-      } catch {
-        // Fall back to the current HTTPS origin when the public URL is malformed.
-      }
-    }
+    const currentOrigin = window.location.origin;
+    const localDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const origin = localDevelopment ? currentOrigin : IMPORTVERIFIER_PRODUCTION_URL;
     const params = new URLSearchParams({ lang: language });
     if (next) params.set('next', next);
     return `${origin}/auth/callback?${params.toString()}`;
