@@ -4,7 +4,7 @@ import { isValidEvidenceUrl, safeEvidenceUrl } from '@/lib/evidence';
 import { evidenceApiText } from '@/lib/evidence-api-i18n';
 import { marketCodeOrEu, type MarketCode } from '@/lib/markets';
 import { createClient } from '@/lib/supabase/server';
-import { PRIVATE_HEADERS, readJsonBody, sameOrigin } from '@/lib/http';
+import { PRIVATE_HEADERS, readJsonBody, RequestBodyTooLargeError, sameOrigin } from '@/lib/http';
 import { requestLanguage } from '@/lib/request-language';
 import type { Language } from '@/lib/landing-i18n';
 
@@ -100,6 +100,7 @@ export async function PUT(request: Request) {
     if (error) throw new Error(e('save'));
     return json({ evidence: sanitizeEvidenceRow(data) });
   } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) return json({ error: e('invalid') }, 413);
     return json({ error: customerEvidenceError(language, error) }, 400);
   }
 }
