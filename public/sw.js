@@ -1,7 +1,16 @@
-const CACHE = 'importverifier-shell-v3';
+const CACHE = 'importverifier-shell-v4';
 const SHELL = ['/', '/login', '/privacy', '/terms', '/icon.svg'];
 const PRIVATE_PREFIXES = ['/api/', '/auth/', '/dashboard', '/reset-password'];
 const CACHEABLE_NAVIGATIONS = new Set(['/', '/login', '/privacy', '/terms']);
+const CACHEABLE_ASSET_DESTINATIONS = new Set(['style', 'script', 'image', 'font']);
+
+function responseAllowsCaching(response) {
+  if (!response.ok || response.type !== 'basic') return false;
+  const cacheControl = (response.headers.get('cache-control') || '').toLowerCase();
+  return !cacheControl.includes('private')
+    && !cacheControl.includes('no-store')
+    && !cacheControl.includes('no-cache');
+}
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -28,7 +37,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(request)
         .then(response => {
-          if (response.ok) {
+          if (responseAllowsCaching(response)) {
             const copy = response.clone();
             caches.open(CACHE).then(cache => cache.put(url.pathname, copy));
           }
@@ -39,9 +48,10 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  if (!CACHEABLE_ASSET_DESTINATIONS.has(request.destination)) return;
   event.respondWith(
     caches.match(request).then(cached => cached || fetch(request).then(response => {
-      if (response.ok && response.type === 'basic') {
+      if (responseAllowsCaching(response)) {
         const copy = response.clone();
         caches.open(CACHE).then(cache => cache.put(request, copy));
       }
