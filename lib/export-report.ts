@@ -4,6 +4,7 @@ import { guideScopeFor } from './guide-i18n';
 import { Analysis, analysisMarket, analyze, supportsRuleVersion, validateProducts } from './analysis';
 import { BRAND_DOCUMENT_FOOTER, BRAND_DOCUMENT_TITLE, BRAND_NAME, BRAND_TAGLINE } from './brand';
 import { fetchEvidenceForAnalysis } from './evidence';
+import { marketDisplayFor } from './market-i18n';
 import { MARKETS } from './markets';
 import { addRegulatoryWorksheet } from './export-regulatory';
 import type { Language } from './landing-i18n';
@@ -82,17 +83,19 @@ export async function buildReport(analysis: Analysis, requestedLanguage?: Langua
   const products = validateProducts(analysis.products);
   const marketCode = analysisMarket(analysis);
   const market = MARKETS[marketCode];
+  const marketDisplay = marketDisplayFor(language, marketCode);
   const results = analyze(products, marketCode);
+  const missingField = (field: string) => field === 'Fabricante' ? t.manufacturer : field === 'Seguridad/advertencias' ? t.warnings : field === market.operatorFieldLabel ? marketDisplay.operator : field;
   const persistedEvidence = await fetchEvidenceForAnalysis(analysis.id);
   const wb = new ExcelJS.Workbook();
-  wb.creator = BRAND_NAME; wb.title = `${BRAND_NAME} · ${t.catalogueReport} · ${market.name}`; wb.subject = BRAND_TAGLINE;
+  wb.creator = BRAND_NAME; wb.title = `${BRAND_NAME} · ${t.catalogueReport} · ${marketDisplay.name}`; wb.subject = BRAND_TAGLINE;
   wb.created = new Date(analysis.created_at); wb.modified = new Date();
   wb.calcProperties.fullCalcOnLoad = true;
   const summary = sheet(wb, 'Resumen', [38, 24, 24, 24], 0, pageLabel);
   const details = sheet(wb, 'Productos', [46, 17, 16, 48], 4, pageLabel);
   const technical = sheet(wb, 'Datos técnicos', [46, 32, 38, 64], 12, pageLabel);
   band(summary, 1, BRAND_DOCUMENT_TITLE, 4, true);
-  band(summary, 2, `${BRAND_TAGLINE} · ${t.catalogueReport.toUpperCase()} · ${market.name}`, 4);
+  band(summary, 2, `${BRAND_TAGLINE} · ${t.catalogueReport.toUpperCase()} · ${marketDisplay.name}`, 4);
   body(summary, 4, [t.file, analysis.filename]); summary.mergeCells('B4:D4'); summary.getRow(4).height = 42;
   body(summary, 5, [t.analysisUtc, new Date(analysis.created_at)]); summary.getCell('B5').numFmt = 'dd/mm/yyyy hh:mm';
   header(summary, 7, [t.summary, t.products, localized(language,'Lectura','Reading','Lecture','Lesart','Lettura','Leitura'), '']);
@@ -128,7 +131,7 @@ export async function buildReport(analysis: Analysis, requestedLanguage?: Langua
   header(details, 4, [t.product, `${t.indicator} / 100`, t.priority, t.emptyFields]);
   results.forEach((r, i) => {
     const row = i + 5;
-    body(details, row, [r.name, r.score, priorityNames[r.priority], r.missing.join('\n') || t.noneBasic]);
+    body(details, row, [r.name, r.score, priorityNames[r.priority], r.missing.map(missingField).join('\n') || t.noneBasic]);
     details.getCell(row, 2).numFmt = '0';
     const cell = details.getCell(row, 3);
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: priorityColors[r.priority][0] } };
@@ -143,10 +146,10 @@ export async function buildReport(analysis: Analysis, requestedLanguage?: Langua
   body(technical, 4, [t.identifier, analysis.id]); technical.mergeCells('B4:D4');
   body(technical, 5, [t.rules, analysis.rule_version]); technical.mergeCells('B5:D5');
   body(technical, 6, [t.analysisUtc, new Date(analysis.created_at)]); technical.getCell('B6').numFmt = 'dd/mm/yyyy hh:mm';
-  body(technical, 7, [localized(language,'Cómo se calcula','How it is calculated','Mode de calcul','Berechnung','Come viene calcolato','Como é calculado'), localized(language,`8 puntos de base + 28 por cada campo ausente: fabricante, ${market.operatorFieldLabel.toLowerCase()} y advertencias.`,`8 base points + 28 for each missing field: manufacturer, ${market.operatorFieldLabel.toLowerCase()} and warnings.`,`8 points de base + 28 pour chaque champ manquant : fabricant, ${market.operatorFieldLabel.toLowerCase()} et avertissements.`,`8 Basispunkte + 28 für jedes fehlende Feld: Hersteller, ${market.operatorFieldLabel.toLowerCase()} und Warnhinweise.`,`8 punti base + 28 per ogni campo mancante: produttore, ${market.operatorFieldLabel.toLowerCase()} e avvertenze.`,`8 pontos base + 28 por cada campo em falta: fabricante, ${market.operatorFieldLabel.toLowerCase()} e avisos.`)]); technical.mergeCells('B7:D7'); technical.getRow(7).height = 42;
+  body(technical, 7, [localized(language,'Cómo se calcula','How it is calculated','Mode de calcul','Berechnung','Come viene calcolato','Como é calculado'), localized(language,`8 puntos de base + 28 por cada campo ausente: fabricante, ${marketDisplay.operator.toLowerCase()} y advertencias.`,`8 base points + 28 for each missing field: manufacturer, ${marketDisplay.operator.toLowerCase()} and warnings.`,`8 points de base + 28 pour chaque champ manquant : fabricant, ${marketDisplay.operator.toLowerCase()} et avertissements.`,`8 Basispunkte + 28 für jedes fehlende Feld: Hersteller, ${marketDisplay.operator.toLowerCase()} und Warnhinweise.`,`8 punti base + 28 per ogni campo mancante: produttore, ${marketDisplay.operator.toLowerCase()} e avvertenze.`,`8 pontos base + 28 por cada campo em falta: fabricante, ${marketDisplay.operator.toLowerCase()} e avisos.`)]); technical.mergeCells('B7:D7'); technical.getRow(7).height = 42;
   body(technical, 8, [t.priority, localized(language,'ALTA: ≥60 · MEDIA: ≥30 y <60 · BAJA: <30. Una prioridad baja no garantiza cumplimiento.','HIGH: ≥60 · MEDIUM: ≥30 and <60 · LOW: <30. Low priority does not guarantee compliance.','HAUTE : ≥60 · MOYENNE : ≥30 et <60 · BASSE : <30. Une priorité basse ne garantit pas la conformité.','HOCH: ≥60 · MITTEL: ≥30 und <60 · NIEDRIG: <30. Niedrige Priorität garantiert keine Konformität.','ALTA: ≥60 · MEDIA: ≥30 e <60 · BASSA: <30. Una priorità bassa non garantisce conformità.','ALTA: ≥60 · MÉDIA: ≥30 e <60 · BAIXA: <30. Prioridade baixa não garante conformidade.')]); technical.mergeCells('B8:D8'); technical.getRow(8).height = 42;
   band(technical, 10, localized(language,'DATOS ORIGINALES · Los campos vacíos se conservan vacíos. Editar este archivo no actualiza la web.','ORIGINAL DATA · Empty fields remain empty. Editing this file does not update the web app.','DONNÉES ORIGINALES · Les champs vides restent vides. Modifier ce fichier ne met pas à jour l’application web.','ORIGINALDATEN · Leere Felder bleiben leer. Änderungen an dieser Datei aktualisieren die Web-App nicht.','DATI ORIGINALI · I campi vuoti restano vuoti. Modificare questo file non aggiorna l’app web.','DADOS ORIGINAIS · Os campos vazios permanecem vazios. Editar este ficheiro não atualiza a aplicação web.'), 4);
-  header(technical, 12, [t.product, t.manufacturer, market.operatorFieldLabel, t.warnings]);
+  header(technical, 12, [t.product, t.manufacturer, marketDisplay.operator, t.warnings]);
   products.forEach((p, i) => body(technical, i + 13, [p.name, p.manufacturer, p.responsible, p.warning]));
   technical.autoFilter = `A12:D${products.length + 12}`;
 
