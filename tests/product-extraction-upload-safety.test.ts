@@ -5,8 +5,8 @@ import { readFileSync } from 'node:fs';
 const route = readFileSync(new URL('../app/api/product-extraction/route.ts', import.meta.url), 'utf8');
 
 test('product extraction validates decoded size and MIME before rate-limited AI work', () => {
-  const parseIndex = route.indexOf('upload = parseDataUrl(dataUrl)');
-  const validateIndex = route.indexOf('kind = validateUploadType(filename, mimeType, upload.mimeType)');
+  const parseIndex = route.indexOf('upload = parseDataUrl(dataUrl, language)');
+  const validateIndex = route.indexOf('kind = validateUploadType(filename, mimeType, upload.mimeType, language)');
   const rateLimitIndex = route.indexOf('const allowed = await consumeApiRateLimit');
   const visionIndex = route.indexOf('generateVisionText(dataUrl');
   assert.ok(parseIndex > 0);
@@ -19,8 +19,14 @@ test('product extraction validates decoded size and MIME before rate-limited AI 
 test('image extension and MIME must agree and spreadsheet formats stay local', () => {
   assert.match(route, /IMAGE_EXTENSIONS/);
   assert.match(route, /IMAGE_MIME/);
-  assert.match(route, /tipo MIME compatible con su extensión/);
+  assert.match(route, /productExtractionText\(language, 'imageMime'\)/);
   assert.doesNotMatch(route, /ALLOWED_EXTENSIONS = .*csv/);
   assert.doesNotMatch(route, /ALLOWED_EXTENSIONS = .*xlsx/);
-  assert.match(route, /CSV y Excel se procesan localmente/);
+  assert.match(route, /productExtractionText\(language, 'unsupportedFormat'\)/);
+});
+
+test('free-only document fallback remains fail-closed and language aware', () => {
+  assert.match(route, /aiCostPolicy\(\) === 'free_only'/);
+  assert.match(route, /productExtractionText\(language, 'freeOnlyDocument'\)/);
+  assert.match(route, /const language = requestLanguage\(request\)/);
 });
