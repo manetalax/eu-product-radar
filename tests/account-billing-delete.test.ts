@@ -14,6 +14,6 @@ test('el borrado de cuenta cancela Stripe antes de invocar la eliminación de Su
 });
 
 test('el webhook acepta la cancelación tardía de una cuenta ya eliminada', () => {
-  assert.match(webhook, /getUserById\(userId\)/);
-  assert.match(webhook, /subscription\.status === 'canceled'/);
+  assert.match(webhook, /subscription\.status === 'canceled' && error\.code === '23503'/);
+  assert.doesNotMatch(webhook, /getUserById\(userId\)/);
 });
