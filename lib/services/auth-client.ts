@@ -1,10 +1,19 @@
 'use client';
 
+import { trustedSupabaseOAuthNavigationUrl } from '@/lib/oauth-navigation';
 import { createClient } from '@/lib/supabase/client';
 
 export const authService = {
-  signInWithOAuth(redirectTo: string) {
-    return createClient().auth.signInWithOAuth({ provider: 'google', options: { redirectTo, skipBrowserRedirect: true } });
+  async signInWithOAuth(redirectTo: string) {
+    const result = await createClient().auth.signInWithOAuth({ provider: 'google', options: { redirectTo, skipBrowserRedirect: true } });
+    if (result.error) return result;
+    return {
+      ...result,
+      data: {
+        ...result.data,
+        url: trustedSupabaseOAuthNavigationUrl(result.data.url, process.env.NEXT_PUBLIC_SUPABASE_URL),
+      },
+    };
   },
   signInWithPassword(email: string, password: string) {
     return createClient().auth.signInWithPassword({ email, password });
