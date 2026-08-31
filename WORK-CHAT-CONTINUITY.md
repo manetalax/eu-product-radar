@@ -52,7 +52,9 @@
 - Added `tests/dashboard-mobile-import.test.ts` to protect mobile upload layout and accepted spreadsheet/document/photo inputs.
 - Price regression test is bound to `UNLIMITED_PLAN.monthlyPriceEur`, protecting canonical EUR 9.95 locale formatting without a duplicated test literal as the source of truth.
 - Supabase security advisor rechecked: RLS-with-no-policy INFO notices are intentional deny-all server-only tables (`ai_usage_events`, `api_rate_limits`, `regulatory_change_events`, `stripe_webhook_events`); do not add client policies merely to silence the advisor. The substantive WARN remains leaked-password protection disabled.
-- Functional HEAD `d9d405ace08fcf2a03c16ebeb1385073f522b995` passed exact-head `ImportVerifier release check` run #833 **SUCCESS**: tests, typecheck and build all passed.
+- PDF export upgraded from a mostly linear text report to a premium consulting-style document system: branded dark cover, executive KPI cards, reusable section hierarchy, product score callouts, page chrome and separated footer treatment. Evidence, official-source references, uncertainty and legal disclaimers remain intact.
+- `tests/pdf-language-completeness.test.ts` now protects the premium cover/KPI/section architecture and verifies that traceability/legal content remains present.
+- Functional HEAD `435ca450b9d86e0a8cafaf38da7429a04a926323` passed exact-head `ImportVerifier release check` run #839 **SUCCESS**: tests, typecheck and build all passed.
 
 ## Production facts last checked 2026-08-31
 - Supabase project: `hfuwwjdcyudflamwwnon`.
@@ -67,8 +69,8 @@
 
 ## IN PROGRESS / NEXT — execute without asking
 1. Verify exact latest HEAD CI after this handoff-only commit; fix any tests/typecheck/build regression immediately.
-2. Continue static + real-device desktop/iPhone/iPad/PWA QA, especially generated PDF/Excel download/save behavior, upload from Files/Photos/camera, table overflow, keyboard/modal behavior and safe-area edge cases. Real-device/browser-only checks are BLOCKED EXTERNAL; keep fixing static issues independently.
-3. Review and improve generated PDF/Excel visual hierarchy toward a premium consulting-style report system without weakening evidence, uncertainty or legal disclaimers.
+2. Review and improve Excel visual hierarchy to match the premium PDF system without weakening evidence, formulas, filters, documentary traceability or localized worksheet names.
+3. Continue static + real-device desktop/iPhone/iPad/PWA QA, especially generated PDF/Excel download/save behavior, upload from Files/Photos/camera, table overflow, keyboard/modal behavior and safe-area edge cases. Real-device/browser-only checks are BLOCKED EXTERNAL; keep fixing static issues independently.
 4. Continue security sweep for remaining customer-visible external URLs or values that become hyperlinks outside Evidence/Radar/documentary official sources.
 5. Continue customer-visible i18n sweep inside Intelligence Suite/reports; branded shorthand may remain, but explanatory English copy must not leak into non-English locales.
 6. Future-market US/CN/GB/JP documentary narratives remain non-customer-active; fully localize and substantiate them before activation.
