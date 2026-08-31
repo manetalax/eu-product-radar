@@ -6,6 +6,7 @@ const JSON_HEADERS = {
   'Cache-Control': 'private, no-store, max-age=0',
 };
 const CONFIRMATION = 'BORRAR';
+const MAX_CONFIRMATION_BODY_BYTES = 4 * 1024;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
@@ -18,6 +19,11 @@ Deno.serve(async (request: Request) => {
 
   const authorization = request.headers.get('Authorization');
   if (!authorization?.startsWith('Bearer ')) return json({ error: 'unauthorized' }, 401);
+
+  const declaredLength = Number(request.headers.get('content-length') ?? '0');
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_CONFIRMATION_BODY_BYTES) {
+    return json({ error: 'invalid_confirmation' }, 400);
+  }
 
   const token = authorization.slice('Bearer '.length);
   const url = Deno.env.get('SUPABASE_URL');
@@ -32,7 +38,11 @@ Deno.serve(async (request: Request) => {
 
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
+    const raw = await request.text();
+    if (new TextEncoder().encode(raw).byteLength > MAX_CONFIRMATION_BODY_BYTES) {
+      return json({ error: 'invalid_confirmation' }, 400);
+    }
+    body = JSON.parse(raw) as Record<string, unknown>;
   } catch {
     return json({ error: 'invalid_confirmation' }, 400);
   }
