@@ -68,7 +68,17 @@ Continue autonomously through every actionable task. Never stop because one task
 - Public localized landing routes `/es`, `/en`, `/fr`, `/de`, `/it`, `/pt` are all published in `sitemap.xml` on the canonical ImportVerifier origin.
 - Each localized landing advertises the six language alternates; canonical URLs never derive from mutable deployment-origin configuration.
 - `robots.txt` points to the canonical `https://importverifier.netlify.app/sitemap.xml`, preserves private/auth/API exclusions and keeps Deploy Previews/branch deploys non-indexable.
+- `metadataBase` is pinned to canonical `BRAND_SITE_URL` rather than mutable deployment configuration.
 - Regression coverage locks localized sitemap entries, canonical origin, private-route exclusions and preview no-index behavior.
+
+## DONE — localized first render and auth continuity
+- The static root layout remains request-independent, but an allowlisted synchronous `<head>` language bootstrap sets `document.documentElement.lang` from a supported `/es|en|fr|de|it|pt` path or validated `?lang=` before body content is parsed. Unsupported values do nothing.
+- This avoids localized static HTML being announced as English until React hydration while preserving static landing generation.
+- `/login` resolves explicit/cookie/browser language server-side and seeds a nested `LanguageProvider` before `AuthForm` hydration.
+- `/reset-password` does the same and keeps the resolved language on invalid/expired-session redirects.
+- `/dashboard` resolves language server-side, seeds all customer dashboard surfaces before hydration and preserves language when redirecting an unauthenticated visitor to login.
+- `/auth/confirm` now propagates only allowlisted language values through signup/email success, recovery success and failure redirects; arbitrary query values are not forwarded.
+- OAuth callback already preserved only validated language values and remains pinned to the canonical production origin.
 
 ## DONE — production fail-closed release gate
 - `next.config.ts` runs `checkReleaseConfig()` only for Netlify `CONTEXT=production`; CI and Deploy Previews remain usable without production secrets.
@@ -83,15 +93,15 @@ Continue autonomously through every actionable task. Never stop because one task
 - Localized SEO metadata lives under `app/[lang]`; language picker navigates directly among static locale paths.
 - PWA registration waits for an idle window after `load`; redundant immediate Service Worker update was removed. Online/visibility checks remain contained.
 - Service Worker public cache remains language-keyed and private/authenticated routes remain excluded.
-- Latest measured Netlify Lighthouse aggregate before the security/branding/SEO-only pass was roughly **Performance 16–17 / Accessibility 100 / Best Practices 92 / SEO 100**. The detailed audit breakdown is unavailable through current connectors. Do not continue speculative React/CSS rewrites without TTFB/LCP/TBT/CLS/resource-level evidence.
+- Latest measured Netlify Lighthouse aggregate before the security/branding/SEO/i18n-only passes was roughly **Performance 16–17 / Accessibility 100 / Best Practices 92 / SEO 100**. The detailed audit breakdown is unavailable through current connectors. Do not continue speculative React/CSS rewrites without TTFB/LCP/TBT/CLS/resource-level evidence.
 
 ## Latest exact functional verification — 2026-09-01
-- Verified functional HEAD: **`9690d03a3f05abd67d812201f9dc8d168e65e319`** (`test: lock canonical localized SEO routes`).
-- GitHub `ImportVerifier release check` **#1410 SUCCESS** on exact `9690d03...`: **320 tests passed, 0 failed**, typecheck passed and production build passed.
-- Build confirms all six localized landing paths are statically generated and `robots.txt` / `sitemap.xml` are static outputs.
-- Netlify Deploy Preview is **READY** on exact `9690d03...` on the correct project **`importverifier`** at `https://deploy-preview-4--importverifier.netlify.app`.
+- Verified functional HEAD: **`311c188b06319bfeb84d6633624f1604f9099152`** (`test: lock localized auth confirmation redirects`).
+- GitHub `ImportVerifier release check` push run **#1436 SUCCESS** on exact `311c188...`: **324 tests passed, 0 failed**, typecheck passed and production build passed.
+- Build confirms all six localized landing paths remain statically generated and `robots.txt` / `sitemap.xml` remain static outputs.
+- Netlify Deploy Preview is **READY** on exact `311c188...` on the correct project **`importverifier`** at `https://deploy-preview-4--importverifier.netlify.app`.
 - PR #4 is **open, mergeable and not merged**.
-- This documentation update creates a newer docs-only HEAD. Reconfirm exact CI/preview for that docs head before treating it as final release HEAD; the functional parent above is already fully verified.
+- This documentation update creates a newer docs-only HEAD. Reconfirm exact CI/preview for that docs head before treating it as final release HEAD; the functional parent above is fully verified.
 
 ## Production service facts checked
 - Supabase project: `hfuwwjdcyudflamwwnon`.
@@ -104,7 +114,7 @@ Continue autonomously through every actionable task. Never stop because one task
 
 ## NEXT — execute without asking
 1. Reconfirm exact CI + correct `importverifier` Deploy Preview for the newest docs-only HEAD; repair any regression immediately.
-2. Continue only genuinely new active customer-facing copy/brand/security findings. Do not repeat hardened Dashboard/Intelligence/Evidence/Latest/Review/Trial/Unlimited/Stripe/OAuth/Supabase-provider/Radar/source-URL work.
+2. Continue only genuinely new active customer-facing copy/brand/security/i18n findings. Do not repeat hardened Dashboard/Intelligence/Evidence/Latest/Review/Trial/Unlimited/Stripe/OAuth/Supabase-provider/Radar/source-URL work.
 3. For performance, obtain detailed Lighthouse/Web Vitals evidence before changing landing architecture again.
 4. Review PDF typography/overflow only against a real multi-product acceptance output; avoid speculative coordinate churn.
 5. During real production acceptance, run `/importverifier-sample-5-products.csv` with a genuinely new account: canonical signup/login → five accepted → sixth rejected → isolated history → premium PDF → Excel → Checkout → webhook entitlement → Portal/cancel lifecycle.
