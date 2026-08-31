@@ -47,6 +47,7 @@
 - Shopify/Amazon/Etsy connector architecture exists; OAuth/API remains unavailable until official credentials exist.
 - Dashboard/auth/legal/intelligence/report surfaces are localized in ES/EN/FR/DE/IT/PT where customer-active.
 - Google auth button includes a visible Google mark; production code pins Google/signup/recovery return flow to the canonical ImportVerifier domain.
+- **Google OAuth client navigation boundary hardened 2026-08-31:** the Supabase auth client now validates the SDK-returned browser navigation URL before AuthForm can use it. Only the exact configured Supabase origin and `/auth/v1/authorize` path are accepted; remote HTTP, credentials, host lookalikes, alternate paths and direct arbitrary provider URLs fail closed. Local HTTP remains permitted only for an explicitly local Supabase base URL. Regression coverage locks these cases.
 - PWA private-cache hardening, localized manifest, own-brand icons, safe areas, 44px touch targets, iOS form sizing and review-modal keyboard/scroll behavior are covered.
 - PWA cache is restricted to public static style/script/image/font requests and refuses private/no-store/no-cache responses.
 - **PWA public-shell cache boundary hardened 2026-08-31:** service-worker precache fetches public shell resources with `credentials: 'omit'`; responses varying on `Cookie` or `Authorization` are not cached; query-bearing navigations cannot overwrite canonical pathname cache entries; activation deletes only obsolete `importverifier-shell-*` caches instead of unrelated origin caches. Regression coverage locks these invariants.
@@ -62,9 +63,9 @@
 - `ACTIVE_MARKET_CODES` remains EU-only; US/CN/GB/JP are structurally isolated and inactive.
 
 ## CI / HEAD last verified 2026-08-31
-- Functional head `6dedc35ecf2f4049f4d33bf64dc68037ee0010a6` contains the latest-regulatory-assessment runtime response validation plus pre-analysis review-gate product/filename validation and regressions.
-- GitHub `ImportVerifier release check` **#1123 SUCCESS** on that exact functional head completed `npm ci`, tests, `npm run typecheck` and `npm run build` successfully.
-- Previous integrated head `695837a6836994e89d972bcdaa78966477338521` has `ImportVerifier release check` **#1115 SUCCESS** with tests, typecheck and build green.
+- Functional head `317e07e7556ff82a6907302aae67564b45d837f2` contains the Supabase OAuth navigation allowlist, auth-service enforcement and regression coverage.
+- GitHub `ImportVerifier release check` **#1131 SUCCESS** on that exact functional head completed `npm ci`, tests, `npm run typecheck` and `npm run build` successfully.
+- Previous integrated head `34eb5fc9a6eb3c1c1c6dff2721479484e0d9c79d` has `ImportVerifier release check` **#1125 SUCCESS** with tests, typecheck and build green.
 - This continuity update creates a newer documentation-only HEAD; reconfirm exact newest HEAD CI and Netlify Deploy Preview at the start of the next execution.
 - PR #4 remains **open** and **not merged**.
 
@@ -82,7 +83,7 @@
 1. Reconfirm exact newest HEAD GitHub CI and Netlify Deploy Preview after this continuity commit; repair any regression immediately.
 2. Continue static mobile/iPhone/iPad/PWA QA around direct camera/photo entry, drag/drop edge states and save-to-Files; real-device validation remains external. Next concrete UX candidate: add a dedicated, fully localized image-only camera affordance using the mobile camera capture path while retaining the existing universal single-file picker and the server-side signature validation.
 3. Continue the remaining customer-facing client API response-shape sweep outside Dashboard/Intelligence/Evidence/latest-assessment/review-gate, prioritizing authenticated surfaces that still place arbitrary 2xx JSON directly into state.
-4. Continue security sweep of remaining customer-facing external links without duplicating already-protected market/evidence/Radar/Stripe URL work.
+4. Continue security sweep of remaining customer-facing external links without duplicating already-protected market/evidence/Radar/Stripe/Supabase-OAuth URL work.
 5. Recheck production Auth logs after Supabase/Netlify domain wiring is corrected; canonical Google login must never return to the old domain.
 6. Use `/importverifier-sample-5-products.csv` for final new-account acceptance once canonical Auth works; prove history/PDF/XLSX end-to-end from that account.
 7. Keep EU as the only active market; do not remove historical plan IDs/monthly schema merely for naming cleanliness.
