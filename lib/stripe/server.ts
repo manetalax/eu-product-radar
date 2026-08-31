@@ -1,5 +1,6 @@
 import 'server-only';
 import Stripe from 'stripe';
+import { BRAND_NAME } from '@/lib/brand';
 import { validStripeSecretKey } from './secret-key';
 
 let instance: Stripe | undefined;
@@ -11,6 +12,6 @@ export function stripeClient() {
       ? 'STRIPE_SECRET_KEY debe ser una clave live válida en producción.'
       : 'Falta configurar una STRIPE_SECRET_KEY válida.');
   }
-  instance ??= new Stripe(key, { maxNetworkRetries: 2, appInfo: { name: 'Import Rules Verifier', version: '1.0.0' } });
+  instance ??= new Stripe(key, { maxNetworkRetries: 2, appInfo: { name: BRAND_NAME, version: '1.0.0' } });
   return instance;
 }
