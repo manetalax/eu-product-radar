@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const landing = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+const brandLogos = readFileSync(new URL('../components/BrandLogos.tsx', import.meta.url), 'utf8');
 
 test('landing does not advertise direct marketplace connectors before OAuth is live', () => {
   assert.match(landing, /Compatible with Shopify, Amazon and Etsy exports/);
@@ -25,4 +26,10 @@ test('structured data uses localized free-plan and EU copy', () => {
   assert.match(landing, /description: t\.pricing\.freeBody/);
   assert.match(landing, /name: t\.markets\.cards\.EU\.name/);
   assert.doesNotMatch(landing, /free product analyses/);
+});
+
+test('payment trust marks only show the currently supported Stripe card path', () => {
+  assert.match(brandLogos, /payments: \[[\s\S]*Stripe[\s\S]*Visa[\s\S]*Mastercard[\s\S]*\]/);
+  assert.doesNotMatch(brandLogos, /PayPal/i);
+  assert.doesNotMatch(brandLogos, /Apple Pay|Google Pay/i);
 });
