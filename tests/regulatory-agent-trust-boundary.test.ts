@@ -41,5 +41,5 @@ test('evidence writes require an owned existing product and a generated regulato
   assert.match(evidence, /\.eq\('id', analysisId\)[\s\S]*?\.eq\('user_id', user\.id\)/);
   assert.match(evidence, /productIndex >= products\.length/);
   assert.match(evidence, /regulatoryEvidenceKeys\(products\[productIndex\]/);
-  assert.match(evidence, /no corresponde a un requisito regulatorio/);
+  assert.match(evidence, /throw new Error\(e\('wrongRequirement'\)\)/);
 });
