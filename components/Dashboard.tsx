@@ -8,6 +8,7 @@ import TrustMark from '@/components/TrustMark';
 import { AccountDeletionErrorCode, DELETE_ACCOUNT_CONFIRMATION } from '@/lib/account';
 import { accountCopy } from '@/lib/account-i18n';
 import { Analysis, AnalysisSummary, analysisMarket, analyze, MAX_FILE_BYTES, supportsRuleVersion } from '@/lib/analysis';
+import { analysisFromUnknown, analysisSummariesFromUnknown, productQuotaFromUnknown, productsFromUnknown } from '@/lib/dashboard-api-shapes';
 import { dashboardText, type DashboardCopyKey } from '@/lib/dashboard-copy-v2';
 import { documentationFor } from '@/lib/documentation';
 import { guideScopeFor } from '@/lib/guide-i18n';
@@ -99,7 +100,8 @@ export default function Dashboard({ email }: { email: string }) {
       // Provider/proxy parser details must never leak into customer-facing UI.
     }
     if (response.status === 401) window.location.replace(`/login?lang=${language}`);
-    if (body.quota) setQuota(body.quota as ProductQuota);
+    const responseQuota = productQuotaFromUnknown(body.quota);
+    if (responseQuota) setQuota(responseQuota);
     if (!response.ok || !validJson) {
       const apiError = new Error(d('importError')) as Error & { code?: AccountDeletionErrorCode };
       if (typeof body.errorCode === 'string') apiError.code = body.errorCode as AccountDeletionErrorCode;
@@ -113,9 +115,12 @@ export default function Dashboard({ email }: { email: string }) {
     setLoading(true);
     api(`/api/analyses?page=${page}`, { signal: controller.signal }).then(body => {
       if (!controller.signal.aborted) {
-        setHistory(body.analyses as AnalysisSummary[]);
-        setHasMore(Boolean(body.hasMore));
-        setQuota(body.quota as ProductQuota);
+        const analyses = analysisSummariesFromUnknown(body.analyses);
+        const responseQuota = productQuotaFromUnknown(body.quota);
+        if (!analyses || typeof body.hasMore !== 'boolean' || !responseQuota) throw new Error(d('historyError'));
+        setHistory(analyses);
+        setHasMore(body.hasMore);
+        setQuota(responseQuota);
       }
     }).catch(() => {
       if (!controller.signal.aborted) setError(d('historyError'));
@@ -170,7 +175,9 @@ export default function Dashboard({ email }: { email: string }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ filename: file.name, mimeType: file.type || 'application/octet-stream', dataUrl }),
         });
-        products = extracted.products;
+        const extractedProducts = productsFromUnknown(extracted.products);
+        if (!extractedProducts) throw new Error(d('importError'));
+        products = extractedProducts;
       }
       const hash = await crypto.subtle.digest('SHA-256', bytes);
       const fingerprint = `${selectedMarket}:${file.name}:` + Array.from(new Uint8Array(hash)).map(byte => byte.toString(16).padStart(2, '0')).join('');
@@ -182,8 +189,10 @@ export default function Dashboard({ email }: { email: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename: file.name, products, requestId, marketCode: selectedMarket }),
       });
-      const typedAnalysis = analysis as Analysis;
-      setQuota(updatedQuota as ProductQuota);
+      const typedAnalysis = analysisFromUnknown(analysis);
+      const typedQuota = productQuotaFromUnknown(updatedQuota);
+      if (!typedAnalysis || !typedQuota) throw new Error(d('importError'));
+      setQuota(typedQuota);
       setCurrent(typedAnalysis);
       setTab('products');
       setNotice(d('analysisSaved', { market: marketName(selectedMarket) }));
@@ -212,7 +221,8 @@ export default function Dashboard({ email }: { email: string }) {
     setBusy(true);
     try {
       const { analysis } = await api(`/api/analyses?id=${encodeURIComponent(id)}`);
-      const typedAnalysis = analysis as Analysis;
+      const typedAnalysis = analysisFromUnknown(analysis);
+      if (!typedAnalysis) throw new Error(d('openError'));
       if (!supportsRuleVersion(typedAnalysis.rule_version)) throw new Error(d('unsupportedVersion'));
       setCurrent(typedAnalysis);
       setSelectedMarket(analysisMarket(typedAnalysis));
