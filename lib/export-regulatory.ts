@@ -1,5 +1,6 @@
 import ExcelJS from 'exceljs';
 import type { Result } from './analysis';
+import { BRAND_DOCUMENT_FOOTER, BRAND_NAME } from './brand';
 
 export function addRegulatoryWorksheet(workbook: ExcelJS.Workbook, results: Result[]) {
   const regulatory = results.filter(result => result.regulatory);
@@ -14,8 +15,9 @@ export function addRegulatoryWorksheet(workbook: ExcelJS.Workbook, results: Resu
     { width: 48 }, { width: 60 }, { width: 54 }, { width: 64 },
   ];
   ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+  ws.headerFooter.oddFooter = `${BRAND_DOCUMENT_FOOTER} | Página &P de &N`;
   ws.mergeCells('A1:H1');
-  ws.getCell('A1').value = 'EVALUACIÓN REGULATORIA UE · Import Rules Verifier';
+  ws.getCell('A1').value = `EVALUACIÓN REGULATORIA UE · ${BRAND_NAME}`;
   ws.getCell('A1').font = { bold: true, size: 18 };
   ws.mergeCells('A2:H2');
   ws.getCell('A2').value = 'Clasificación automatizada y conservadora. Confirma categoría, características y uso previsto. No constituye certificación ni aprobación de una autoridad.';
