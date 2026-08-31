@@ -20,9 +20,11 @@ test('Google, signup and password reset preserve the selected language', () => {
   assert.match(authForm, /resetPasswordForEmail\(email\.trim\(\), callbackUrl\('\/reset-password'\)\)/);
 });
 
-test('auth back navigation returns directly to the selected static landing locale', () => {
-  assert.match(authForm, /href=\{`\/\$\{language\}`\}/);
-  assert.doesNotMatch(authForm, /href=\{`\/\?lang=\$\{language\}`\}/);
+test('successful password auth and brand navigation keep locale explicitly', () => {
+  assert.equal((authForm.match(/window\.location\.assign\(`\/dashboard\?lang=\$\{language\}`\)/g) ?? []).length, 2);
+  assert.match(authForm, /<Brand market="EU" href=\{`\/\$\{language\}`\} \/>/);
+  assert.match(authForm, /<Link className="back-link" href=\{`\/\$\{language\}`\}>/);
+  assert.doesNotMatch(authForm, /window\.location\.assign\('\/dashboard'\)/);
 });
 
 test('production auth callbacks are pinned to the canonical ImportVerifier origin', () => {
