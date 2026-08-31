@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const route = readFileSync(new URL('../app/api/account/route.ts', import.meta.url), 'utf8');
 const webhook = readFileSync(new URL('../app/api/billing/webhook/route.ts', import.meta.url), 'utf8');
+const subscriptionSync = readFileSync(new URL('../lib/stripe/subscription-sync.ts', import.meta.url), 'utf8');
 const edgeDelete = readFileSync(new URL('../supabase/functions/delete-account/index.ts', import.meta.url), 'utf8');
 
 test('el borrado de cuenta cancela Stripe antes de invocar la eliminación de Supabase', () => {
@@ -22,9 +23,10 @@ test('la Edge Function de borrado exige JWT y limita el cuerpo de confirmación'
   assert.match(edgeDelete, /admin\.auth\.admin\.signOut\(token, 'global'\)/);
 });
 
-test('el webhook acepta la cancelación tardía de una cuenta ya eliminada', () => {
-  assert.match(webhook, /subscription\.status === 'canceled' && error\.code === '23503'/);
-  assert.doesNotMatch(webhook, /getUserById\(userId\)/);
+test('la sincronización Stripe acepta la cancelación tardía de una cuenta ya eliminada', () => {
+  assert.match(subscriptionSync, /subscription\.status === 'canceled' && error\.code === '23503'/);
+  assert.doesNotMatch(subscriptionSync, /getUserById\(userId\)/);
+  assert.match(webhook, /syncStripeSubscription/);
 });
 
 test('el webhook solo descarta eventos ya procesados y reintenta eventos en processing', () => {
