@@ -8,6 +8,7 @@ import { readJsonBody, sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { isLanguage } from '@/lib/landing-i18n';
 import { relevantRadarChanges } from '@/lib/radar-match';
 import { regulatoryAgentText } from '@/lib/regulatory-agent-i18n';
+import { requestLanguage } from '@/lib/request-language';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
@@ -16,18 +17,20 @@ const json = (body: unknown, status = 200) => NextResponse.json(body, { status, 
 const uuid = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
 export async function POST(request: Request) {
-  let body: { question?: unknown; analysisId?: unknown; productIndex?: unknown; language?: unknown } = {};
-  try { body = await readJsonBody(request) as typeof body; }
-  catch {}
-  const language = isLanguage(body.language) ? body.language : 'es';
-  const a = (key: Parameters<typeof regulatoryAgentText>[1]) => regulatoryAgentText(language, key);
+  const initialLanguage = requestLanguage(request);
+  const initialText = (key: Parameters<typeof regulatoryAgentText>[1]) => regulatoryAgentText(initialLanguage, key);
+  if (!sameOrigin(request)) return json({ error: initialText('origin') }, 403);
 
-  if (!sameOrigin(request)) return json({ error: a('origin') }, 403);
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return json({ error: a('signIn') }, 401);
+  if (authError || !user) return json({ error: initialText('signIn') }, 401);
 
-  if (!Object.keys(body).length) return json({ error: a('invalidRequest') }, 400);
+  let body: { question?: unknown; analysisId?: unknown; productIndex?: unknown; language?: unknown };
+  try { body = await readJsonBody(request) as typeof body; }
+  catch { return json({ error: initialText('invalidRequest') }, 400); }
+
+  const language = isLanguage(body.language) ? body.language : initialLanguage;
+  const a = (key: Parameters<typeof regulatoryAgentText>[1]) => regulatoryAgentText(language, key);
   const question = typeof body.question === 'string' ? body.question.trim() : '';
   const analysisId = typeof body.analysisId === 'string' ? body.analysisId : '';
   const productIndex = Number(body.productIndex);
@@ -118,10 +121,7 @@ export async function POST(request: Request) {
       latencyMs: Date.now() - started,
     });
 
-    return json({
-      answer: resultAi.text,
-      disclaimer: a('disclaimer'),
-    });
+    return json({ answer: resultAi.text, disclaimer: a('disclaimer') });
   } catch (error) {
     return json({ error: error instanceof Error && error.message ? error.message : a('assistantFailure') }, 502);
   }
