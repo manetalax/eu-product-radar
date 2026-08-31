@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { productQuotaFromUnknown } from '@/lib/dashboard-api-shapes';
 import { localeFor } from '@/lib/landing-i18n';
 import { UNLIMITED_PLAN } from '@/lib/plans';
 import { useLanguage } from '@/lib/use-language';
-
-type QuotaResponse = { quota?: { billing?: { planId?: string } } };
 
 const copy = {
   es: { active:'Unlimited activo', period:'mes', body:'Analiza sin cuota comercial de productos. Se mantienen únicamente protecciones técnicas razonables contra abuso automatizado.' },
@@ -24,11 +23,21 @@ export default function UnlimitedExperience() {
   useEffect(() => {
     let cancelled = false;
     fetch('/api/analyses?page=0', { cache: 'no-store' })
-      .then(response => response.ok ? response.json() : null)
-      .then((body: QuotaResponse | null) => {
-        if (!cancelled) setUnlimited(body?.quota?.billing?.planId === 'starter');
+      .then(async response => {
+        if (!response.ok) return null;
+        try {
+          const parsed = await response.json();
+          return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null;
+        } catch {
+          return null;
+        }
       })
-      .catch(() => {});
+      .then(body => {
+        if (cancelled) return;
+        const quota = productQuotaFromUnknown(body?.quota);
+        setUnlimited(quota?.billing.planId === 'starter');
+      })
+      .catch(() => { if (!cancelled) setUnlimited(false); });
     return () => { cancelled = true; };
   }, []);
 
