@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { formatProductCount, landingCopy, LANGUAGES } from '../lib/landing-i18n';
 import { FREE_TRIAL_PRODUCT_LIMIT, PLANS, UNLIMITED_FAIR_USE_CEILING } from '../lib/plans';
+
+const planInterest = readFileSync(new URL('../lib/services/plan-interest.ts', import.meta.url), 'utf8');
+const loginPage = readFileSync(new URL('../app/login/page.tsx', import.meta.url), 'utf8');
 
 test('cada cuenta conserva exactamente 5 productos de prueba gratuita', () => {
   assert.equal(FREE_TRIAL_PRODUCT_LIMIT, 5);
@@ -13,6 +17,14 @@ test('la oferta comercial pública es un único plan Unlimited a 9,95 €/mes', 
   ]);
   assert.equal(PLANS[0].monthlyProductLimit, UNLIMITED_FAIR_USE_CEILING);
   assert.deepEqual(PLANS.filter(plan => plan.featured).map(plan => plan.id), ['starter']);
+});
+
+test('la intención pública de compra es one-shot y solo permite Unlimited', () => {
+  assert.match(planInterest, /const PUBLIC_PURCHASE_INTENT = 'starter'/);
+  assert.match(planInterest, /window\.localStorage\.removeItem\(PLAN_INTENT_STORAGE_KEY\)/);
+  assert.match(planInterest, /return stored === PUBLIC_PURCHASE_INTENT \? stored : undefined/);
+  assert.match(loginPage, /const requestedPlan = plan === 'starter' \? 'starter' as const : undefined/);
+  assert.doesNotMatch(loginPage, /isPurchaseId/);
 });
 
 test('cada idioma conserva textos completos y unidades localizadas', () => {
