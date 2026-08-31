@@ -25,9 +25,12 @@ test('normaliza eventos UE y genera un fingerprint estable', () => {
   assert.equal(first.last_seen_at, '2026-08-31T10:00:00.000Z');
 });
 
-test('rechaza fuentes no oficiales, HTTP y campos obligatorios vacíos', () => {
+test('rechaza fuentes no oficiales, HTTP, credenciales, espacios y campos obligatorios vacíos', () => {
   assert.throws(() => normalizeRegulatoryEvent({ ...sample, sourceUrl: 'https://example.com/alerta' }), /dominio oficial UE/);
   assert.throws(() => normalizeRegulatoryEvent({ ...sample, sourceUrl: 'http://ec.europa.eu/alerta' }), /dominio oficial UE/);
+  assert.throws(() => normalizeRegulatoryEvent({ ...sample, sourceUrl: 'https://user:secret@ec.europa.eu/alerta' }), /HTTPS segura/);
+  assert.throws(() => normalizeRegulatoryEvent({ ...sample, sourceUrl: 'https://ec.europa.eu/alerta con espacios' }), /formato no es válido/);
+  assert.throws(() => normalizeRegulatoryEvent({ ...sample, sourceUrl: 'not-a-url' }), /no es válida/);
   assert.throws(() => normalizeRegulatoryEvent({ ...sample, title: '   ' }), /obligatorios/);
 });
 
