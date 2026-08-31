@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { evidenceForProduct, isValidEvidenceUrl, type PersistedEvidence } from '../lib/evidence';
+import { evidenceForProduct, evidenceFromUnknown, evidenceListFromUnknown, isValidEvidenceUrl, type PersistedEvidence } from '../lib/evidence';
 import { regulatoryReadiness } from '../lib/regulatory-twin';
 
 test('separa evidencia por producto sin mezclar cuentas del análisis', () => {
@@ -32,4 +32,26 @@ test('evidence URLs require well-formed HTTPS without embedded credentials', () 
   assert.equal(isValidEvidenceUrl('https://user:secret@example.com/evidence'), false);
   assert.equal(isValidEvidenceUrl('javascript:alert(1)'), false);
   assert.equal(isValidEvidenceUrl('https://example.com/space here'), false);
+});
+
+test('evidence payload parser rejects malformed 2xx rows and sanitizes unsafe links', () => {
+  const row = {
+    id: '11111111-1111-4111-8111-111111111111',
+    analysis_id: '22222222-2222-4222-8222-222222222222',
+    product_index: 0,
+    evidence_key: 'Declaration of conformity',
+    status: 'available',
+    note: 'Supplier document',
+    source_document: 'doc.pdf',
+    source_page: '2',
+    source_url: 'https://example.com/doc',
+    updated_at: '2026-08-31T12:00:00.000Z',
+  };
+  assert.deepEqual(evidenceFromUnknown(row), row);
+  assert.deepEqual(evidenceListFromUnknown([row]), [row]);
+  assert.equal(evidenceFromUnknown({ ...row, product_index: -1 }), null);
+  assert.equal(evidenceFromUnknown({ ...row, status: 'verified-by-attacker' }), null);
+  assert.equal(evidenceFromUnknown({ ...row, source_document: 'x'.repeat(241) }), null);
+  assert.equal(evidenceListFromUnknown([{ ...row, evidence_key: '' }]), null);
+  assert.equal(evidenceFromUnknown({ ...row, source_url: 'javascript:alert(1)' })?.source_url, '');
 });
