@@ -43,6 +43,8 @@
 - Evidence traceability is persisted as requirement → status → document → page/section → note → HTTPS URL.
 - Evidence keys remain canonical/stable across UI language changes so saved evidence is not orphaned by localization.
 - Evidence source URLs require a well-formed HTTPS URL with a real hostname, no whitespace and no embedded username/password; malformed schemes/credential-bearing links are rejected server-side with regression tests.
+- Marketplace URL detection now rejects HTTP, malformed/lookalike hosts, whitespace and embedded credentials before identifying Shopify/Amazon/Etsy; regression tests cover safe and unsafe cases.
+- Radar official-source ingestion now rejects malformed/whitespace-bearing or credentialed URLs even when the hostname is an allowed EU domain, preventing unsafe persisted source links; regression coverage added.
 - Failed evidence saves roll back optimistic state, surface a localized alert in all six languages and restore unsaved text-field values instead of leaving the form visually inconsistent.
 - Evidence and analysis APIs now return customer-facing errors in ES/EN/FR/DE/IT/PT using the shared request-language resolution.
 
@@ -115,13 +117,14 @@
 - Performance advisor only reports currently-unused indexes; do not remove them merely because the project has little production traffic.
 
 ## LATEST VERIFIED BUILD
-- Exact HEAD `59e6f1d1d1607fabda131e25897af416fed59ec4` completed `ImportVerifier release check` run #638 successfully: tests + typecheck + build green.
+- Latest functional security commit in this pass: `e518fd782ba744f7a35fda9af97d83201df6bc35` (`Test Radar source URL safety`), following marketplace URL hardening/test commits `4bfe2fb615d70b9959eb122695bada22b699c4b1` and `c1475f3775bf26b89f5294eadc6c079706cf4ebe` plus Radar hardening `f584658214abdf766a88df64f3ba643632ed3b02`.
+- Exact-HEAD `ImportVerifier release check` run #740 was still in progress when this handoff update was written; verify its final conclusion before the next code change and fix immediately if red.
 - PR #4 is open, unmerged and mergeable.
 - GitHub/Netlify may still surface legacy `euproductradar` checks because multiple Netlify sites are connected to the same repository; do not treat those as the canonical ImportVerifier deployment.
 
 ## IN PROGRESS / NEXT — execute without asking
-1. Keep exact latest HEAD CI green; fix any failure immediately.
-2. Continue security/account/billing sweep, especially any remaining URL-bearing/user-supplied fields and failure-recovery paths.
+1. Verify exact latest HEAD CI after this handoff commit and keep it green; fix any failure immediately.
+2. Continue security/account/billing sweep, especially remaining URL-bearing/user-supplied fields and failure-recovery paths; marketplace detection and Radar source URL credentials/whitespace are now covered.
 3. Continue customer-visible i18n sweep for secondary/ancillary surfaces; future-market US/CN/GB/JP documentary narratives must be localized before activation.
 4. Continue desktop/iPhone/iPad/PWA QA, especially upload/export flows, table overflow, modal keyboard behavior and touch/safe-area edge cases.
 5. Keep all customer-visible price copy sourced from canonical plan definitions and exact EUR 9.95 formatting.
