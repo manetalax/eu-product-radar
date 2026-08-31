@@ -20,10 +20,31 @@ const unlimitedCopy: Record<Language, { title: string; body: string; features: s
   pt: { title: 'Unlimited', body: 'Uma única subscrição. Analisa todo o catálogo, usa o ImportVerifier AI e gera relatórios sem contar produtos.', features: ['Análises de produtos ilimitadas*', 'ImportVerifier AI', 'PDF e Excel com histórico', 'Regulatory Twin + Impact Radar', 'Conectores Shopify, Amazon e Etsy'], cta: 'Escolher Unlimited', fairUse: '*Utilização ilimitada sujeita a proteções técnicas razoáveis contra abuso automatizado.' },
 };
 
+const landingExtras: Record<Language, {
+  previewKicker: string;
+  intelligenceEyebrow: string;
+  intelligenceTitle: string;
+  intelligenceLead: string;
+  aiBody: string;
+  twinBody: string;
+  radarBody: string;
+  pricingEyebrow: string;
+  pricingTitle: (price: string) => string;
+  planLabel: string;
+}> = {
+  es: { previewKicker: 'IMPORTVERIFIER AI · EUROPA', intelligenceEyebrow: 'IMPORTVERIFIER INTELLIGENCE', intelligenceTitle: 'AI + Twin + Radar, en el mismo producto.', intelligenceLead: 'Pregunta a ImportVerifier AI, conserva un gemelo regulatorio por producto y prioriza impactos sin abandonar tu catálogo.', aiBody: 'Pregunta qué falta, por qué puede aplicar una norma y qué pedir al proveedor.', twinBody: 'Estado vivo por producto: categoría, reglas, evidencias, incertidumbres y acciones.', radarBody: 'Prioriza los cambios y obligaciones que merecen revisión antes que el resto.', pricingEyebrow: 'UN PLAN. TODO INCLUIDO.', pricingTitle: price => `${price} al mes.`, planLabel: 'TODO INCLUIDO' },
+  en: { previewKicker: 'IMPORTVERIFIER AI · EUROPE', intelligenceEyebrow: 'IMPORTVERIFIER INTELLIGENCE', intelligenceTitle: 'AI + Twin + Radar in one product.', intelligenceLead: 'Ask ImportVerifier AI, keep a regulatory twin for each product and prioritise impacts without leaving your catalogue.', aiBody: 'Ask what is missing, why a rule may apply and what to request from the supplier.', twinBody: 'A living product state: category, rules, evidence, uncertainties and actions.', radarBody: 'Prioritise the changes and obligations that deserve review first.', pricingEyebrow: 'ONE PLAN. EVERYTHING INCLUDED.', pricingTitle: price => `${price} per month.`, planLabel: 'EVERYTHING INCLUDED' },
+  fr: { previewKicker: 'IMPORTVERIFIER AI · EUROPE', intelligenceEyebrow: 'IMPORTVERIFIER INTELLIGENCE', intelligenceTitle: 'AI + Twin + Radar dans un seul produit.', intelligenceLead: 'Interrogez ImportVerifier AI, conservez un jumeau réglementaire par produit et priorisez les impacts sans quitter votre catalogue.', aiBody: 'Demandez ce qui manque, pourquoi une règle peut s’appliquer et quoi demander au fournisseur.', twinBody: 'Un état vivant par produit : catégorie, règles, preuves, incertitudes et actions.', radarBody: 'Priorisez les changements et obligations qui doivent être examinés en premier.', pricingEyebrow: 'UN SEUL PLAN. TOUT INCLUS.', pricingTitle: price => `${price} par mois.`, planLabel: 'TOUT INCLUS' },
+  de: { previewKicker: 'IMPORTVERIFIER AI · EUROPA', intelligenceEyebrow: 'IMPORTVERIFIER INTELLIGENCE', intelligenceTitle: 'AI + Twin + Radar in einem Produkt.', intelligenceLead: 'Frage ImportVerifier AI, führe für jedes Produkt einen regulatorischen Zwilling und priorisiere Auswirkungen direkt im Katalog.', aiBody: 'Frage, was fehlt, warum eine Vorschrift gelten könnte und was beim Lieferanten anzufordern ist.', twinBody: 'Lebender Produktstatus: Kategorie, Regeln, Nachweise, Unsicherheiten und Maßnahmen.', radarBody: 'Priorisiere Änderungen und Pflichten, die zuerst geprüft werden sollten.', pricingEyebrow: 'EIN PLAN. ALLES ENTHALTEN.', pricingTitle: price => `${price} pro Monat.`, planLabel: 'ALLES ENTHALTEN' },
+  it: { previewKicker: 'IMPORTVERIFIER AI · EUROPA', intelligenceEyebrow: 'IMPORTVERIFIER INTELLIGENCE', intelligenceTitle: 'AI + Twin + Radar in un unico prodotto.', intelligenceLead: 'Chiedi a ImportVerifier AI, mantieni un gemello normativo per ogni prodotto e dai priorità agli impatti senza uscire dal catalogo.', aiBody: 'Chiedi cosa manca, perché una norma può applicarsi e cosa richiedere al fornitore.', twinBody: 'Stato vivo per prodotto: categoria, regole, evidenze, incertezze e azioni.', radarBody: 'Dai priorità ai cambiamenti e agli obblighi da verificare per primi.', pricingEyebrow: 'UN PIANO. TUTTO INCLUSO.', pricingTitle: price => `${price} al mese.`, planLabel: 'TUTTO INCLUSO' },
+  pt: { previewKicker: 'IMPORTVERIFIER AI · EUROPA', intelligenceEyebrow: 'IMPORTVERIFIER INTELLIGENCE', intelligenceTitle: 'AI + Twin + Radar num único produto.', intelligenceLead: 'Pergunte ao ImportVerifier AI, mantenha um gémeo regulamentar por produto e priorize impactos sem sair do catálogo.', aiBody: 'Pergunte o que falta, porque uma regra pode aplicar-se e o que pedir ao fornecedor.', twinBody: 'Estado vivo por produto: categoria, regras, evidências, incertezas e ações.', radarBody: 'Priorize as alterações e obrigações que devem ser revistas primeiro.', pricingEyebrow: 'UM PLANO. TUDO INCLUÍDO.', pricingTitle: price => `${price} por mês.`, planLabel: 'TUDO INCLUÍDO' },
+};
+
 export default function Home() {
   const { language, setLanguage } = useLanguage();
   const t = landingCopy[language];
   const unlimited = unlimitedCopy[language];
+  const extra = landingExtras[language];
   const price = new Intl.NumberFormat(localeFor(language), { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(UNLIMITED_PLAN.monthlyPriceEur);
 
   const structuredData = {
@@ -58,7 +79,7 @@ export default function Home() {
         <div className="trust-row" aria-label={t.hero.trust.join(', ')}>{t.hero.trust.map(item => <span key={item}>{item}</span>)}</div><p className="legal-note">{t.hero.legal}</p>
       </div>
       <div className="product-preview" id="producto" aria-label={t.preview.fictional}>
-        <div className="preview-toolbar"><div><span className="preview-kicker">IMPORTVERIFIER AI · EUROPA</span><strong>{t.preview.file}</strong></div><span className="preview-badge">🇪🇺 {t.preview.count}</span></div>
+        <div className="preview-toolbar"><div><span className="preview-kicker">{extra.previewKicker}</span><strong>{t.preview.file}</strong></div><span className="preview-badge">🇪🇺 {t.preview.count}</span></div>
         <div className="preview-score-row"><div><span className="preview-label">{t.preview.incomplete}</span><div className="score">72<span>/100</span></div></div><div className="preview-summary"><strong>{t.preview.priority}</strong><p>{t.preview.summary}</p></div></div>
         <div className="preview-list">{t.preview.products.map((product, index) => <div key={product}><span>{product}</span><span className={`pill ${index === 0 ? 'high' : index === 1 ? 'medium' : 'low'}`}>{t.preview.priorities[index]}</span></div>)}</div>
         <div className="preview-next"><span>ImportVerifier AI</span><span>Regulatory Twin</span><span>Impact Radar</span></div><div className="preview-footer"><span>{t.preview.fictional}</span><span>{t.preview.reports}</span></div>
@@ -74,8 +95,8 @@ export default function Home() {
     </section>
 
     <section className="section methodology-section">
-      <div className="method-copy"><div className="eyebrow">IMPORTVERIFIER INTELLIGENCE</div><h2>AI + Twin + Radar, en el mismo producto.</h2><p className="lead">Pregunta a ImportVerifier AI, conserva un gemelo regulatorio por producto y prioriza impactos sin abandonar tu catálogo.</p><div className="official-links"><a href={`https://eur-lex.europa.eu/eli/reg/2023/988/oj?locale=${language}`} target="_blank" rel="noopener noreferrer">{t.method.gpsr}</a><a href="https://single-market-economy.ec.europa.eu/single-market/goods/ce-marking/manufacturers_en" target="_blank" rel="noopener noreferrer">{t.method.ce}</a></div></div>
-      <div className="method-cards"><article><span>01</span><div><strong>ImportVerifier AI</strong><p>Pregunta qué falta, por qué puede aplicar una norma y qué pedir al proveedor.</p></div></article><article><span>02</span><div><strong>Product Regulatory Twin</strong><p>Estado vivo por producto: categoría, reglas, evidencias, incertidumbres y acciones.</p></div></article><article><span>03</span><div><strong>Impact Radar</strong><p>Prioriza los cambios y obligaciones que merecen revisión antes que el resto.</p></div></article></div>
+      <div className="method-copy"><div className="eyebrow">{extra.intelligenceEyebrow}</div><h2>{extra.intelligenceTitle}</h2><p className="lead">{extra.intelligenceLead}</p><div className="official-links"><a href={`https://eur-lex.europa.eu/eli/reg/2023/988/oj?locale=${language}`} target="_blank" rel="noopener noreferrer">{t.method.gpsr}</a><a href="https://single-market-economy.ec.europa.eu/single-market/goods/ce-marking/manufacturers_en" target="_blank" rel="noopener noreferrer">{t.method.ce}</a></div></div>
+      <div className="method-cards"><article><span>01</span><div><strong>ImportVerifier AI</strong><p>{extra.aiBody}</p></div></article><article><span>02</span><div><strong>Product Regulatory Twin</strong><p>{extra.twinBody}</p></div></article><article><span>03</span><div><strong>Impact Radar</strong><p>{extra.radarBody}</p></div></article></div>
     </section>
 
     <section className="section market-section" id="mercados">
@@ -84,9 +105,9 @@ export default function Home() {
     </section>
 
     <section className="section pricing-section" id="planes">
-      <div className="toprow pricing-heading"><div><div className="eyebrow">UN PLAN. TODO INCLUIDO.</div><h2>{price} al mes.</h2><p className="muted">{unlimited.body}</p></div><div className="availability-note">{t.pricing.availability}</div></div>
+      <div className="toprow pricing-heading"><div><div className="eyebrow">{extra.pricingEyebrow}</div><h2>{extra.pricingTitle(price)}</h2><p className="muted">{unlimited.body}</p></div><div className="availability-note">{t.pricing.availability}</div></div>
       <div className="free-trial-card"><div><span>{t.pricing.freeTitle}</span><strong>{FREE_TRIAL_PRODUCT_LIMIT} {t.pricing.products}</strong><p>{t.pricing.freeBody}</p></div><Link className="btn ghost" href={`/login?lang=${language}`}>{t.pricing.freeCta}</Link></div>
-      <div className="plans polished-plans global-plans"><article className="plan featured"><span className="plan-label">TODO INCLUIDO</span><b>{unlimited.title}</b><div className="price">{price}</div><span className="plan-cadence">{t.pricing.perMonth}</span><ul className="plan-features">{unlimited.features.map(feature => <li key={feature}>✓ {feature}</li>)}</ul><Link className="btn primary plan-button" href={`/login?plan=starter&lang=${language}`}>{unlimited.cta}</Link></article></div>
+      <div className="plans polished-plans global-plans"><article className="plan featured"><span className="plan-label">{extra.planLabel}</span><b>{unlimited.title}</b><div className="price">{price}</div><span className="plan-cadence">{t.pricing.perMonth}</span><ul className="plan-features">{unlimited.features.map(feature => <li key={feature}>✓ {feature}</li>)}</ul><Link className="btn primary plan-button" href={`/login?plan=starter&lang=${language}`}>{unlimited.cta}</Link></article></div>
       <p className="pricing-honesty">{unlimited.fairUse} {t.pricing.honesty}</p>
       <div className="pricing-trust-grid"><BrandLogos group="payments" label={t.compatibility.paymentLabel} note={t.compatibility.paymentNote} compact /><TrustMark title={t.trust.title} detail={t.trust.detail} httpsLabel={t.trust.https} explanation={t.trust.explanation} compact /></div>
     </section>
