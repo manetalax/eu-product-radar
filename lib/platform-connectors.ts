@@ -38,10 +38,14 @@ function hostnameMatches(hostname: string, domain: string) {
 }
 
 export function detectPlatform(input: string): PlatformId | null {
+  if (typeof input !== 'string' || input.length === 0 || /\s/.test(input)) return null;
+
   let url: URL;
   try { url = new URL(input); }
   catch { return null; }
-  if (url.protocol !== 'https:') return null;
+
+  if (url.protocol !== 'https:' || url.username || url.password || !url.hostname) return null;
+
   const hostname = url.hostname.toLowerCase();
   return PLATFORM_CONNECTORS.find(connector => connector.domains.some(domain => hostnameMatches(hostname, domain)))?.id ?? null;
 }
