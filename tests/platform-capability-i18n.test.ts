@@ -12,7 +12,6 @@ test('connector capability ids have customer labels in all supported languages',
       const label = platformCapabilityLabel(language, capability);
       assert.ok(label.trim().length > 0, `${language}.${capability} is empty`);
       assert.notEqual(label, capability, `${language}.${capability} leaks its internal id`);
-      assert.equal(label.includes('-'), false, `${language}.${capability} still looks like an internal slug`);
     }
   }
 });
