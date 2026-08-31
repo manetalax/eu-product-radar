@@ -1,6 +1,7 @@
 import { LEGAL_ENV_KEYS, legalConfig } from './legal-config';
 
 export const IMPORTVERIFIER_PRODUCTION_URL = 'https://importverifier.netlify.app';
+export const IMPORTVERIFIER_UNLIMITED_PRICE_ID = 'price_1UAJy5HJnO8odw1Mn4jMVjFt';
 
 export type ReleaseConfigCheck = { ok: boolean; errors: string[]; warnings: string[] };
 
@@ -22,6 +23,9 @@ export function checkReleaseConfig(env: NodeJS.ProcessEnv = process.env): Releas
   }
   for (const key of requiredPublic) if (!env[key]) errors.push(`Falta ${key}.`);
   for (const key of requiredSecrets) if (!env[key]) errors.push(`Falta ${key}.`);
+  if (production && env.STRIPE_PRICE_STARTER && env.STRIPE_PRICE_STARTER !== IMPORTVERIFIER_UNLIMITED_PRICE_ID) {
+    errors.push(`STRIPE_PRICE_STARTER debe ser el price live canónico de ImportVerifier Unlimited: ${IMPORTVERIFIER_UNLIMITED_PRICE_ID}.`);
+  }
   if (production && !legalConfig(env)) {
     errors.push(`Falta completar la información legal obligatoria para aceptar pagos: ${LEGAL_ENV_KEYS.join(', ')}.`);
   }
