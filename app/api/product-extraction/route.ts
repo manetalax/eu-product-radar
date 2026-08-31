@@ -7,6 +7,9 @@ import { aiCostPolicy, generateText, generateVisionText } from '@/lib/ai-provide
 import { recordAiUsage } from '@/lib/ai-telemetry';
 import { consumeApiRateLimit } from '@/lib/api-rate-limit';
 import { extractLocalDocumentText } from '@/lib/local-document-text';
+import type { Language } from '@/lib/landing-i18n';
+import { productExtractionText } from '@/lib/product-extraction-i18n';
+import { requestLanguage } from '@/lib/request-language';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -41,16 +44,16 @@ function parseProductsJson(text: string): ExtractedProduct[] {
   return parsed.products.filter((item): item is ExtractedProduct => Boolean(item) && typeof item === 'object' && !Array.isArray(item));
 }
 
-function parseDataUrl(dataUrl: string): { mimeType: string; bytes: Buffer } {
+function parseDataUrl(dataUrl: string, language: Language): { mimeType: string; bytes: Buffer } {
   const match = /^data:([^;,]+);base64,([A-Za-z0-9+/=\r\n]+)$/i.exec(dataUrl);
-  if (!match) throw new Error('Archivo no válido.');
+  if (!match) throw new Error(productExtractionText(language, 'invalidFile'));
   const bytes = Buffer.from(match[2], 'base64');
-  if (!bytes.length) throw new Error('El archivo está vacío.');
-  if (bytes.length > MAX_FILE_BYTES) throw new Error('El archivo supera el límite de 5 MB.');
+  if (!bytes.length) throw new Error(productExtractionText(language, 'emptyFile'));
+  if (bytes.length > MAX_FILE_BYTES) throw new Error(productExtractionText(language, 'tooLarge'));
   return { mimeType: match[1].toLowerCase(), bytes };
 }
 
-function validateUploadType(filename: string, declaredMime: string, dataMime: string): 'image' | 'document' {
+function validateUploadType(filename: string, declaredMime: string, dataMime: string, language: Language): 'image' | 'document' {
   const isImageExtension = IMAGE_EXTENSIONS.test(filename);
   const declared = declaredMime.toLowerCase();
   const data = dataMime.toLowerCase();
@@ -58,21 +61,21 @@ function validateUploadType(filename: string, declaredMime: string, dataMime: st
   const dataImage = IMAGE_MIME.test(data);
 
   if (isImageExtension) {
-    if (!declaredImage || !dataImage) throw new Error('La imagen no tiene un tipo MIME compatible con su extensión.');
+    if (!declaredImage || !dataImage) throw new Error(productExtractionText(language, 'imageMime'));
     if (declared !== data && !(declared === 'image/heic' && data === 'image/heif') && !(declared === 'image/heif' && data === 'image/heic')) {
-      throw new Error('El tipo MIME declarado no coincide con el archivo recibido.');
+      throw new Error(productExtractionText(language, 'mimeMismatch'));
     }
     return 'image';
   }
 
-  if (declaredImage || dataImage) throw new Error('El tipo MIME no coincide con la extensión del documento.');
+  if (declaredImage || dataImage) throw new Error(productExtractionText(language, 'documentMime'));
   if (declared !== 'application/octet-stream' && data !== 'application/octet-stream' && declared !== data) {
-    throw new Error('El tipo MIME declarado no coincide con el archivo recibido.');
+    throw new Error(productExtractionText(language, 'mimeMismatch'));
   }
   return 'document';
 }
 
-async function structureLocalText(filename: string, text: string, started: number): Promise<ExtractedProduct[]> {
+async function structureLocalText(filename: string, text: string, started: number, language: Language): Promise<ExtractedProduct[]> {
   const result = await generateText([
     { role: 'system', content: PRODUCT_PROMPT },
     { role: 'user', content: text.slice(0, 500_000) },
@@ -85,16 +88,16 @@ async function structureLocalText(filename: string, text: string, started: numbe
     latencyMs: Date.now() - started,
   });
   const products = parseProductsJson(result.text);
-  if (!products.length) throw new Error(`No se han encontrado productos identificables en ${filename}.`);
+  if (!products.length) throw new Error(`${productExtractionText(language, 'noProducts')} (${filename})`);
   return products;
 }
 
-async function extractDocumentWithOpenAi(filename: string, mimeType: string, dataUrl: string) {
+async function extractDocumentWithOpenAi(filename: string, mimeType: string, dataUrl: string, language: Language) {
   if (aiCostPolicy() === 'free_only') {
-    throw new Error('Este documento no contiene una capa de texto utilizable en modo gratuito. Si es un PDF escaneado, exporta sus páginas como imágenes; los .doc antiguos deben guardarse como DOCX, ODT o PDF con texto.');
+    throw new Error(productExtractionText(language, 'freeOnlyDocument'));
   }
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('Este formato requiere temporalmente el proveedor documental de respaldo.');
+  if (!apiKey) throw new Error(productExtractionText(language, 'backupRequired'));
   const model = process.env.OPENAI_PRODUCT_EXTRACT_MODEL || 'gpt-5.6-terra';
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
@@ -120,42 +123,43 @@ async function extractDocumentWithOpenAi(filename: string, mimeType: string, dat
     }),
   });
   const body = await response.json() as Record<string, unknown>;
-  if (!response.ok) throw new Error('No se ha podido interpretar el documento.');
+  if (!response.ok) throw new Error(productExtractionText(language, 'interpretError'));
   const text = outputText(body);
-  if (!text) throw new Error('No se han encontrado productos identificables.');
+  if (!text) throw new Error(productExtractionText(language, 'noProducts'));
   return { products: parseProductsJson(text), model };
 }
 
 export async function POST(request: Request) {
-  if (!sameOrigin(request)) return json({ error: 'Origen de solicitud no permitido.' }, 403);
+  const language = requestLanguage(request);
+  if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return json({ error: 'Inicia sesión para analizar documentos o imágenes.' }, 401);
+  if (authError || !user) return json({ error: productExtractionText(language, 'signIn') }, 401);
 
   const contentLength = Number(request.headers.get('content-length') || 0);
-  if (contentLength > 7.5 * 1024 * 1024) return json({ error: 'El archivo supera el límite de 5 MB.' }, 413);
+  if (contentLength > 7.5 * 1024 * 1024) return json({ error: productExtractionText(language, 'tooLarge') }, 413);
 
   let body: { filename?: unknown; mimeType?: unknown; dataUrl?: unknown };
   try { body = await request.json(); }
-  catch { return json({ error: 'No se ha podido leer el archivo.' }, 400); }
+  catch { return json({ error: productExtractionText(language, 'readError') }, 400); }
 
   const filename = typeof body.filename === 'string' ? body.filename.trim() : '';
   const mimeType = typeof body.mimeType === 'string' ? body.mimeType.trim().toLowerCase() : 'application/octet-stream';
   const dataUrl = typeof body.dataUrl === 'string' ? body.dataUrl : '';
-  if (!filename || filename.length > 120 || !ALLOWED_EXTENSIONS.test(filename)) return json({ error: 'Formato no compatible. Usa foto, PDF, Word o texto. CSV y Excel se procesan localmente.' }, 400);
-  if (!dataUrl.startsWith('data:') || dataUrl.length > Math.ceil(MAX_FILE_BYTES * 4 / 3) + 1000) return json({ error: 'El archivo está vacío o supera el límite de 5 MB.' }, 400);
+  if (!filename || filename.length > 120 || !ALLOWED_EXTENSIONS.test(filename)) return json({ error: productExtractionText(language, 'unsupportedFormat') }, 400);
+  if (!dataUrl.startsWith('data:') || dataUrl.length > Math.ceil(MAX_FILE_BYTES * 4 / 3) + 1000) return json({ error: productExtractionText(language, 'invalidPayload') }, 400);
 
   let upload: { mimeType: string; bytes: Buffer };
   let kind: 'image' | 'document';
   try {
-    upload = parseDataUrl(dataUrl);
-    kind = validateUploadType(filename, mimeType, upload.mimeType);
+    upload = parseDataUrl(dataUrl, language);
+    kind = validateUploadType(filename, mimeType, upload.mimeType, language);
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'El tipo de archivo no es válido.' }, 400);
+    return json({ error: error instanceof Error ? error.message : productExtractionText(language, 'genericType') }, 400);
   }
 
   const allowed = await consumeApiRateLimit({ userId: user.id, route: 'product_extraction', limit: 30, windowSeconds: 3600 });
-  if (!allowed) return json({ error: 'Hay demasiados documentos procesándose desde esta cuenta. Vuelve a intentarlo más tarde.' }, 429);
+  if (!allowed) return json({ error: productExtractionText(language, 'rateLimit') }, 429);
 
   const started = Date.now();
   try {
@@ -173,21 +177,21 @@ export async function POST(request: Request) {
       });
     } else if (LOCALLY_EXTRACTABLE.test(filename)) {
       const sourceText = extractLocalDocumentText(filename, upload.bytes);
-      if (sourceText) products = await structureLocalText(filename, sourceText, started);
+      if (sourceText) products = await structureLocalText(filename, sourceText, started, language);
       else {
-        const result = await extractDocumentWithOpenAi(filename, mimeType, dataUrl);
+        const result = await extractDocumentWithOpenAi(filename, mimeType, dataUrl, language);
         products = result.products;
         void recordAiUsage({ task: 'product_document', provider: 'openai', model: result.model, latencyMs: Date.now() - started });
       }
     } else {
-      const result = await extractDocumentWithOpenAi(filename, mimeType, dataUrl);
+      const result = await extractDocumentWithOpenAi(filename, mimeType, dataUrl, language);
       products = result.products;
       void recordAiUsage({ task: 'product_document', provider: 'openai', model: result.model, latencyMs: Date.now() - started });
     }
 
-    if (!products.length) throw new Error('No se han encontrado productos identificables.');
+    if (!products.length) throw new Error(productExtractionText(language, 'noProducts'));
     return json({ products: normalizeExtractedProducts({ kind, sourceName: filename, products }) });
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'No se ha podido interpretar el archivo.' }, 502);
+    return json({ error: error instanceof Error ? error.message : productExtractionText(language, 'interpretError') }, 502);
   }
 }
