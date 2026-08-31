@@ -86,7 +86,7 @@ export async function POST(request: Request) {
     source_url: safeEvidenceUrl(item.source_url),
   }));
   const radarRows = radarResult.data ?? [];
-  const radar = radarRuntimeEnabled(process.env, radarRows.length)
+  const radar = radarRuntimeEnabled(process.env.REGULATORY_RADAR_LIVE, process.env.REGULATORY_INGEST_SECRET, radarRows.length)
     ? relevantRadarChanges(
         radarRows.map(event => ({
           ...event,
