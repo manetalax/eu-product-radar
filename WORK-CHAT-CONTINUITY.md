@@ -58,7 +58,8 @@
 - PWA manifest is now generated dynamically from the active server language instead of remaining permanently Spanish. ES/EN/FR/DE/IT/PT receive localized description/shortcut labels while brand identity, installation scope and icon assets remain stable.
 - Service worker cache moved to `importverifier-shell-v3`; the localized `/manifest.webmanifest` is deliberately excluded from the offline shell and fetch cache so a user-language manifest cannot become stale after a language change. Private routes remain excluded.
 - PWA/icon/upload/export regression tests cover manifest language parity, real icon assets, private-cache exclusion, HEIC/HEIF input safety and premium report structure.
-- Functional HEAD `5164e0cd8eef43768e1b0f2c5d448d17fc9a85f2` passed exact-head `ImportVerifier release check` run #867 **SUCCESS**: all 205 tests, typecheck and build passed.
+- Concurrent mobile QA additionally corrected Intelligence Suite safe-area padding so left/right insets are independent, retains bottom safe-area spacing and keeps 16px iOS form controls; `tests/intelligence-suite-mobile-safe-area.test.ts` protects these invariants.
+- Latest validated branch HEAD `f9af353e6f3aa6b200c6b957f049723a8fb883a8` passed exact-head `ImportVerifier release check` run #873 **SUCCESS**: tests, typecheck and build all passed. Core PWA/export functional work is contained in `5164e0cd8eef43768e1b0f2c5d448d17fc9a85f2` and predecessors.
 
 ## Production facts last checked 2026-08-31
 - Supabase project: `hfuwwjdcyudflamwwnon`.
