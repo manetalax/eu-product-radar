@@ -10,5 +10,5 @@ test('Intelligence Suite parses API JSON defensively and does not surface server
   assert.match(source, /if \(!detailResponse\.ok\)/);
   assert.match(source, /typeof body\.answer !== 'string'/);
   assert.doesNotMatch(source, /body\.error \|\| t\.aiError/);
-  assert.match(source, /catch \{\s*setError\(t\.aiError\)/s);
+  assert.ok(source.includes("catch {\n      setError(t.aiError);"));
 });
