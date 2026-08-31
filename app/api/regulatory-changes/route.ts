@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { PRIVATE_HEADERS } from '@/lib/http';
-import { radarRuntimeEnabled } from '@/lib/radar-runtime';
+import { radarRuntimeConfigured, radarRuntimeEnabled } from '@/lib/radar-runtime';
 import { regulatoryChangesText } from '@/lib/regulatory-changes-i18n';
 import { safeOfficialRegulatoryUrl } from '@/lib/regulatory-source-url';
 import { requestLanguage } from '@/lib/request-language';
@@ -16,6 +16,9 @@ export async function GET(request: Request) {
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return json({ error: t('signIn') }, 401);
+
+  const radarConfigured = radarRuntimeConfigured(process.env.REGULATORY_RADAR_LIVE, process.env.REGULATORY_INGEST_SECRET);
+  if (!radarConfigured) return json({ events: [], live: false, sourcePolicy: 'official-only' });
 
   const url = new URL(request.url);
   const limitParam = Number(url.searchParams.get('limit') ?? '20');
