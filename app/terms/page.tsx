@@ -1,22 +1,23 @@
 import Link from 'next/link';
+import { termsCopy } from '@/lib/legal-pages-i18n';
 import { legalConfig } from '@/lib/legal-config';
+import { serverLanguage } from '@/lib/server-language';
 
 const SUPPORT_EMAIL = 'importverifier@gmail.com';
 
-export default function TermsPage() {
+export default async function TermsPage({ searchParams }: { searchParams: Promise<{ lang?: string }> }) {
+  const params = await searchParams;
+  const language = await serverLanguage(params.lang);
+  const t = termsCopy[language];
   const legal = legalConfig();
-  return <main className="shell legal-page">
-    <h1>Términos de uso</h1>
-    <p><strong>Última actualización:</strong> 31 de agosto de 2026.</p>
-    <p>Import Rules Verifier es una herramienta independiente de asistencia para organizar información de productos, identificar posibles obligaciones regulatorias y preparar revisiones documentales.</p>
-    <h2>No es una autoridad ni certificación</h2><p>Los resultados son automatizados y orientativos. No constituyen aprobación, certificación, asesoramiento jurídico ni decisión de una autoridad de la Unión Europea. La aplicabilidad final depende de las características reales, composición, uso previsto, público, mercado y documentación del producto.</p>
-    <h2>Responsabilidad del usuario</h2><p>El usuario debe revisar los datos detectados, confirmar la categoría y comprobar la documentación y fuentes oficiales antes de comercializar un producto. No debe introducir información ilícita ni datos personales innecesarios.</p>
-    <h2>Suscripción Unlimited</h2><p>La oferta pública de pago es una suscripción mensual Unlimited de 9,95 € al mes, salvo promoción expresamente indicada. Se renueva automáticamente hasta su cancelación desde el portal de cliente. El uso ilimitado está sujeto a medidas técnicas razonables contra abuso automatizado, fraude, ataques o utilización incompatible con un servicio interactivo normal. Estas salvaguardas no se presentan como una cuota comercial de productos.</p>
-    <h2>Pagos, renovaciones y cancelación</h2><p>Stripe muestra el importe y las condiciones antes de confirmar el pago. La cancelación evita futuras renovaciones y mantiene el acceso pagado hasta el final del periodo ya abonado, salvo supuestos legalmente permitidos de suspensión por fraude o abuso. Para incidencias de facturación, escribe a <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</p>
-    <h2>Reembolsos y desistimiento</h2><p>{legal ? legal.refundPolicy : 'La contratación permanece desactivada hasta que se configure y publique la política de reembolsos y desistimiento aplicable.'}</p>
-    <h2>Disponibilidad e historial</h2><p>El servicio puede cambiar reglas, fuentes, modelos de IA y funcionalidades para reflejar cambios regulatorios o técnicos. Los análisis históricos son instantáneas y conservan la versión de reglas utilizada cuando técnicamente corresponda.</p>
-    <h2>Prestador y jurisdicción</h2>{legal ? <p><strong>{legal.providerName}</strong><br />{legal.providerAddress}<br />Identificación fiscal: {legal.taxId}<br />Jurisdicción: {legal.jurisdiction}</p> : <p><strong>Servicio en fase previa a contratación:</strong> el checkout de pago permanece bloqueado hasta completar la identidad legal, domicilio, identificación fiscal, jurisdicción y política de reembolsos.</p>}
-    <h2>Contacto</h2><p>Soporte: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</p>
-    <p><Link href="/privacy">Política de privacidad</Link> · <Link href="/">Volver a Import Rules Verifier</Link></p>
+  return <main className="shell legal-page" lang={language}>
+    <h1>{t.title}</h1>
+    <p><strong>{t.updatedLabel}:</strong> {t.updated}.</p>
+    <p>{t.intro}</p>
+    {t.sections.map(section => <section key={section.title}><h2>{section.title}</h2><p>{section.body}</p></section>)}
+    <h2>{t.refundTitle}</h2><p>{legal ? legal.refundPolicy : t.refundFallback}</p>
+    <h2>{t.providerTitle}</h2>{legal ? <p><strong>{legal.providerName}</strong><br />{legal.providerAddress}<br />{t.taxId}: {legal.taxId}<br />{t.jurisdiction}: {legal.jurisdiction}</p> : <p><strong>{t.prerelease}</strong></p>}
+    <h2>{t.contactTitle}</h2><p>{t.support}: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</p>
+    <p><Link href={`/privacy?lang=${language}`}>{t.privacy}</Link> · <Link href={`/?lang=${language}`}>{t.back}</Link></p>
   </main>;
 }
