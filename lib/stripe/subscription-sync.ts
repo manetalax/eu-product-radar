@@ -10,6 +10,7 @@ export function stripeObjectId(value: string | { id: string } | null): string | 
 export async function syncStripeSubscription(subscription: Stripe.Subscription) {
   const admin = createAdminClient();
   const customerId = stripeObjectId(subscription.customer);
+  if (subscription.items.data.length !== 1) throw new Error('unexpected_subscription_items');
   const priceId = subscription.items.data[0]?.price.id ?? null;
   let userId = subscription.metadata.user_id;
 
@@ -25,8 +26,9 @@ export async function syncStripeSubscription(subscription: Stripe.Subscription) 
   const planId = pricePlanId ?? metadataPlanId;
   if (!userId || !planId || !customerId) throw new Error('unrecognized_subscription_identity');
 
-  const ends = subscription.items.data.map(item => item.current_period_end).filter(Number.isFinite);
-  const periodEnd = ends.length ? new Date(Math.max(...ends) * 1000).toISOString() : null;
+  const periodEnd = Number.isFinite(subscription.items.data[0].current_period_end)
+    ? new Date(subscription.items.data[0].current_period_end * 1000).toISOString()
+    : null;
   const { error } = await admin.from('subscriptions').upsert({
     user_id: userId,
     stripe_customer_id: customerId,
