@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 
-export const alt = 'Import Rules Verifier · Inteligencia regulatoria europea independiente';
+export const alt = 'ImportVerifier · Inteligencia regulatoria europea independiente';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -15,7 +15,7 @@ export default function OpenGraphImage() {
           <path d="M80 23a50 50 0 0 1 45 45" fill="none" stroke="#4f46e5" strokeWidth="10" strokeLinecap="round" />
           <circle cx="72" cy="77" r="9" fill="#4f46e5" />
         </svg>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, fontSize: 42, fontWeight: 800, letterSpacing: -2 }}><span>Import</span><span style={{ color: '#4f46e5', fontSize: 30, letterSpacing: 2, textTransform: 'uppercase' }}>Rules</span><span>Verifier</span></div>
+        <div style={{ display: 'flex', alignItems: 'baseline', fontSize: 42, fontWeight: 800, letterSpacing: -2 }}><span>Import</span><span style={{ color: '#4f46e5' }}>Verifier</span></div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 62, height: 44, borderRadius: 12, color: '#ffd54a', background: '#12358b', fontSize: 20, fontWeight: 900, letterSpacing: 1 }}>EU</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 940 }}>
