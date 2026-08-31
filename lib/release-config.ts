@@ -7,10 +7,6 @@ const requiredSecrets = [
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
   'STRIPE_PRICE_STARTER',
-  'STRIPE_PRICE_GROWTH',
-  'STRIPE_PRICE_PRO',
-  'STRIPE_PRICE_BUSINESS',
-  'STRIPE_PRICE_AUDIT',
   'OPENAI_API_KEY',
 ] as const;
 
@@ -24,6 +20,7 @@ export function checkReleaseConfig(env: NodeJS.ProcessEnv = process.env): Releas
   }
   for (const key of requiredPublic) if (!env[key]) errors.push(`Falta ${key}.`);
   for (const key of requiredSecrets) if (!env[key]) errors.push(`Falta ${key}.`);
+  if (!env.SILICONFLOW_API_KEY) warnings.push('SILICONFLOW_API_KEY no configurado: la ruta free-first de IA no estará disponible y se usará el fallback configurado.');
   if (!env.RESEND_API_KEY) warnings.push('RESEND_API_KEY no configurado: verifica el proveedor SMTP/transaccional usado por Supabase Auth.');
   if (!env.NEXT_PUBLIC_POSTHOG_KEY) warnings.push('PostHog no configurado: analítica de producto desactivada.');
   return { ok: errors.length === 0, errors, warnings };
