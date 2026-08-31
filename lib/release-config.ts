@@ -1,8 +1,9 @@
 import { isTrustedSiliconFlowBaseUrl } from './ai-provider';
 import { LEGAL_ENV_KEYS, legalConfig } from './legal-config';
+import { IMPORTVERIFIER_SUPABASE_URL, trustedSupabaseProjectUrl } from './supabase/config';
 
+export { IMPORTVERIFIER_SUPABASE_URL } from './supabase/config';
 export const IMPORTVERIFIER_PRODUCTION_URL = 'https://importverifier.netlify.app';
-export const IMPORTVERIFIER_SUPABASE_URL = 'https://hfuwwjdcyudflamwwnon.supabase.co';
 export const IMPORTVERIFIER_UNLIMITED_PRICE_ID = 'price_1UAJy5HJnO8odw1Mn4jMVjFt';
 
 export type ReleaseConfigCheck = { ok: boolean; errors: string[]; warnings: string[] };
@@ -26,7 +27,7 @@ export function checkReleaseConfig(env: NodeJS.ProcessEnv = process.env): Releas
   for (const key of requiredPublic) if (!env[key]) errors.push(`Falta ${key}.`);
   for (const key of requiredSecrets) if (!env[key]) errors.push(`Falta ${key}.`);
 
-  if (production && env.NEXT_PUBLIC_SUPABASE_URL && env.NEXT_PUBLIC_SUPABASE_URL !== IMPORTVERIFIER_SUPABASE_URL) {
+  if (production && env.NEXT_PUBLIC_SUPABASE_URL && !trustedSupabaseProjectUrl(env.NEXT_PUBLIC_SUPABASE_URL, true)) {
     errors.push(`NEXT_PUBLIC_SUPABASE_URL debe apuntar al proyecto canónico de ImportVerifier: ${IMPORTVERIFIER_SUPABASE_URL}.`);
   }
   if (production && env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY && !env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.startsWith('sb_publishable_')) {
