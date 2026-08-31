@@ -87,7 +87,6 @@ export async function buildReport(analysis: Analysis, requestedLanguage?: Langua
   wb.creator = BRAND_NAME; wb.title = `${BRAND_NAME} · ${t.catalogueReport} · ${market.name}`; wb.subject = BRAND_TAGLINE;
   wb.created = new Date(analysis.created_at); wb.modified = new Date();
   wb.calcProperties.fullCalcOnLoad = true;
-  // Sheet names remain stable in Spanish for formula/backwards compatibility; visible content follows the selected language.
   const summary = sheet(wb, 'Resumen', [38, 24, 24, 24], 0, pageLabel);
   const details = sheet(wb, 'Productos', [46, 17, 16, 48], 4, pageLabel);
   const technical = sheet(wb, 'Datos técnicos', [46, 32, 38, 64], 12, pageLabel);
@@ -107,7 +106,7 @@ export async function buildReport(analysis: Analysis, requestedLanguage?: Langua
       : p === 'MEDIA'
         ? localized(language,'Completar campos','Complete fields','Compléter les champs','Felder vervollständigen','Completare i campi','Completar campos')
         : localized(language,'Sin campos básicos vacíos','No empty basic fields','Aucun champ de base vide','Keine leeren Grundfelder','Nessun campo base vuoto','Sem campos básicos vazios');
-    body(summary, 9 + i, [`${t.priority} ${priorityNames[p]}`, { formula: `COUNTIF('Productos'!C5:C${end},"${p}")`, result: count(p) }, reading]);
+    body(summary, 9 + i, [`${t.priority} ${priorityNames[p]}`, { formula: `COUNTIF('Productos'!C5:C${end},"${priorityNames[p]}")`, result: count(p) }, reading]);
     summary.mergeCells(9 + i, 3, 9 + i, 4);
     summary.getRow(9 + i).height = 32;
     summary.getCell(9 + i, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: priorityColors[p][0] } };
