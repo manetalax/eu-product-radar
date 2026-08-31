@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, createElement, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { isLanguage, type Language } from './landing-i18n';
 import { LANGUAGE_COOKIE } from './request-language';
 
@@ -21,8 +21,8 @@ export function LanguageProvider({ initialLanguage, children }: { initialLanguag
     const storedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
     const browserLanguage = navigator.language.slice(0, 2);
     const preferred = [urlLanguage, storedLanguage, initialLanguage, browserLanguage].find(isLanguage);
-    if (preferred && preferred !== language) setLanguageState(preferred);
-  }, [initialLanguage, language]);
+    if (preferred) setLanguageState(current => current === preferred ? current : preferred);
+  }, [initialLanguage]);
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -38,7 +38,7 @@ export function LanguageProvider({ initialLanguage, children }: { initialLanguag
   }, []);
 
   const value = useMemo(() => ({ language, setLanguage }), [language, setLanguage]);
-  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+  return createElement(LanguageContext.Provider, { value }, children);
 }
 
 export function useLanguage(): LanguageContextValue {
