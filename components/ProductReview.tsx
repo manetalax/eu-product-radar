@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import type { Product } from '@/lib/analysis';
 import type { Language } from '@/lib/landing-i18n';
 import { useLanguage } from '@/lib/use-language';
@@ -26,14 +27,36 @@ export type ReviewDraft = { filename:string; marketLabel:string; products:Produc
 export default function ProductReview({ draft, busy, onChange, onCancel, onConfirm }: { draft:ReviewDraft; busy:boolean; onChange:(products:Product[])=>void; onCancel:()=>void; onConfirm:()=>void }) {
   const { language } = useLanguage();
   const t = copy[language];
+  const panelRef = useRef<HTMLDivElement>(null);
   const update = (index:number, key:keyof Product, value:string) => onChange(draft.products.map((product, i) => i === index ? { ...product, [key]:value } : product));
   const remove = (index:number) => onChange(draft.products.filter((_, i) => i !== index));
   const valid = draft.products.length > 0 && draft.products.every(product => product.name.trim());
 
-  return <section className={styles.overlay} role="dialog" aria-modal="true" aria-labelledby="review-title">
-    <div className={styles.panel}>
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const frame = requestAnimationFrame(() => panelRef.current?.querySelector<HTMLElement>('input, textarea, button')?.focus());
+    return () => {
+      cancelAnimationFrame(frame);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !busy) {
+        event.preventDefault();
+        onCancel();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [busy, onCancel]);
+
+  return <section className={styles.overlay} role="dialog" aria-modal="true" aria-labelledby="review-title" aria-describedby="review-description">
+    <div className={styles.panel} ref={panelRef}>
       <header className={styles.header}>
-        <div><span className="eyebrow">{t.eyebrow}</span><h2 id="review-title">{t.title}</h2><p>{t.intro} <strong>{t.quota}</strong></p></div>
+        <div><span className="eyebrow">{t.eyebrow}</span><h2 id="review-title">{t.title}</h2><p id="review-description">{t.intro} <strong>{t.quota}</strong></p></div>
         <span className={styles.count}>{draft.products.length} {t.products} · {draft.marketLabel}</span>
       </header>
       <div className={styles.notice}>{t.file}: <strong>{draft.filename}</strong>. {t.notice}</div>
