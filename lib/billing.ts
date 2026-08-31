@@ -35,8 +35,8 @@ export function auditBillingStatus(): BillingStatus {
   return { planId: 'audit', planName: ONE_TIME_AUDIT.name, status: 'paid', productLimit: ONE_TIME_AUDIT.productLimit, currentPeriodEnd: null, cancelAtPeriodEnd: false };
 }
 
-export function stripePriceId(planId: PlanId): string {
-  if (process.env.NODE_ENV === 'production' && planId === 'starter') return IMPORTVERIFIER_UNLIMITED_PRICE_ID;
+export function stripePriceId(planId: PlanId, production = process.env.NODE_ENV === 'production'): string {
+  if (production && planId === 'starter') return IMPORTVERIFIER_UNLIMITED_PRICE_ID;
   const names: Record<PlanId, string> = {
     starter: 'STRIPE_PRICE_STARTER',
     growth: 'STRIPE_PRICE_GROWTH',
@@ -48,9 +48,8 @@ export function stripePriceId(planId: PlanId): string {
   return value;
 }
 
-export function planIdForStripePrice(priceId: string | null | undefined): PlanId | null {
+export function planIdForStripePrice(priceId: string | null | undefined, production = process.env.NODE_ENV === 'production'): PlanId | null {
   if (!priceId) return null;
-  const production = process.env.NODE_ENV === 'production';
   const entries = [
     ['starter', production ? IMPORTVERIFIER_UNLIMITED_PRICE_ID : process.env.STRIPE_PRICE_STARTER],
     ['growth', process.env.STRIPE_PRICE_GROWTH],
