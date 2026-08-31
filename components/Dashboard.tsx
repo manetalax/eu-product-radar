@@ -18,6 +18,7 @@ import { ProductQuota } from '@/lib/quota';
 import { reportLabels } from '@/lib/report-i18n';
 import { authService } from '@/lib/services/auth-client';
 import { clearPlanIntent, readPlanIntent } from '@/lib/services/plan-interest';
+import { uploadCopy } from '@/lib/upload-i18n';
 import { useLanguage } from '@/lib/use-language';
 
 type Tab = 'dashboard' | 'products' | 'history' | 'reports' | 'settings';
@@ -27,6 +28,7 @@ export default function Dashboard({ email }: { email: string }) {
   const accountT = accountCopy[language];
   const reportT = reportLabels[language];
   const trustT = landingCopy[language].trust;
+  const uploadT = uploadCopy[language];
   const d = (key: DashboardCopyKey, values: Record<string, string | number> = {}) => dashboardText(language, key, values);
   const tabs: [Tab, string, string][] = [
     ['dashboard', d('tabDashboard'), d('tabDashboardDesc')],
@@ -383,7 +385,7 @@ export default function Dashboard({ email }: { email: string }) {
         {notice && <p role="status" className="message success">{notice}</p>}
         <input ref={input} className="file-input" aria-label={d('importAria')} type="file" accept=".csv,.xls,.xlsx,.pdf,.doc,.docx,.rtf,.odt,.txt,.md,.json,.png,.jpg,.jpeg,.webp,.heic,.heif,image/*" disabled={busy || loading || quotaBlocked} onChange={event => { const file = event.target.files?.[0]; if (file) void load(file); }} />
 
-        {(tab === 'dashboard' || tab === 'products') && <div className="card import-card premium-import" onDragEnter={event => { event.preventDefault(); setDragging(true); }} onDragOver={event => event.preventDefault()} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false); }} onDrop={event => { event.preventDefault(); setDragging(false); const file = event.dataTransfer.files?.[0]; if (file) void load(file); }} data-dragging={dragging}>
+        {(tab === 'dashboard' || tab === 'products') && <div className="card import-card premium-import" onDragEnter={event => { event.preventDefault(); if (!busy && !loading && !quotaBlocked) setDragging(true); }} onDragOver={event => event.preventDefault()} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false); }} onDrop={event => { event.preventDefault(); setDragging(false); if (busy || loading || quotaBlocked) return; const files = event.dataTransfer.files; if (files.length > 1) { setNotice(''); setError(uploadT.singleFileOnly); return; } const file = files.item(0); if (file) void load(file); }} data-dragging={dragging} aria-disabled={busy || loading || quotaBlocked}>
           <div className="import-icon" aria-hidden="true">↑</div>
           <div className="import-copy"><div className="import-title-row"><h2>{quotaBlocked ? d('quotaTitle') : d('analyzeFor', { market: marketName(selectedMarket) })}</h2><span className="market-live">{d('active')}</span></div><p>{d('importBody')}</p><div className="format-chips"><span>{d('photo')}</span><span>PDF/WORD</span><span>{d('text')}</span><span>CSV/EXCEL</span><span>{d('max5mb')}</span></div></div>
           <div className="import-actions"><button className="btn primary import-cta" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{busy ? d('analyzing') : quotaBlocked ? d('upgrade') : d('chooseFile')}</button><button className="text-button template-link" onClick={downloadTemplate}>{d('downloadTemplate')}</button></div>
