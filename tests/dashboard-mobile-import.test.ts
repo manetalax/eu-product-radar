@@ -13,9 +13,15 @@ test('mobile import actions span the full upload card and keep touch-sized contr
 
 test('universal file picker remains broad while camera capture is a separate image-only path', () => {
   assert.match(dashboard, /accept="[^"]*\.csv[^"]*\.xlsx[^"]*\.pdf[^"]*\.docx[^"]*\.png[^"]*\.heic[^"]*image\/\*[^"]*"/);
+  assert.doesNotMatch(dashboard, /ref=\{input\}[^>]*capture=/);
   assert.match(dashboard, /ref=\{cameraInput\}[\s\S]*accept="image\/\*" capture="environment"/);
   assert.match(dashboard, /cameraInput\.current\?\.click\(\)/);
   assert.match(dashboard, /if \(cameraInput\.current\) cameraInput\.current\.value = ''/);
+});
+
+test('picker or camera cancellation does not enter the import pipeline', () => {
+  const guardedLoads = dashboard.match(/const file = event\.target\.files\?\.\[0\]; if \(file\) void load\(file\);/g) ?? [];
+  assert.equal(guardedLoads.length, 2);
 });
 
 test('camera affordance is localized across every active language', () => {
