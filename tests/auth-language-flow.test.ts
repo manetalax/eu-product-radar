@@ -13,6 +13,11 @@ test('Google, signup and password reset preserve the selected language', () => {
   assert.match(authForm, /resetPasswordForEmail\(email\.trim\(\), callbackUrl\('\/reset-password'\)\)/);
 });
 
+test('auth back navigation returns directly to the selected static landing locale', () => {
+  assert.match(authForm, /href=\{`\/\$\{language\}`\}/);
+  assert.doesNotMatch(authForm, /href=\{`\/\?lang=\$\{language\}`\}/);
+});
+
 test('production auth callbacks are pinned to the canonical ImportVerifier origin', () => {
   assert.match(authForm, /IMPORTVERIFIER_PRODUCTION_URL/);
   assert.match(authForm, /const localDevelopment = window\.location\.hostname === 'localhost' \|\| window\.location\.hostname === '127\.0\.0\.1'/);
