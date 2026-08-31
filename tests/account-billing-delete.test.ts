@@ -26,3 +26,11 @@ test('el webhook acepta la cancelación tardía de una cuenta ya eliminada', () 
   assert.match(webhook, /subscription\.status === 'canceled' && error\.code === '23503'/);
   assert.doesNotMatch(webhook, /getUserById\(userId\)/);
 });
+
+test('el webhook solo descarta eventos ya procesados y reintenta eventos en processing', () => {
+  assert.match(webhook, /status: 'processing'/);
+  assert.match(webhook, /if \(existing\?\.status === 'processed'\) return NextResponse\.json\(\{ received: true, duplicate: true \}\)/);
+  assert.match(webhook, /status: 'processed'/);
+  assert.match(webhook, /processed_at: completedAt/);
+  assert.doesNotMatch(webhook, /delete\(\)\.eq\('event_id', event\.id\)/);
+});
