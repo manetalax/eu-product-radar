@@ -1,5 +1,7 @@
-const CACHE = 'importverifier-shell-v1';
+const CACHE = 'importverifier-shell-v2';
 const SHELL = ['/', '/login', '/privacy', '/terms', '/manifest.webmanifest', '/icon.svg'];
+const PRIVATE_PREFIXES = ['/api/', '/auth/', '/dashboard', '/reset-password'];
+const CACHEABLE_NAVIGATIONS = new Set(['/', '/login', '/privacy', '/terms']);
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -18,17 +20,20 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/')) return;
+  if (PRIVATE_PREFIXES.some(prefix => url.pathname.startsWith(prefix))) return;
 
   if (request.mode === 'navigate') {
+    if (!CACHEABLE_NAVIGATIONS.has(url.pathname)) return;
     event.respondWith(
       fetch(request)
         .then(response => {
-          const copy = response.clone();
-          caches.open(CACHE).then(cache => cache.put(request, copy));
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE).then(cache => cache.put(url.pathname, copy));
+          }
           return response;
         })
-        .catch(async () => (await caches.match(request)) || (await caches.match('/')))
+        .catch(async () => (await caches.match(url.pathname)) || (await caches.match('/')))
     );
     return;
   }
