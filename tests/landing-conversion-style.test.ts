@@ -28,3 +28,12 @@ test('brand and commerce/payment logos are deliberately larger and mobile-safe',
   assert.match(css, /@media\(max-width:767px\)/);
   assert.match(css, /\.hero-verified-seal\{position:relative/);
 });
+
+test('official EU source links receive visible touch-safe institutional treatment', () => {
+  assert.match(landing, /className="official-links"/);
+  assert.match(landing, /eur-lex\.europa\.eu/);
+  assert.match(landing, /single-market-economy\.ec\.europa\.eu/);
+  assert.match(css, /\.official-links a\{[^}]*min-height:44px/);
+  assert.match(css, /\.official-links a::before\{content:'EU'/);
+  assert.match(css, /\.official-links a:focus-visible/);
+});
