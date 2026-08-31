@@ -36,7 +36,8 @@ export async function DELETE(request: Request) {
     if (subscriptionError && subscriptionError.code !== 'PGRST116') return failure('delete_failed', 503);
 
     const subscriptionId = typeof subscription?.stripe_subscription_id === 'string' ? subscription.stripe_subscription_id : '';
-    if (subscriptionId && subscription.status !== 'canceled') {
+    const subscriptionStatus = typeof subscription?.status === 'string' ? subscription.status : '';
+    if (subscriptionId && subscriptionStatus !== 'canceled') {
       await stripeClient().subscriptions.cancel(subscriptionId);
     }
   } catch {
