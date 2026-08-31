@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { checkReleaseConfig, IMPORTVERIFIER_PRODUCTION_URL, IMPORTVERIFIER_SUPABASE_URL, IMPORTVERIFIER_UNLIMITED_PRICE_ID } from '../lib/release-config';
-import { aiCostPolicy } from '../lib/ai-provider';
+import { aiCostPolicy, isTrustedSiliconFlowBaseUrl } from '../lib/ai-provider';
 
 const baseEnv = {
   NODE_ENV: 'production',
@@ -40,14 +40,29 @@ test('producción rechaza políticas que permitan gasto de IA', () => {
   }
 });
 
-test('producción rechaza una base URL insegura o con credenciales para la IA gratuita', () => {
-  for (const baseUrl of ['http://api.siliconflow.com/v1', 'https://user:pass@api.siliconflow.com/v1', 'not-a-url']) {
+test('producción fija la IA gratuita al endpoint oficial y evita redirección de credenciales', () => {
+  const rejected = [
+    'http://api.siliconflow.com/v1',
+    'https://user:pass@api.siliconflow.com/v1',
+    'https://api.siliconflow.com.evil.example/v1',
+    'https://evil.example/v1',
+    'https://api.siliconflow.com:444/v1',
+    'https://api.siliconflow.com/v2',
+    'https://api.siliconflow.com/v1?redirect=1',
+    'https://api.siliconflow.com/v1#fragment',
+    'not-a-url',
+  ];
+  for (const baseUrl of rejected) {
+    assert.equal(isTrustedSiliconFlowBaseUrl(baseUrl), false, baseUrl);
     const result = checkReleaseConfig({ ...baseEnv, AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key', SILICONFLOW_BASE_URL: baseUrl });
-    assert.equal(result.ok, false);
+    assert.equal(result.ok, false, baseUrl);
     assert.ok(result.errors.some(error => /SILICONFLOW_BASE_URL/));
   }
-  const valid = checkReleaseConfig({ ...baseEnv, AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key', SILICONFLOW_BASE_URL: 'https://api.siliconflow.com/v1' });
-  assert.equal(valid.ok, true);
+  for (const baseUrl of [undefined, 'https://api.siliconflow.com/v1', 'https://api.siliconflow.com/v1/']) {
+    assert.equal(isTrustedSiliconFlowBaseUrl(baseUrl), true);
+    const result = checkReleaseConfig({ ...baseEnv, AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key', ...(baseUrl ? { SILICONFLOW_BASE_URL: baseUrl } : {}) });
+    assert.equal(result.ok, true);
+  }
 });
 
 test('producción no queda lista para cobrar sin identidad legal completa', () => {
