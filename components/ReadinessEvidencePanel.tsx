@@ -3,23 +3,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Analysis } from '@/lib/analysis';
 import { analyze } from '@/lib/analysis';
+import { evidenceFromUnknown, fetchEvidenceForAnalysis, type PersistedEvidence } from '@/lib/evidence';
 import { localizeEuRegulatoryAssessment } from '@/lib/eu-regulatory-i18n';
 import type { Language } from '@/lib/landing-i18n';
 import { localizeMarketReadiness } from '@/lib/market-readiness-i18n';
 import { marketReadiness } from '@/lib/market-readiness';
 import { useLanguage } from '@/lib/use-language';
 
-type EvidenceStatus = 'available' | 'pending' | 'not_applicable';
-type EvidenceRow = {
-  id?: string;
-  product_index: number;
-  evidence_key: string;
-  status: EvidenceStatus;
-  note: string;
-  source_document: string;
-  source_page: string;
-  source_url: string;
-};
+type EvidenceStatus = PersistedEvidence['status'];
+type EvidenceRow = PersistedEvidence;
 
 const blankTrace = { note: '', source_document: '', source_page: '', source_url: '' };
 
@@ -42,10 +34,9 @@ export default function ReadinessEvidencePanel({ analysis }: { analysis: Analysi
   const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
-    fetch(`/api/evidence?analysisId=${encodeURIComponent(analysis.id)}`, { cache: 'no-store' })
-      .then(r => r.ok ? r.json() : null)
-      .then(body => { if (body?.evidence) setRows(body.evidence); })
-      .catch(() => {});
+    let active = true;
+    void fetchEvidenceForAnalysis(analysis.id).then(evidence => { if (active) setRows(evidence); });
+    return () => { active = false; };
   }, [analysis.id]);
 
   function rowFor(productIndex: number, evidenceKey: string): EvidenceRow {
@@ -67,8 +58,10 @@ export default function ReadinessEvidencePanel({ analysis }: { analysis: Analysi
         body: JSON.stringify({ analysisId: analysis.id, productIndex, evidenceKey, status: next.status, note: next.note, sourceDocument: next.source_document, sourcePage: next.source_page, sourceUrl: next.source_url }),
       });
       if (!response.ok) throw new Error('evidence_save_failed');
-      const body = await response.json();
-      setRows(current => [...current.filter(row => !(row.product_index === productIndex && row.evidence_key === evidenceKey)), body.evidence]);
+      const body = await response.json() as { evidence?: unknown };
+      const saved = evidenceFromUnknown(body.evidence);
+      if (!saved) throw new Error('evidence_response_invalid');
+      setRows(current => [...current.filter(row => !(row.product_index === productIndex && row.evidence_key === evidenceKey)), saved]);
       return true;
     } catch {
       setRows(current => [...current.filter(row => !(row.product_index === productIndex && row.evidence_key === evidenceKey)), existing]);
