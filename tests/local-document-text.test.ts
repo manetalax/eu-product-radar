@@ -52,6 +52,19 @@ function storedZip(name: string, content: string): Buffer {
   return Buffer.concat([local, nameBytes, data, central, nameBytes, eocd]);
 }
 
+function zipWithDeclaredEntryCount(count: number): Buffer {
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(0, 4);
+  eocd.writeUInt16LE(0, 6);
+  eocd.writeUInt16LE(count, 8);
+  eocd.writeUInt16LE(count, 10);
+  eocd.writeUInt32LE(0, 12);
+  eocd.writeUInt32LE(0, 16);
+  eocd.writeUInt16LE(0, 20);
+  return eocd;
+}
+
 test('extrae texto útil de un PDF con capa de texto', () => {
   const pdf = Buffer.from('%PDF-1.4\n1 0 obj << /Length 120 >>\nstream\nBT /F1 12 Tf (Producto Lampara LED Fabricante Marca Norte Advertencia No cubrir) Tj ET\nendstream\nendobj\n%%EOF', 'latin1');
   const text = extractPdfText(pdf);
@@ -74,6 +87,13 @@ test('extrae texto de DOCX y ODT sin dependencias externas', () => {
   const odt = storedZip('content.xml', '<office:document-content><text:p>Producto Mochila Marca Norte</text:p><text:p>Uso escolar</text:p></office:document-content>');
   assert.match(extractLocalDocumentText('catalogo.docx', docx), /Auriculares Marca Sonora/);
   assert.match(extractLocalDocumentText('catalogo.odt', odt), /Mochila Marca Norte/);
+});
+
+test('DOCX y ODT rechazan archivos con demasiadas entradas ZIP antes de recorrerlas', () => {
+  assert.match(parserSource, /const MAX_ZIP_ENTRIES = 4096/);
+  const malicious = zipWithDeclaredEntryCount(4097);
+  assert.throws(() => extractLocalDocumentText('catalogo.docx', malicious), /demasiadas entradas internas/);
+  assert.throws(() => extractLocalDocumentText('catalogo.odt', malicious), /demasiadas entradas internas/);
 });
 
 test('convierte RTF a texto antes de enviarlo al modelo gratuito', () => {
