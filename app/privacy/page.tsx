@@ -17,6 +17,6 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
     {t.sections.map(section => <section key={section.title}><h2>{section.title}</h2><p>{section.body}</p></section>)}
     <h2>{t.controllerTitle}</h2>
     {legal ? <p><strong>{legal.providerName}</strong><br />{legal.providerAddress}<br />{t.taxId}: {legal.taxId}<br />{t.jurisdiction}: {legal.jurisdiction}<br />{t.contact}: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a></p> : <p><strong>{t.prerelease}</strong></p>}
-    <p><Link href={`/terms?lang=${language}`}>{t.terms}</Link> · <Link href={`/?lang=${language}`}>{t.back}</Link></p>
+    <p><Link href={`/terms?lang=${language}`}>{t.terms}</Link> · <Link href={`/${language}`}>{t.back}</Link></p>
   </main>;
 }
