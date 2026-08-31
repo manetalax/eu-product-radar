@@ -3,6 +3,7 @@
 import type { Result } from '@/lib/analysis';
 import { localizeEuRegulatoryAssessment } from '@/lib/eu-regulatory-i18n';
 import type { Language } from '@/lib/landing-i18n';
+import { safeOfficialRegulatoryUrl } from '@/lib/regulatory-source-url';
 import { useLanguage } from '@/lib/use-language';
 import styles from './RegulatoryAssessment.module.css';
 
@@ -54,23 +55,29 @@ export default function RegulatoryAssessment({ results }: { results: Result[] })
             <section>
               <h3>{t.rules}</h3>
               <ul className={styles.acts}>
-                {assessment.applicableActs.map(act => <li key={`${act.reference}-${act.applicability}`}>
-                  <div><strong>{act.title}</strong><span>{act.reference}</span></div>
-                  <p>{act.reason}</p>
-                  <a href={act.url} target="_blank" rel="noopener noreferrer">{t.officialSource} ↗</a>
-                </li>)}
+                {assessment.applicableActs.map(act => {
+                  const sourceUrl = safeOfficialRegulatoryUrl(act.url);
+                  return <li key={`${act.reference}-${act.applicability}`}>
+                    <div><strong>{act.title}</strong><span>{act.reference}</span></div>
+                    <p>{act.reason}</p>
+                    {sourceUrl && <a href={sourceUrl} target="_blank" rel="noopener noreferrer">{t.officialSource} ↗</a>}
+                  </li>;
+                })}
               </ul>
             </section>
 
             <section>
               <h3>{t.actions}</h3>
               <div className={styles.obligations}>
-                {assessment.obligations.map(obligation => <article key={obligation.id}>
-                  <strong>{obligation.title}</strong>
-                  <p>{obligation.reason}</p>
-                  <ul>{obligation.evidence.map(item => <li key={item}>{item}</li>)}</ul>
-                  <a href={obligation.source.url} target="_blank" rel="noopener noreferrer">{obligation.source.reference} ↗</a>
-                </article>)}
+                {assessment.obligations.map(obligation => {
+                  const sourceUrl = safeOfficialRegulatoryUrl(obligation.source.url);
+                  return <article key={obligation.id}>
+                    <strong>{obligation.title}</strong>
+                    <p>{obligation.reason}</p>
+                    <ul>{obligation.evidence.map(item => <li key={item}>{item}</li>)}</ul>
+                    {sourceUrl && <a href={sourceUrl} target="_blank" rel="noopener noreferrer">{obligation.source.reference} ↗</a>}
+                  </article>;
+                })}
               </div>
             </section>
 
