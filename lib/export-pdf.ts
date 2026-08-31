@@ -4,6 +4,7 @@ import { documentationFor, GUIDE_VERSION } from './documentation';
 import { guideScopeFor } from './guide-i18n';
 import { BRAND_DOCUMENT_FOOTER, BRAND_DOCUMENT_TITLE, BRAND_INDEPENDENCE_NOTICE, BRAND_NAME, BRAND_SITE_URL, BRAND_TAGLINE } from './brand';
 import { fetchEvidenceForAnalysis, evidenceForProduct } from './evidence';
+import { localizeEuRegulatoryAssessment } from './eu-regulatory-i18n';
 import { marketDisplayFor } from './market-i18n';
 import type { Language } from './landing-i18n';
 import { reportLabels } from './report-i18n';
@@ -115,7 +116,7 @@ export async function pdfBytes(analysis: Analysis, requestedLanguage?: Language)
     for (const [label, value] of [[t.manufacturer, p.manufacturer], [marketDisplay.operator, p.responsible], [t.warnings, p.warning]]) lineBlock(`${label}: ${value || t.notProvided}`);
 
     if (result.regulatory) {
-      const regulatory = result.regulatory;
+      const regulatory = localizeEuRegulatoryAssessment(result.regulatory, language);
       lineBlock(t.regulatoryAssessment, 14, true);
       const confidence = regulatory.confidence === 'high' ? t.confidenceHigh : regulatory.confidence === 'medium' ? t.confidenceMedium : t.confidenceLow;
       lineBlock(`${t.candidateCategory}: ${regulatory.category} | ${t.confidence}: ${confidence}${regulatory.requiresCategoryConfirmation ? ` | ${t.requiresConfirmation}` : ''}`);
