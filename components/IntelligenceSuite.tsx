@@ -2,9 +2,11 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Analysis, analyze } from '@/lib/analysis';
+import { intelligenceCopy } from '@/lib/intelligence-i18n';
 import { PLATFORM_CONNECTORS, detectPlatform } from '@/lib/platform-connectors';
 import { relevantRadarChanges } from '@/lib/radar-match';
 import { regulatoryReadiness, type RegulatoryEvidenceLink } from '@/lib/regulatory-twin';
+import { useLanguage } from '@/lib/use-language';
 import styles from './IntelligenceSuite.module.css';
 
 type HistoryItem = { id: string; filename: string; product_count: number };
@@ -24,17 +26,23 @@ type RadarEvent = {
 };
 
 export default function IntelligenceSuite() {
+  const { language } = useLanguage();
+  const t = intelligenceCopy[language];
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [evidenceRows, setEvidenceRows] = useState<EvidenceRow[]>([]);
   const [radarEvents, setRadarEvents] = useState<RadarEvent[]>([]);
   const [radarLive, setRadarLive] = useState(false);
   const [selected, setSelected] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [question, setQuestion] = useState('¿Qué me falta para poder avanzar con este producto?');
+  const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
   const [error, setError] = useState('');
   const [platformUrl, setPlatformUrl] = useState('');
+
+  useEffect(() => {
+    if (!question) setQuestion(t.defaultQuestion);
+  }, [t.defaultQuestion, question]);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,14 +72,14 @@ export default function IntelligenceSuite() {
           if (!cancelled) setEvidenceRows(evidenceBody.evidence ?? []);
         }
       } catch {
-        if (!cancelled) setError('No se ha podido cargar la capa de inteligencia. El resto del panel sigue disponible.');
+        if (!cancelled) setError(t.loadError);
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
     void loadLatest();
     return () => { cancelled = true; };
-  }, []);
+  }, [t.loadError]);
 
   const results = useMemo(() => analysis ? analyze(analysis.products, analysis.market_code ?? 'EU') : [], [analysis]);
   const result = results[selected];
@@ -116,52 +124,53 @@ export default function IntelligenceSuite() {
           question: question.trim(),
           analysisId: analysis.id,
           productIndex: selected,
-          language: navigator.language || 'es',
+          language,
         }),
       });
       const body = await response.json() as { answer?: string; error?: string };
-      if (!response.ok || !body.answer) throw new Error(body.error || 'No se ha podido consultar ImportVerifier AI.');
+      if (!response.ok || !body.answer) throw new Error(body.error || t.aiError);
       setAnswer(body.answer);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se ha podido consultar ImportVerifier AI.');
+      setError(e instanceof Error ? e.message : t.aiError);
     } finally { setAiBusy(false); }
   }
 
   const detected = platformUrl.trim() ? detectPlatform(platformUrl.trim()) : null;
+  const severityLabel = (severity: 'info' | 'review' | 'action') => severity === 'action' ? t.action : severity === 'review' ? t.review : t.information;
 
-  return <section className={styles.suite} aria-label="ImportVerifier Intelligence Suite">
+  return <section className={styles.suite} aria-label={t.aria}>
     <div className={styles.hero}>
-      <div><span className={styles.eyebrow}>IMPORTVERIFIER INTELLIGENCE SUITE</span><h2>Una capa inteligente sobre cada producto.</h2><p>Pregunta, entiende el estado regulatorio, prioriza cambios y prepara conexiones con tus canales de venta desde un único lugar.</p></div>
+      <div><span className={styles.eyebrow}>IMPORTVERIFIER INTELLIGENCE SUITE</span><h2>{t.heroTitle}</h2><p>{t.heroLead}</p></div>
       <span className={styles.badge}>AI · TWIN · RADAR · CONNECT</span>
     </div>
 
-    {loading ? <div className={styles.empty}>Preparando la inteligencia de tu último análisis…</div> : !analysis ? <div className={styles.empty}>Crea tu primer análisis para activar ImportVerifier AI, Regulatory Twin e Impact Radar.</div> : <div className={styles.grid}>
+    {loading ? <div className={styles.empty}>{t.loading}</div> : !analysis ? <div className={styles.empty}>{t.noAnalysis}</div> : <div className={styles.grid}>
       <article className={`${styles.card} ${styles.wide}`}>
-        <div className={styles.cardHead}><div><h3>ImportVerifier AI</h3><p>Asistente regulatorio contextual. Responde a partir de tu producto, reglas y evidencias guardadas en tu cuenta.</p></div><span className={styles.status}>ACTIVO</span></div>
-        <select className={styles.productSelect} value={selected} onChange={e => { setSelected(Number(e.target.value)); setAnswer(''); }} aria-label="Producto para consultar">
+        <div className={styles.cardHead}><div><h3>ImportVerifier AI</h3><p>{t.aiLead}</p></div><span className={styles.status}>{t.active}</span></div>
+        <select className={styles.productSelect} value={selected} onChange={e => { setSelected(Number(e.target.value)); setAnswer(''); }} aria-label={t.productLabel}>
           {analysis.products.map((item, index) => <option value={index} key={`${item.name}-${index}`}>{item.name}</option>)}
         </select>
-        <form className={styles.aiForm} onSubmit={askAi}><input className={styles.aiInput} value={question} maxLength={2000} onChange={e => setQuestion(e.target.value)} placeholder="Pregunta qué falta, qué pedir al proveedor o por qué aplica una norma…" /><button className={styles.button} disabled={aiBusy || !question.trim()}>{aiBusy ? 'Analizando…' : 'Preguntar a ImportVerifier AI'}</button></form>
+        <form className={styles.aiForm} onSubmit={askAi}><input className={styles.aiInput} value={question} maxLength={2000} onChange={e => setQuestion(e.target.value)} placeholder={t.questionPlaceholder} /><button className={styles.button} disabled={aiBusy || !question.trim()}>{aiBusy ? t.asking : t.ask}</button></form>
         {answer && <div className={styles.answer}>{answer}</div>}
         {error && <div className={styles.error}>{error}</div>}
-        <div className={styles.disclaimer}>El contexto se reconstruye en el servidor desde tu análisis y evidencia guardada. Asistencia orientativa; ImportVerifier no emite certificaciones ni sustituye evaluación jurídica o técnica especializada.</div>
+        <div className={styles.disclaimer}>{t.aiDisclaimer}</div>
       </article>
 
       <article className={styles.card}>
-        <div className={styles.cardHead}><div><h3>Product Regulatory Twin</h3><p>Gemelo regulatorio vivo del producto seleccionado.</p></div><span className={styles.status}>{regulatory ? 'VIVO' : 'SIN CLASIFICAR'}</span></div>
-        {regulatory ? <><div className={styles.meterRow}><div className={styles.meter} style={{ '--score': `${readiness}%` } as React.CSSProperties}><div className={styles.meterInner}>{readiness}%</div></div><div className={styles.facts}><div className={styles.fact}><span>Categoría</span><strong>{regulatory.category}</strong></div><div className={styles.fact}><span>Confianza</span><strong>{regulatory.confidence}</strong></div><div className={styles.fact}><span>Evidencia disponible</span><strong>{suppliedCount}</strong></div><div className={styles.fact}><span>Pendiente / revisar</span><strong>{missingCount + reviewCount}</strong></div></div></div><ul className={styles.list}>{actions.slice(0, 4).map(action => <li key={action}>{action}</li>)}</ul><div className={styles.disclaimer}>El readiness refleja el estado de evidencia guardado por el usuario; no equivale a una certificación de conformidad.</div></> : <div className={styles.empty}>No hay una clasificación regulatoria disponible para este producto.</div>}
+        <div className={styles.cardHead}><div><h3>Product Regulatory Twin</h3><p>{t.twinLead}</p></div><span className={styles.status}>{regulatory ? t.live : t.unclassified}</span></div>
+        {regulatory ? <><div className={styles.meterRow}><div className={styles.meter} style={{ '--score': `${readiness}%` } as React.CSSProperties}><div className={styles.meterInner}>{readiness}%</div></div><div className={styles.facts}><div className={styles.fact}><span>{t.category}</span><strong>{regulatory.category}</strong></div><div className={styles.fact}><span>{t.confidence}</span><strong>{regulatory.confidence}</strong></div><div className={styles.fact}><span>{t.evidenceAvailable}</span><strong>{suppliedCount}</strong></div><div className={styles.fact}><span>{t.pendingReview}</span><strong>{missingCount + reviewCount}</strong></div></div></div><ul className={styles.list}>{actions.slice(0, 4).map(action => <li key={action}>{action}</li>)}</ul><div className={styles.disclaimer}>{t.readinessDisclaimer}</div></> : <div className={styles.empty}>{t.noClassification}</div>}
       </article>
 
       <article className={styles.card}>
-        <div className={styles.cardHead}><div><h3>Regulatory Impact Radar</h3><p>Prioriza cambios oficiales que coinciden con las características del producto seleccionado.</p></div><span className={styles.status}>{radarLive ? 'FUENTES OFICIALES' : 'RADAR'}</span></div>
-        {relevantOfficialEvents.length > 0 ? <ul className={styles.list}>{relevantOfficialEvents.slice(0, 5).map(event => <li className={styles.impact} key={event.id}><span className={styles.dot} /><div><strong>{event.severity === 'action' ? 'Acción' : event.severity === 'review' ? 'Revisar' : 'Información'} · {event.title}</strong><br />{event.summary || event.official_reference || event.source_name}<br /><a href={event.source_url} target="_blank" rel="noopener noreferrer">Fuente oficial ↗</a></div></li>)}</ul> : localImpacts.length ? <><ul className={styles.list}>{localImpacts.map((impact, index) => <li className={styles.impact} key={`${impact.reason}-${index}`}><span className={styles.dot} /><div><strong>{impact.severity === 'action' ? 'Acción' : impact.severity === 'review' ? 'Revisar' : 'Contexto'}</strong><br />{impact.reason}</div></li>)}</ul><div className={styles.disclaimer}>{radarEvents.length ? 'Hay cambios oficiales guardados, pero ninguno coincide todavía con las palabras clave del producto seleccionado.' : 'Todavía no hay eventos regulatorios oficiales persistidos; estos puntos proceden del análisis actual del producto.'}</div></> : <div className={styles.empty}>Sin cambios oficiales relevantes ni impactos destacados para este producto.</div>}
+        <div className={styles.cardHead}><div><h3>Regulatory Impact Radar</h3><p>{t.radarLead}</p></div><span className={styles.status}>{radarLive ? t.officialSources : t.radar}</span></div>
+        {relevantOfficialEvents.length > 0 ? <ul className={styles.list}>{relevantOfficialEvents.slice(0, 5).map(event => <li className={styles.impact} key={event.id}><span className={styles.dot} /><div><strong>{severityLabel(event.severity)} · {event.title}</strong><br />{event.summary || event.official_reference || event.source_name}<br /><a href={event.source_url} target="_blank" rel="noopener noreferrer">{t.officialSource} ↗</a></div></li>)}</ul> : localImpacts.length ? <><ul className={styles.list}>{localImpacts.map((impact, index) => <li className={styles.impact} key={`${impact.reason}-${index}`}><span className={styles.dot} /><div><strong>{impact.severity === 'action' ? t.action : impact.severity === 'review' ? t.review : t.context}</strong><br />{impact.reason}</div></li>)}</ul><div className={styles.disclaimer}>{radarEvents.length ? t.radarNoMatch : t.radarNoEvents}</div></> : <div className={styles.empty}>{t.radarEmpty}</div>}
       </article>
 
       <article className={`${styles.card} ${styles.wide}`}>
-        <div className={styles.cardHead}><div><h3>Connect</h3><p>Base de integración preparada para importar catálogos y refrescar su estado desde las principales plataformas.</p></div><span className={styles.status}>3 CONECTORES</span></div>
-        <div className={styles.platforms}>{PLATFORM_CONNECTORS.map(connector => <div className={styles.platform} key={connector.id}><strong>{connector.name}</strong><small>{connector.capabilities.map(item => item.replaceAll('-', ' ')).join(' · ')}</small><button type="button" disabled aria-label={`${connector.name} pendiente de autorización oficial`}>Próximamente · Autorizar {connector.name}</button></div>)}</div>
-        <div className={styles.urlRow}><input value={platformUrl} onChange={e => setPlatformUrl(e.target.value)} placeholder="Pega una URL HTTPS de Shopify, Amazon o Etsy para detectar la plataforma" /><button className={styles.button} type="button" disabled={!platformUrl.trim()}>Detectar</button></div>
-        {platformUrl.trim() && <div className={styles.detected}>{detected ? `Plataforma detectada: ${PLATFORM_CONNECTORS.find(item => item.id === detected)?.name}. La autorización se activará cuando la integración oficial esté configurada.` : 'No se ha reconocido una URL HTTPS compatible.'}</div>}
+        <div className={styles.cardHead}><div><h3>Connect</h3><p>{t.connectLead}</p></div><span className={styles.status}>3 {t.connectors}</span></div>
+        <div className={styles.platforms}>{PLATFORM_CONNECTORS.map(connector => <div className={styles.platform} key={connector.id}><strong>{connector.name}</strong><small>{connector.capabilities.map(item => item.replaceAll('-', ' ')).join(' · ')}</small><button type="button" disabled aria-label={`${t.upcomingAuthorize} ${connector.name}`}>{t.upcomingAuthorize} {connector.name}</button></div>)}</div>
+        <div className={styles.urlRow}><input value={platformUrl} onChange={e => setPlatformUrl(e.target.value)} placeholder={t.platformPlaceholder} inputMode="url" autoCapitalize="none" autoCorrect="off" /><button className={styles.button} type="button" disabled={!platformUrl.trim()}>{t.detect}</button></div>
+        {platformUrl.trim() && <div className={styles.detected}>{detected ? `${t.platformDetected}: ${PLATFORM_CONNECTORS.find(item => item.id === detected)?.name}. ${t.authorizationPending}` : t.unknownPlatform}</div>}
       </article>
     </div>}
   </section>;
