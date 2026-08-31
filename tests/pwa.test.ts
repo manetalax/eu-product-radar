@@ -29,13 +29,14 @@ test('el manifest localiza descripción y accesos directos sin cambiar rutas', (
   }
 });
 
-test('la PWA nunca incluye páginas privadas en el shell offline', () => {
+test('la PWA nunca incluye páginas privadas ni el manifest localizado en el shell offline', () => {
   const shellMatch = sw.match(/const SHELL = \[([^\]]+)\]/);
   assert.ok(shellMatch);
   const shell = shellMatch[1];
-  for (const privatePath of ['/dashboard', '/api/', '/auth/', '/reset-password']) {
+  for (const privatePath of ['/dashboard', '/api/', '/auth/', '/reset-password', '/manifest.webmanifest']) {
     assert.equal(shell.includes(`'${privatePath}'`), false);
   }
+  assert.match(sw, /url\.pathname === '\/manifest\.webmanifest'/);
 });
 
 test('el service worker excluye explícitamente rutas privadas del caché', () => {
