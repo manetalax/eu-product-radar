@@ -11,8 +11,8 @@ import { Analysis, AnalysisSummary, analysisMarket, analyze, MAX_FILE_BYTES, sup
 import { ProductQuota } from '@/lib/quota';
 import { documentationFor, GUIDE_SCOPE } from '@/lib/documentation';
 import { isActiveMarketCode, MarketCode, MARKETS, MARKETS_BY_RANK } from '@/lib/markets';
-import { formatPrice, formatProductCount, landingCopy } from '@/lib/landing-i18n';
-import { ONE_TIME_AUDIT, PLANS, PLANS_BY_ID, PurchaseId } from '@/lib/plans';
+import { formatPrice } from '@/lib/landing-i18n';
+import { UNLIMITED_PLAN } from '@/lib/plans';
 import { authService } from '@/lib/services/auth-client';
 import { clearPlanIntent, readPlanIntent } from '@/lib/services/plan-interest';
 import { useLanguage } from '@/lib/use-language';
@@ -55,8 +55,10 @@ export default function Dashboard({ email }: { email: string }) {
   const results = useMemo(() => current ? analyze(current.products, analysisMarket(current)) : [], [current]);
   const avg = results.length ? Math.round(results.reduce((sum, result) => sum + result.score, 0) / results.length) : 0;
   const highCount = results.filter(result => result.priority === 'ALTA').length;
-  const quotaBlocked = quota?.remaining === 0;
-  const quotaPercent = quota ? Math.min(100, Math.round((quota.used / quota.limit) * 100)) : 0;
+  const unlimited = quota?.billing.planId === 'starter';
+  const free = quota?.billing.planId === 'free';
+  const quotaBlocked = free && quota?.remaining === 0;
+  const quotaPercent = free && quota ? Math.min(100, Math.round((quota.used / quota.limit) * 100)) : 0;
   const firstName = email.split('@')[0].replace(/[._-]+/g, ' ');
   const canDeleteAccount = deleteEmail.trim().toLocaleLowerCase('en-US') === email.trim().toLocaleLowerCase('en-US')
     && deleteConfirmation === DELETE_ACCOUNT_CONFIRMATION;
@@ -64,9 +66,7 @@ export default function Dashboard({ email }: { email: string }) {
   async function api(url: string, options?: RequestInit) {
     const response = await fetch(url, { ...options, cache: 'no-store' });
     const body = await response.json();
-    if (response.status === 401) {
-      window.location.replace(`/login?lang=${language}`);
-    }
+    if (response.status === 401) window.location.replace(`/login?lang=${language}`);
     if (body.quota) setQuota(body.quota);
     if (!response.ok) {
       const apiError = new Error(body.error || body.errorCode || 'No se ha podido completar la operación.') as Error & { code?: AccountDeletionErrorCode };
@@ -108,10 +108,9 @@ export default function Dashboard({ email }: { email: string }) {
   useEffect(() => {
     const planId = readPlanIntent();
     const checkout = new URLSearchParams(window.location.search).get('checkout');
-    if (checkout === 'success') setNotice('Pago recibido. Stripe está confirmando tu plan; la cuota se actualizará automáticamente.');
-    if (checkout === 'audit-success') setNotice('Pago recibido. Stripe está activando tu auditoría profesional para un catálogo de hasta 30 productos.');
-    if (checkout === 'cancelled') setNotice('No se ha realizado ningún cobro. Puedes elegir un plan cuando quieras.');
-    if (planId) void startCheckout(planId);
+    if (checkout === 'success') setNotice('Pago recibido. Stripe está confirmando Unlimited; el acceso se actualizará automáticamente.');
+    if (checkout === 'cancelled') setNotice('No se ha realizado ningún cobro. Tus 5 productos gratuitos siguen disponibles según el uso de tu cuenta.');
+    if (planId) void startCheckout();
   }, []);
 
   async function load(file: File) {
@@ -231,12 +230,13 @@ export default function Dashboard({ email }: { email: string }) {
     setNotice('Plantilla de Europa descargada. Sustituye el ejemplo por tus productos y conserva los cuatro encabezados.');
   }
 
-  async function startCheckout(planId: PurchaseId) {
+  async function startCheckout() {
+    if (unlimited) return;
     setBusy(true);
     setError('');
     setNotice('');
     try {
-      const { url } = await api('/api/billing/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ purchaseId: planId }) });
+      const { url } = await api('/api/billing/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ purchaseId: 'starter' }) });
       clearPlanIntent();
       window.location.assign(url);
     } catch (checkoutError) {
@@ -313,17 +313,16 @@ export default function Dashboard({ email }: { email: string }) {
           {tabs.map(([id, label, description]) => <button key={id} aria-current={tab === id ? 'page' : undefined} className={tab === id ? 'active' : ''} onClick={() => { setTab(id); setNotice(''); }}><strong>{label}</strong><span>{description}</span></button>)}
         </nav>
         <div className="side-quota">
-          <div className="toprow"><span>Plan {quota?.billing.planName ?? '—'}</span><strong>{quota ? `${quota.remaining} libres` : '—'}</strong></div>
-          <div className="quota-track" aria-label="Uso mensual"><span style={{ width: `${quotaPercent}%` }} /></div>
-          <small>{quota ? quota.billing.planId === 'audit' ? `${quota.remaining} de ${quota.limit} productos disponibles para una carga` : `${quota.used} de ${quota.limit} productos este mes` : 'Calculando uso…'}</small>
-          <button className="side-upgrade" onClick={() => setTab('settings')}>Ver planes →</button>
+          <div className="toprow"><span>Plan {unlimited ? 'Unlimited' : 'Gratis'}</span><strong>{unlimited ? 'Ilimitado' : quota ? `${quota.remaining} libres` : '—'}</strong></div>
+          {!unlimited && <><div className="quota-track" aria-label="Uso gratuito"><span style={{ width: `${quotaPercent}%` }} /></div><small>{quota ? `${quota.used} de ${quota.limit} productos gratuitos utilizados` : 'Calculando uso…'}</small></>}
+          {!unlimited && <button className="side-upgrade" onClick={() => setTab('settings')}>Ver Unlimited →</button>}
         </div>
       </aside>
 
       <section className="workspace" aria-busy={busy}>
         <div className="workspace-heading">
           <div><span className="eyebrow">{tabs.find(([id]) => id === tab)?.[1]}</span><h1>{tab === 'dashboard' ? `Hola, ${firstName || 'bienvenido'}` : tabs.find(([id]) => id === tab)?.[1]}</h1></div>
-          {tab !== 'settings' && <button className="btn primary compact-cta" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{quotaBlocked ? 'Límite alcanzado' : 'Nuevo análisis'}</button>}
+          {tab !== 'settings' && <button className="btn primary compact-cta" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{quotaBlocked ? '5 productos gratuitos usados' : 'Nuevo análisis'}</button>}
         </div>
         <p className="workspace-subtitle">{tab === 'dashboard' ? 'Prepara tu catálogo europeo, prioriza la información incompleta y conserva una trazabilidad clara.' : tabs.find(([id]) => id === tab)?.[2]}</p>
 
@@ -343,9 +342,9 @@ export default function Dashboard({ email }: { email: string }) {
 
         {(tab === 'dashboard' || tab === 'products') && <div className="card import-card premium-import" onDragEnter={event => { event.preventDefault(); setDragging(true); }} onDragOver={event => event.preventDefault()} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false); }} onDrop={event => { event.preventDefault(); setDragging(false); const file = event.dataTransfer.files?.[0]; if (file) void load(file); }} data-dragging={dragging}>
           <div className="import-icon" aria-hidden="true">↑</div>
-          <div className="import-copy"><div className="import-title-row"><h2>{quotaBlocked ? 'Has utilizado tu cuota de este mes' : `Analiza para ${MARKETS[selectedMarket].name}`}</h2><span className="market-live">ACTIVO</span></div><p>Arrastra una foto, PDF, Word, texto, CSV o Excel de hasta 5 MB. Identificaremos los productos y conservaremos el análisis en tu historial privado.</p><div className="format-chips"><span>FOTO</span><span>PDF/WORD</span><span>TEXTO</span><span>CSV/EXCEL</span><span>Máx. 5 MB</span></div></div>
-          <div className="import-actions"><button className="btn primary import-cta" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{busy ? 'Analizando…' : quotaBlocked ? 'Disponible el próximo mes' : 'Elegir archivo'}</button><button className="text-button template-link" onClick={downloadTemplate}>Descargar plantilla</button></div>
-          <div className="quota-inline"><span>{quota ? `${quota.remaining} de ${quota.limit} productos disponibles` : 'Calculando cuota…'}</span><div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div></div>
+          <div className="import-copy"><div className="import-title-row"><h2>{quotaBlocked ? 'Has utilizado tus 5 productos gratuitos' : `Analiza para ${MARKETS[selectedMarket].name}`}</h2><span className="market-live">ACTIVO</span></div><p>Arrastra una foto, PDF, Word, texto, CSV o Excel de hasta 5 MB. Identificaremos los productos y conservaremos el análisis en tu historial privado.</p><div className="format-chips"><span>FOTO</span><span>PDF/WORD</span><span>TEXTO</span><span>CSV/EXCEL</span><span>Máx. 5 MB</span></div></div>
+          <div className="import-actions"><button className="btn primary import-cta" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{busy ? 'Analizando…' : quotaBlocked ? 'Pasar a Unlimited' : 'Elegir archivo'}</button><button className="text-button template-link" onClick={downloadTemplate}>Descargar plantilla</button></div>
+          <div className="quota-inline"><span>{unlimited ? 'Unlimited · análisis sin cuota comercial de productos' : quota ? `${quota.remaining} de ${quota.limit} productos gratuitos disponibles` : 'Calculando prueba gratuita…'}</span>{!unlimited && <div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div>}</div>
         </div>}
         {(tab === 'dashboard' || tab === 'products') && <BrandLogos group="commerce" label="Compatible con exportaciones de" note="Sube fotos, documentos, texto, CSV o Excel. La extracción inteligente identifica los productos y marca como vacíos los datos que no puede verificar." compact />}
 
@@ -368,13 +367,12 @@ export default function Dashboard({ email }: { email: string }) {
 
         {tab === 'history' && <div className="card content-card"><div className="section-heading"><div><span className="eyebrow">ARCHIVO</span><h2>Historial de análisis</h2></div><span className="muted">Página {page + 1}</span></div>{loading ? <div className="empty-state compact"><p role="status">Cargando tus análisis…</p></div> : history.length ? <ul className="history-list premium-history">{history.map(item => { const market = MARKETS[analysisMarket(item)]; return <li key={item.id}><div className="history-file"><span className="file-mark">{market.flag}</span><div><strong>{item.filename}</strong><p>{when(item.created_at)} · {item.product_count} productos · {market.shortName}</p></div></div><button className="btn ghost" disabled={busy} onClick={() => open(item.id)}>Abrir</button></li>; })}</ul> : <div className="empty-state"><div className="empty-mark">□</div><h3>Aquí aparecerá todo lo que analices</h3><p>Los análisis quedan vinculados a tu cuenta para que puedas volver a ellos cuando los necesites.</p><button className="btn primary" disabled={quotaBlocked} onClick={() => input.current?.click()}>Crear primer análisis</button></div>}<div className="history-pagination"><button className="btn ghost" disabled={page === 0 || loading || busy} onClick={() => setPage(value => value - 1)}>← Anterior</button><button className="btn ghost" disabled={!hasMore || loading || busy} onClick={() => setPage(value => value + 1)}>Siguiente →</button></div></div>}
 
-        {tab === 'reports' && <><div className="card content-card"><span className="eyebrow">EXPORTACIÓN · {currentMarket.shortName}</span><h2>Informes listos para trabajar</h2><p className="muted">{current ? `Estás trabajando con ${current.filename}.` : 'Abre un análisis desde el historial para activar las descargas.'}</p><div className="report-grid"><button className="report-option" disabled={!current || busy} onClick={() => exportReport()}><strong>Excel detallado</strong><span>Resumen, productos, datos originales, reglas y guía documental.</span><b>Descargar .xlsx →</b></button><button className="report-option" disabled={!current || busy} onClick={() => exportReport('pdf')}><strong>PDF ejecutivo</strong><span>Resumen, fichas por producto y fuentes oficiales.</span><b>Descargar .pdf →</b></button></div></div>{current && <div className="card content-card documentation-card"><span className="eyebrow">GUÍA DOCUMENTAL · {currentMarket.name}</span><h2>Qué pedir y qué comprobar</h2><p className="muted">{GUIDE_SCOPE}</p>{current.products.map((product, index) => <details key={index}><summary>{product.name}</summary><div className="documentation-body">{documentationFor(product, currentMarketCode).map(action => <section key={action.title}><h3>{action.title}</h3><p><strong>{action.status}</strong> · {action.condition}</p><p><strong>Dónde conseguirlo:</strong> {action.obtain}</p><p><strong>Qué comprobar:</strong> {action.check}</p><a href={action.source} target="_blank" rel="noopener noreferrer">Consultar fuente oficial ↗</a></section>)}</div></details>)}</div>}</>}
+        {tab === 'reports' && <><div className="card content-card"><span className="eyebrow">EXPORTACIÓN · {currentMarket.shortName}</span><h2>Informes listos para trabajar</h2><p className="muted">{current ? `Estás trabajando con ${current.filename}.` : 'Abre un análisis desde el historial para activar las descargas.'}</p><div className="report-grid"><button className="report-option" disabled={!current || busy} onClick={() => exportReport()}><strong>Excel detallado</strong><span>Resumen, productos, datos originales, reglas, evidencia y guía documental.</span><b>Descargar .xlsx →</b></button><button className="report-option" disabled={!current || busy} onClick={() => exportReport('pdf')}><strong>PDF ejecutivo</strong><span>Resumen, fichas por producto, evidencia guardada y fuentes oficiales.</span><b>Descargar .pdf →</b></button></div></div>{current && <div className="card content-card documentation-card"><span className="eyebrow">GUÍA DOCUMENTAL · {currentMarket.name}</span><h2>Qué pedir y qué comprobar</h2><p className="muted">{GUIDE_SCOPE}</p>{current.products.map((product, index) => <details key={index}><summary>{product.name}</summary><div className="documentation-body">{documentationFor(product, currentMarketCode).map(action => <section key={action.title}><h3>{action.title}</h3><p><strong>{action.status}</strong> · {action.condition}</p><p><strong>Dónde conseguirlo:</strong> {action.obtain}</p><p><strong>Qué comprobar:</strong> {action.check}</p><a href={action.source} target="_blank" rel="noopener noreferrer">Consultar fuente oficial ↗</a></section>)}</div></details>)}</div>}</>}
 
         {tab === 'settings' && <div className="settings-grid">
           <div className="card content-card"><span className="eyebrow">CUENTA</span><h2>Tu perfil</h2><p className="account-email settings-email">{email}</p><Link className="btn ghost" href="/reset-password">Cambiar contraseña</Link></div>
-          <div className="card content-card"><span className="eyebrow">PLAN ACTUAL</span><h2>{quota?.billing.planName ?? 'Cargando…'}</h2><div className="settings-quota"><strong>{quota?.remaining ?? '—'}</strong><span>{quota?.billing.planId === 'audit' ? 'productos disponibles para una carga' : 'productos disponibles este mes'}</span></div><div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div><p className="muted">{quota ? quota.billing.planId === 'audit' ? `Auditoría de pago único para un catálogo de hasta ${quota.limit} productos.` : `${quota.limit} productos al mes. La cuota se reinicia el primer día de cada mes.` : 'Consultando tu acceso…'}</p>{quota?.billing.planId !== 'free' && quota?.billing.planId !== 'audit' && <button className="btn ghost" disabled={busy} onClick={manageSubscription}>Gestionar suscripción</button>}</div>
-          <div className="card content-card plan-interest"><span className="eyebrow">PAGO ÚNICO</span><h2>{ONE_TIME_AUDIT.name}</h2><p>Analiza un catálogo de hasta 30 productos y recibe los informes PDF y Excel, sin suscripción ni renovación.</p><button className="btn primary" disabled={busy || quota?.billing.planId === 'audit'} onClick={() => startCheckout('audit')}>{quota?.billing.planId === 'audit' ? 'Auditoría activa' : `Contratar por ${formatPrice('es', ONE_TIME_AUDIT.priceEur)}`}</button></div>
-          <div className="card content-card plan-interest"><span className="eyebrow">SUSCRIPCIONES</span><h2>Elige el plan que necesitas</h2><div className="mini-plans">{PLANS.map(plan => <button className={plan.featured ? 'featured' : ''} key={plan.id} disabled={busy || quota?.billing.planId === plan.id} onClick={() => startCheckout(plan.id)}><span>{plan.name}{plan.featured ? ' · Recomendado' : ''}</span><strong>{formatPrice('es', plan.monthlyPriceEur)}/mes</strong><small>{quota?.billing.planId === plan.id ? 'Plan actual' : `${landingCopy.es.pricing.upTo} ${formatProductCount('es', plan.monthlyProductLimit)}`}</small></button>)}</div><p className="muted">Pago seguro con Stripe. Puedes consultar facturas, cambiar el método de pago o cancelar desde el portal de cliente.</p></div>
+          <div className="card content-card"><span className="eyebrow">PLAN ACTUAL</span><h2>{unlimited ? 'Unlimited' : 'Gratis'}</h2>{unlimited ? <><div className="settings-quota"><strong>∞</strong><span>productos</span></div><p className="muted">Uso ilimitado comercialmente. Solo se mantienen protecciones técnicas razonables contra abuso automatizado.</p><button className="btn ghost" disabled={busy} onClick={manageSubscription}>Gestionar suscripción</button></> : <><div className="settings-quota"><strong>{quota?.remaining ?? '—'}</strong><span>de 5 productos gratis disponibles</span></div><div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div><p className="muted">Cada cuenta puede analizar exactamente 5 productos gratis, sin tarjeta. Después puedes pasar a Unlimited.</p></>}</div>
+          <div className="card content-card plan-interest"><span className="eyebrow">ÚNICA SUSCRIPCIÓN</span><h2>ImportVerifier Unlimited</h2><p>Analiza productos sin cuota comercial, utiliza ImportVerifier AI, Regulatory Twin, Impact Radar e informes PDF/Excel desde un único plan.</p><button className="btn primary" disabled={busy || unlimited} onClick={() => void startCheckout()}>{unlimited ? 'Unlimited activo' : `Contratar por ${formatPrice('es', UNLIMITED_PLAN.monthlyPriceEur)}/mes`}</button><p className="muted">Pago seguro con Stripe. Puedes consultar facturas, cambiar el método de pago o cancelar desde el portal de cliente.</p></div>
           <div className="card content-card expansion-card"><span className="eyebrow">EXPANSIÓN INTERNACIONAL</span><h2>Un núcleo, cada mercado como módulo.</h2><p>Europa está activa. EE. UU., China, Reino Unido y Japón son los siguientes destinos preparados en la arquitectura.</p><div className="expansion-flags">{MARKETS_BY_RANK.map(market => <span key={market.code} title={market.name}>{market.flag}</span>)}</div></div>
           <div className="card content-card settings-security"><span className="eyebrow">PRIVACIDAD</span><h2>Tu información permanece separada</h2><p>Los análisis de esta cuenta no son visibles desde otras cuentas.</p><p className="muted">Evita subir datos personales innecesarios o información confidencial que no sea necesaria para analizar tus productos.</p><TrustMark title="IRV Trust Mark" detail="Comprobaciones internas de transparencia" httpsLabel="Conexión HTTPS segura" explanation="Sello interno de Import Rules Verifier. No es una certificación externa ni acredita la conformidad de un producto." compact /></div>
           <div className="card content-card account-danger-zone">
