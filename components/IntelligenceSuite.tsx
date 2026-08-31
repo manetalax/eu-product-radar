@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Analysis, analyze } from '@/lib/analysis';
 import { localizeEuRegulatoryAssessment } from '@/lib/eu-regulatory-i18n';
 import { intelligenceCopy } from '@/lib/intelligence-i18n';
+import { intelligenceSectionCopy } from '@/lib/intelligence-section-i18n';
 import { platformCapabilityLabel } from '@/lib/platform-capability-i18n';
 import { PLATFORM_CONNECTORS, detectPlatform } from '@/lib/platform-connectors';
 import { relevantRadarChanges } from '@/lib/radar-match';
@@ -30,6 +31,7 @@ type RadarEvent = {
 export default function IntelligenceSuite() {
   const { language } = useLanguage();
   const t = intelligenceCopy[language];
+  const section = intelligenceSectionCopy[language];
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [evidenceRows, setEvidenceRows] = useState<EvidenceRow[]>([]);
   const [radarEvents, setRadarEvents] = useState<RadarEvent[]>([]);
@@ -146,7 +148,7 @@ export default function IntelligenceSuite() {
 
   return <section className={styles.suite} aria-label={t.aria}>
     <div className={styles.hero}>
-      <div><span className={styles.eyebrow}>IMPORTVERIFIER INTELLIGENCE SUITE</span><h2>{t.heroTitle}</h2><p>{t.heroLead}</p></div>
+      <div><span className={styles.eyebrow}>{section.suiteEyebrow}</span><h2>{t.heroTitle}</h2><p>{t.heroLead}</p></div>
       <span className={styles.badge}>AI · TWIN · RADAR · CONNECT</span>
     </div>
 
@@ -163,17 +165,17 @@ export default function IntelligenceSuite() {
       </article>
 
       <article className={styles.card}>
-        <div className={styles.cardHead}><div><h3>Product Regulatory Twin</h3><p>{t.twinLead}</p></div><span className={styles.status}>{regulatory ? t.live : t.unclassified}</span></div>
+        <div className={styles.cardHead}><div><h3>{section.twinTitle}</h3><p>{t.twinLead}</p></div><span className={styles.status}>{regulatory ? t.live : t.unclassified}</span></div>
         {regulatory ? <><div className={styles.meterRow}><div className={styles.meter} style={{ '--score': `${readiness}%` } as React.CSSProperties}><div className={styles.meterInner}>{readiness}%</div></div><div className={styles.facts}><div className={styles.fact}><span>{t.category}</span><strong>{regulatory.category}</strong></div><div className={styles.fact}><span>{t.confidence}</span><strong>{regulatory.confidence}</strong></div><div className={styles.fact}><span>{t.evidenceAvailable}</span><strong>{suppliedCount}</strong></div><div className={styles.fact}><span>{t.pendingReview}</span><strong>{missingCount + reviewCount}</strong></div></div></div><ul className={styles.list}>{actions.slice(0, 4).map(action => <li key={action}>{action}</li>)}</ul><div className={styles.disclaimer}>{t.readinessDisclaimer}</div></> : <div className={styles.empty}>{t.noClassification}</div>}
       </article>
 
       <article className={styles.card}>
-        <div className={styles.cardHead}><div><h3>Regulatory Impact Radar</h3><p>{t.radarLead}</p></div><span className={styles.status}>{radarLive ? t.officialSources : t.radar}</span></div>
+        <div className={styles.cardHead}><div><h3>{section.radarTitle}</h3><p>{t.radarLead}</p></div><span className={styles.status}>{radarLive ? t.officialSources : t.radar}</span></div>
         {relevantOfficialEvents.length > 0 ? <ul className={styles.list}>{relevantOfficialEvents.slice(0, 5).map(event => <li className={styles.impact} key={event.id}><span className={styles.dot} /><div><strong>{severityLabel(event.severity)} · {event.title}</strong><br />{event.summary || event.official_reference || event.source_name}<br /><a href={event.source_url} target="_blank" rel="noopener noreferrer">{t.officialSource} ↗</a></div></li>)}</ul> : localImpacts.length ? <><ul className={styles.list}>{localImpacts.map((impact, index) => <li className={styles.impact} key={`${impact.reason}-${index}`}><span className={styles.dot} /><div><strong>{impact.severity === 'action' ? t.action : impact.severity === 'review' ? t.review : t.context}</strong><br />{impact.reason}</div></li>)}</ul><div className={styles.disclaimer}>{radarEvents.length ? t.radarNoMatch : t.radarNoEvents}</div></> : <div className={styles.empty}>{t.radarEmpty}</div>}
       </article>
 
       <article className={`${styles.card} ${styles.wide}`}>
-        <div className={styles.cardHead}><div><h3>Connect</h3><p>{t.connectLead}</p></div><span className={styles.status}>3 {t.connectors}</span></div>
+        <div className={styles.cardHead}><div><h3>{section.connectTitle}</h3><p>{t.connectLead}</p></div><span className={styles.status}>3 {t.connectors}</span></div>
         <div className={styles.platforms}>{PLATFORM_CONNECTORS.map(connector => <div className={styles.platform} key={connector.id}><strong>{connector.name}</strong><small>{connector.capabilities.map(item => platformCapabilityLabel(language, item)).join(' · ')}</small><button type="button" disabled aria-label={`${t.upcomingAuthorize} ${connector.name}`}>{t.upcomingAuthorize} {connector.name}</button></div>)}</div>
         <div className={styles.urlRow}><input value={platformUrl} onChange={e => setPlatformUrl(e.target.value)} placeholder={t.platformPlaceholder} inputMode="url" autoCapitalize="none" autoCorrect="off" /><button className={styles.button} type="button" disabled={!platformUrl.trim()}>{t.detect}</button></div>
         {platformUrl.trim() && <div className={styles.detected}>{detected ? `${t.platformDetected}: ${PLATFORM_CONNECTORS.find(item => item.id === detected)?.name}. ${t.authorizationPending}` : t.unknownPlatform}</div>}
