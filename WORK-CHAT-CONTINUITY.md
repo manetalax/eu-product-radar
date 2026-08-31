@@ -43,7 +43,8 @@
 - Google auth button includes a visible Google mark; production code pins Google/signup/recovery return flow to the canonical ImportVerifier domain.
 - PWA private-cache hardening, localized manifest, own-brand icons, safe areas, 44px touch targets, iOS form sizing and review-modal keyboard/scroll behavior are covered.
 - PWA cache is restricted to public static style/script/image/font requests and refuses private/no-store/no-cache responses.
-- Upload UI supports spreadsheet/document/photo inputs and declares `.heic`, `.heif` and `image/*`; server recognizes HEIC/HEIF when MIME information agrees.
+- Upload UI supports spreadsheet/document/photo inputs and declares `.heic`, `.heif` and `image/*`.
+- **Mobile photo MIME robustness hardened 2026-08-31:** Product Extraction now validates PNG/JPEG/WebP/HEIC/HEIF from binary signatures plus filename extension and any MIME metadata that exists. Legitimate Safari/iOS/iPadOS images with blank/`application/octet-stream` MIME are accepted only when their magic bytes agree; extension spoofing and MIME/signature disagreement remain fail-closed. The image `data:` payload is normalized to the detected MIME before calling vision.
 - Mobile cards wrap long unbroken filenames and constrain flex children.
 - PDF/XLSX/template downloads use explicit filenames, Blob URLs and 60-second delayed revocation for Safari/iPadOS save-to-Files robustness.
 - Dashboard API parsing is defensive against malformed/non-object JSON.
@@ -52,8 +53,10 @@
 - `ACTIVE_MARKET_CODES` remains EU-only; US/CN/GB/JP are structurally isolated and inactive.
 
 ## CI / HEAD last verified 2026-08-31
-- Previous exact head `63435feb9794a27565c7fea2bc316a3f6e0bac0f` had GitHub release verification **SUCCESS** and Netlify Deploy Preview for **importverifier** **SUCCESS**.
-- Functional security head `a13a405f2cfaca746de7a058e7e3d054e0e0c373` adds the market-guidance host policy and its regression tests. Exact-head GitHub `verify` completed **SUCCESS**; Netlify checks were still processing at the last observation.
+- Functional head `4243be6ce56d36b0a710bb5a8322c427928f1771` contains mobile image signature/MIME hardening and repaired regression coverage.
+- GitHub `ImportVerifier release check` **#1067 SUCCESS** on that exact head: `npm ci`, **252/252 tests**, `npm run typecheck` and `npm run build` passed.
+- Netlify Deploy Preview for **importverifier** is **READY** on the exact same functional head `4243be6ce56d36b0a710bb5a8322c427928f1771` at `https://deploy-preview-4--importverifier.netlify.app`.
+- During this work an intermediate CI run correctly exposed stale static assertions, then a TypeScript-target incompatibility in a test regex; both were repaired before the green exact-head run.
 - PR #4 remains **open**, mergeable and **not merged**.
 
 ## Production facts last checked 2026-08-31
@@ -67,10 +70,10 @@
 - Radar persisted events remain 0; keep `REGULATORY_RADAR_LIVE=false` until official ingestion succeeds.
 
 ## IN PROGRESS / NEXT — execute without asking
-1. Reconfirm exact newest HEAD GitHub CI and Netlify Deploy Preview; repair any regression immediately.
-2. **Mobile photo MIME robustness:** static QA found that `Dashboard` substitutes `application/octet-stream` when browser `File.type` is empty, while Product Extraction currently requires image MIME agreement for known image extensions. Harden the path for legitimate iOS/iPadOS HEIC/HEIF/JPEG selections with missing MIME without weakening spoofing protection; prefer magic-byte/type normalization and regression tests rather than trusting extension alone.
-3. Continue static mobile/iPhone/iPad/PWA QA around drag/drop multiple-file behavior and save-to-Files. Current drag/drop intentionally consumes only the first file; make that behavior explicit or reject multi-file drops rather than silently ignoring extras if UX copy/flow is updated.
-4. Continue security sweep of external links and customer-facing provenance. Market guidance host drift is now regression-protected; keep future-market domains exact and inactive until legally substantiated.
+1. Reconfirm exact newest HEAD GitHub CI and Netlify Deploy Preview after the continuity-only commit; repair any regression immediately.
+2. **Mobile multi-file drag/drop:** Dashboard currently consumes only `event.dataTransfer.files?.[0]`. Make this behavior explicit or reject multi-file drops with localized UX rather than silently ignoring extra files; preserve touch/file-picker behavior.
+3. Continue static mobile/iPhone/iPad/PWA QA around camera/photo import and save-to-Files after the MIME hardening; real-device validation remains external.
+4. Continue security sweep of external links and customer-facing provenance. Market guidance host drift is regression-protected; keep future-market domains exact and inactive until legally substantiated.
 5. Recheck production Auth logs after Supabase/Netlify domain wiring is corrected; canonical Google login must never return to the old domain.
 6. Use `/importverifier-sample-5-products.csv` for final new-account acceptance once canonical Auth works; prove history/PDF/XLSX end-to-end from that account.
 7. Keep EU as the only active market; do not remove historical plan IDs/monthly schema merely for naming cleanliness.
