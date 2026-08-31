@@ -5,6 +5,7 @@ import { dashboardDictionaries, dashboardText } from '../lib/dashboard-copy-v2';
 
 const languages = ['es','en','fr','de','it','pt'] as const;
 const dashboardSource = readFileSync(new URL('../components/Dashboard.tsx', import.meta.url), 'utf8');
+const dashboardPage = readFileSync(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8');
 
 test('el dashboard tiene exactamente las mismas claves en seis idiomas', () => {
   const expected = Object.keys(dashboardDictionaries.es).sort();
@@ -41,4 +42,11 @@ test('Dashboard.tsx está conectado estructuralmente al idioma activo', () => {
   assert.doesNotMatch(dashboardSource, /\bGUIDE_SCOPE\b/);
   assert.doesNotMatch(dashboardSource, /formatPrice\('es'/);
   assert.doesNotMatch(dashboardSource, /\['dashboard', 'Resumen', 'Vista general'\]/);
+});
+
+test('dashboard dynamic route seeds language server-side before customer UI hydration', () => {
+  assert.match(dashboardPage, /lang\?: string/);
+  assert.match(dashboardPage, /const language = await serverLanguage\(params\.lang\)/);
+  assert.match(dashboardPage, /redirect\(`\/login\?lang=\$\{language\}`\)/);
+  assert.match(dashboardPage, /<LanguageProvider initialLanguage=\{language\}>/);
 });
