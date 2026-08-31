@@ -1,16 +1,21 @@
 export const PRIVATE_HEADERS = { 'Cache-Control': 'private, no-store, max-age=0' };
 export const MAX_BODY_BYTES = 2 * 1024 * 1024;
 
-export function sameOrigin(request: Request) {
-  const expected = process.env.NEXT_PUBLIC_SITE_URL;
-  if (!expected) return false;
+export function configuredSiteOrigin(value: string | undefined = process.env.NEXT_PUBLIC_SITE_URL): string | null {
+  if (!value) return null;
   try {
-    const expectedUrl = new URL(expected);
-    if (expectedUrl.protocol !== 'https:' && expectedUrl.hostname !== 'localhost') return false;
-    return request.headers.get('origin') === expectedUrl.origin;
+    const parsed = new URL(value);
+    if (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost') return null;
+    if (parsed.username || parsed.password) return null;
+    return parsed.origin;
   } catch {
-    return false;
+    return null;
   }
+}
+
+export function sameOrigin(request: Request) {
+  const expectedOrigin = configuredSiteOrigin();
+  return Boolean(expectedOrigin) && request.headers.get('origin') === expectedOrigin;
 }
 
 export async function readJsonBody(request: Request): Promise<unknown> {
