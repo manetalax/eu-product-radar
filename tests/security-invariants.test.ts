@@ -80,11 +80,16 @@ test('analysis evidence composite FK rejects cross-account ownership even outsid
     await db.exec(migration('202608310002_evidence_traceability.sql'));
     await db.exec(migration('202608310007_evidence_owner_fk.sql'));
 
+    // Create the analysis through the same identity contract the quota trigger expects.
+    // The evidence assertions below still execute as the database owner, so RLS cannot
+    // be what makes the cross-account write fail; only the composite FK can do that.
+    await db.query(`select set_config('request.jwt.claim.sub',$1,false)`, [owner]);
     const products = JSON.stringify([{ name: 'Producto', manufacturer: '', responsible: '', warning: '' }]);
     const analysis = await db.query<{ id: string }>(
       'insert into public.analyses(user_id,filename,products) values ($1,$2,$3::jsonb) returning id',
       [owner, 'producto.csv', products],
     );
+    await db.query(`select set_config('request.jwt.claim.sub','',false)`);
 
     await assert.rejects(
       db.query(
