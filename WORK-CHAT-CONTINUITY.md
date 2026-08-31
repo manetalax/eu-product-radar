@@ -26,6 +26,7 @@
 - Public acceptance sample `public/importverifier-sample-5-products.csv` contains exactly five distinct EU products and is regression-tested.
 - Stripe live canonical offer is `ImportVerifier Unlimited` at EUR 9.95/month (`price_1UAJy5HJnO8odw1Mn4jMVjFt`). Checkout revalidates price/currency/amount/month interval and only accepts internal `starter`.
 - Checkout/portal URLs are server-allowlisted to canonical Stripe HTTPS hosts; provider/Supabase exception details do not leak to customers. Subscription synchronization, webhook ordering, entitlement, cancellation and account-deletion billing safety fail closed.
+- **Client billing redirect boundary hardened 2026-08-31:** reusable `trustedStripeNavigationUrl` accepts only exact credential-free HTTPS Stripe surfaces (`checkout.stripe.com` for Checkout, `billing.stripe.com` for Portal), rejects wrong-surface/lookalike/port/credential schemes, and the free-trial upgrade CTA now validates the returned Checkout URL before navigation. Checkout-return confirmation also requires an explicit `confirmed === true` object response and never renders raw server/parser error strings. Regression coverage locks these properties.
 - RLS/account isolation, evidence ownership, privileged-table deny-all posture and server-only privilege hardening are implemented.
 - Evidence URLs are sanitized at persistence/API/render/export/AI-context boundaries.
 - Official Radar URLs are HTTPS allowlisted and revalidated at ingestion/API/render/AI-context boundaries; non-default ports are rejected.
@@ -56,10 +57,10 @@
 - `ACTIVE_MARKET_CODES` remains EU-only; US/CN/GB/JP are structurally isolated and inactive.
 
 ## CI / HEAD last verified 2026-08-31
-- Functional head `2a64ef2a5c27f2c3b4089873ebc0582814f62bef` contains the hardened PWA public-shell cache boundary plus defensive Intelligence Suite API parsing/error privacy and their regression coverage.
-- GitHub `ImportVerifier release check` **#1087 SUCCESS** on that exact functional head: `npm ci`, **257 tests**, `npm run typecheck` and `npm run build` passed.
-- Intermediate release check **#1085 FAILURE** was caused only by a test RegExp `s` flag incompatible with the current TypeScript target; production code/tests otherwise passed. Commit `2a64ef2a…` replaced the incompatible assertion and #1087 verified the repair.
-- Previous exact-head Netlify Deploy Preview for **importverifier** was READY; reconfirm the preview after this continuity-only commit before treating the newest HEAD as preview-verified.
+- Functional head `31c37930a95a25db5838db579562c2e278645f63` contains client-side Stripe Checkout validation for the free-trial CTA, defensive checkout-confirm response handling/error privacy, shared Stripe navigation validation and regression coverage.
+- GitHub `ImportVerifier release check` **#1093 SUCCESS** on that exact functional head: `npm ci`, **260 tests**, `npm run typecheck` and `npm run build` passed.
+- Intermediate release check **#1091 FAILURE** on `536ea9aea8ec7ac509fc4461dfdae684be9a03e9` was caused only by the pre-existing `checkout-return-resilience` test expecting the previous parser syntax. The hardened production behavior and 259/260 tests passed; `31c37930…` updated that regression to assert defensive parsing/privacy semantics and #1093 verified the repair.
+- Netlify Deploy Preview for **importverifier** was READY on intermediate functional commit `536ea9aea8ec7ac509fc4461dfdae684be9a03e9`; reconfirm the preview after the regression-test-only commit and this continuity update before treating the newest HEAD as preview-verified.
 - PR #4 remains **open** and **not merged**.
 
 ## Production facts last checked 2026-08-31
@@ -74,9 +75,9 @@
 
 ## IN PROGRESS / NEXT — execute without asking
 1. Reconfirm exact newest HEAD GitHub CI and Netlify Deploy Preview after this continuity-only commit; repair any regression immediately.
-2. Harden Dashboard client-side Stripe navigation as defense in depth: reuse `trustedStripeNavigationUrl` before `window.location.assign` for Checkout and Portal, without weakening the already server-side allowlisted billing boundary.
+2. Complete Dashboard billing defense in depth: import/reuse `trustedStripeNavigationUrl` before `window.location.assign` in both `startCheckout` and `manageSubscription`; fail to localized payment/portal errors if the response URL is absent or untrusted.
 3. Continue static mobile/iPhone/iPad/PWA QA around camera/photo import, drag/drop states and save-to-Files; real-device validation remains external.
-4. Continue security sweep of remaining client API response-shape/trust boundaries and customer-facing external links without duplicating the already-protected market/evidence/Radar URL work.
+4. Continue security sweep of remaining client API response-shape/trust boundaries, especially Dashboard `api()` handling of server `body.error`, and customer-facing external links without duplicating the already-protected market/evidence/Radar URL work.
 5. Recheck production Auth logs after Supabase/Netlify domain wiring is corrected; canonical Google login must never return to the old domain.
 6. Use `/importverifier-sample-5-products.csv` for final new-account acceptance once canonical Auth works; prove history/PDF/XLSX end-to-end from that account.
 7. Keep EU as the only active market; do not remove historical plan IDs/monthly schema merely for naming cleanliness.
