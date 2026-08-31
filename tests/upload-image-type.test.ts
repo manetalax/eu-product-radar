@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { sniffSupportedImageMime, validateImageUploadType } from '../lib/upload-image-type';
 
 const bytes = (...values: number[]) => Uint8Array.from(values);
@@ -57,4 +58,12 @@ test('rejects extension spoofing and MIME/signature disagreement', () => {
     validateImageUploadType('photo.jpg', 'application/octet-stream', 'application/octet-stream', ascii('%PDF-1.7')),
     { ok: false, reason: 'unrecognized-signature' },
   );
+});
+
+test('product extraction normalizes signature-verified image data before vision', () => {
+  const route = readFileSync(new URL('../app/api/product-extraction/route.ts', import.meta.url), 'utf8');
+  assert.match(route, /\^data:\(\[\^;,\]\*\);base64/);
+  assert.match(route, /sniffSupportedImageMime\(upload\.bytes\)/);
+  assert.match(route, /data:\$\{detectedMime\};base64,\$\{upload\.bytes\.toString\('base64'\)\}/);
+  assert.match(route, /generateVisionText\(normalizedDataUrl,/);
 });
