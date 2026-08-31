@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkReleaseConfig, IMPORTVERIFIER_PRODUCTION_URL } from '../lib/release-config';
+import { checkReleaseConfig, IMPORTVERIFIER_PRODUCTION_URL, IMPORTVERIFIER_UNLIMITED_PRICE_ID } from '../lib/release-config';
 import { aiCostPolicy } from '../lib/ai-provider';
 
 const baseEnv = {
@@ -11,7 +11,7 @@ const baseEnv = {
   SUPABASE_SECRET_KEY: 'secret-key',
   STRIPE_SECRET_KEY: 'sk_live_example',
   STRIPE_WEBHOOK_SECRET: 'whsec_example',
-  STRIPE_PRICE_STARTER: 'price_example',
+  STRIPE_PRICE_STARTER: IMPORTVERIFIER_UNLIMITED_PRICE_ID,
   LEGAL_PROVIDER_NAME: 'Example Provider SL',
   LEGAL_PROVIDER_ADDRESS: 'Example street 1, Madrid, Spain',
   LEGAL_TAX_ID: 'B00000000',
@@ -45,6 +45,12 @@ test('producción no queda lista para cobrar sin identidad legal completa', () =
   const result = checkReleaseConfig({ ...incomplete, AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key' });
   assert.equal(result.ok, false);
   assert.ok(result.errors.some(error => /información legal obligatoria/));
+});
+
+test('producción rechaza un Stripe price distinto del Unlimited live canónico', () => {
+  const result = checkReleaseConfig({ ...baseEnv, STRIPE_PRICE_STARTER: 'price_stale', AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key' });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some(error => error.includes(IMPORTVERIFIER_UNLIMITED_PRICE_ID)));
 });
 
 test('Radar live exige un secreto de ingesta fuerte y compartible', () => {
