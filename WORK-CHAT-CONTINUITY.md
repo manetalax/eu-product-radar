@@ -10,7 +10,7 @@
 ## Read order
 1. This file — latest operational state; wins over stale text.
 2. `WORK-HANDOFF-IMPORTVERIFIER.md` — background/architecture.
-3. Latest PR #4 HEAD + latest CI.
+3. Latest PR #4 HEAD + exact-HEAD CI.
 4. `AGENTS.md` — autonomous execution standard.
 
 ## Commercial invariants
@@ -21,139 +21,97 @@
 - End users see only **ImportVerifier AI**, never provider/model names.
 - Production paid checkout stays blocked until truthful legal provider data is configured.
 
-## DONE — billing / account safety
+## DONE — billing / account / quota safety
 - Stripe live Unlimited product exists at EUR 9.95/month; canonical price `price_1UAJy5HJnO8odw1Mn4jMVjFt` is active, monthly and mapped internally to `starter`.
-- Checkout only accepts `starter` and re-validates active EUR 9.95 monthly Stripe price before redirect.
-- Release config now also rejects any different `STRIPE_PRICE_STARTER` in production; `.env.production.example` pins the canonical non-secret price ID.
-- Billing entitlement only treats active/trialing + unexpired subscriptions as paid.
-- Portal validates canonical site URL before creating Stripe session.
-- Production legal guard requires `LEGAL_PROVIDER_NAME`, `LEGAL_PROVIDER_ADDRESS`, `LEGAL_TAX_ID`, `LEGAL_JURISDICTION`, `LEGAL_REFUND_POLICY`; obvious placeholders such as TODO/TBD/CHANGE_ME are rejected.
-- Privacy and Terms render configured legal identity/refund policy; otherwise paid checkout remains explicitly disabled.
-- Account deletion cancels any Stripe subscription before deleting the Supabase user; deletion aborts if cancellation fails.
-- Production `delete-account` Edge Function is ACTIVE, JWT-protected, matches repository source, revokes sessions globally and then deletes the user.
-- Stripe cancellation webhook safely acknowledges a terminal canceled subscription arriving after Supabase user deletion.
-- **Stripe live production webhook now exists and is enabled** at `https://importverifier.netlify.app/api/billing/webhook`, endpoint id `we_1UAMNFHJnO8odw1MlqGn7YFT`, for checkout completion/async success and subscription create/update/delete.
-- The webhook signing secret was obtained securely from Stripe but must still be placed in Netlify as `STRIPE_WEBHOOK_SECRET`; never expose it in chat or repository.
+- Checkout accepts only `starter`, re-validates the canonical active EUR 9.95 monthly price and production release config rejects another `STRIPE_PRICE_STARTER`.
+- Billing entitlement requires active/trialing + unexpired subscription; portal validates canonical site URL.
+- Production legal guard requires real provider identity/address/tax/jurisdiction/refund policy; paid checkout remains deliberately disabled until configured.
+- Account deletion cancels Stripe first, aborts safely on cancellation failure, revokes sessions globally and deletes the Supabase user.
+- Stripe cancellation webhook safely handles terminal events after account deletion.
+- Live webhook endpoint exists at `https://importverifier.netlify.app/api/billing/webhook`; signing secret still must be placed in Netlify externally.
+- Lifetime free usage is enforced cumulatively at 5 products; historical counters were normalized without granting extra quota.
 
-## DONE — lifetime free trial / database integrity
-- Production trigger enforces cumulative lifetime use: new free accounts cannot persist more than 5 products total.
-- Historical pre-lifetime usage was normalized in production so no `free_account_usage.product_count` remains above 5; this did not grant any additional free usage.
-- Migration `20260831040918_normalize_lifetime_free_usage.sql` is applied and persisted in the repo.
-- Composite evidence ownership FK has a covering `(analysis_id,user_id)` index in production and repository migration `20260831035722_analysis_evidence_owner_fk_index.sql`.
-- Supabase advisors no longer report the unindexed evidence ownership FK.
+## DONE — database / evidence / RLS security
+- RLS is active on analyses, evidence, free usage, one-time audit history and subscriptions with user ownership policies.
+- Composite `(analysis_id,user_id)` FK prevents cross-account evidence linkage even outside RLS and has a covering index.
+- Server-only telemetry/rate-limit/Radar/webhook tables expose no table privileges to `anon` or `authenticated`.
+- Relevant SECURITY DEFINER functions are not executable by default PUBLIC.
+- Evidence traceability is persisted as requirement → status → document → page/section → note → HTTPS URL.
+- Evidence keys remain canonical/stable across UI language changes so saved evidence is not orphaned by localization.
 
-## DONE — database / RLS security verification
-- RLS is active on analyses, evidence, free usage, one-time audit history and subscriptions.
-- Ownership policies use `auth.uid()`; evidence insert/update also verifies ownership of the linked analysis.
-- Server-only tables `ai_usage_events`, `api_rate_limits`, `regulatory_change_events`, `stripe_webhook_events` grant no table privileges to `anon` or `authenticated`.
-- Public SECURITY DEFINER functions currently relevant to quota/rate-limit/RLS bootstrap have execution restricted to `postgres`, not default PUBLIC.
-- Supabase security advisor still reports **Leaked Password Protection Disabled**; this is an Auth-dashboard setting, not a SQL workaround.
-
-## DONE — zero-cost AI / trustworthy context
-- Production default/fail-closed policy is `AI_COST_POLICY=free_only`; release config rejects production policies that permit premium AI spend.
+## DONE — zero-cost AI / upload controls
+- Production policy is fail-closed `AI_COST_POLICY=free_only`; production config rejects policies permitting premium AI spend.
 - SiliconFlow-compatible free text + vision/OCR routing exists; `free_only` never calls OpenAI.
-- CSV/XLS/XLSX parse locally without AI.
-- Images use free vision/OCR when configured.
-- TXT/MD/JSON/RTF and PDF/DOCX/ODT with usable text layer use local extraction + free text model.
+- CSV/XLS/XLSX parse locally without AI; text-layer PDF/DOCX/ODT and text formats extract locally then use free text AI; images use free vision/OCR when configured.
 - Scanned PDF without usable text and legacy `.doc` fail clearly under free_only instead of leaking premium spend.
-- Product-extraction user-visible upload/MIME/rate-limit/free-only errors are now localized ES/EN/FR/DE/IT/PT.
-- `useLanguage()` persists a non-sensitive `iv_lang` cookie; server request-language resolution prioritizes explicit header, then cookie, then `Accept-Language`, Spanish fallback.
-- AI telemetry is server-only and stores no prompts/product/document/user/email/PII.
-- ImportVerifier AI reconstructs owned regulatory context server-side and does not accept browser-supplied regulatory context.
-- Public regulatory-agent response contains only answer + disclaimer; provider/model remain server-side telemetry only.
+- Upload/MIME/data-URL/decoded-size checks run before rate limiting or AI calls; spreadsheet formats are not accepted by the remote extraction endpoint.
+- Atomic server-only rate limits: regulatory AI 60/account/hour; AI extraction 30 documents/account/hour.
+- AI telemetry stores no prompts, product/document content, email or user PII.
+- Regulatory AI reconstructs owned context server-side and does not accept browser-supplied regulatory context.
 
-## DONE — AI abuse / upload controls
-- Atomic server-only Supabase rate limiter applied in production.
-- ImportVerifier AI: 60 requests/account/hour technical guardrail.
-- AI-backed product extraction: 30 documents/account/hour technical guardrail.
-- Product extraction validates filename extension, declared MIME, data-URL MIME and decoded byte size before rate limiting or any AI call.
-- Remote extraction endpoint does not accept CSV/XLS/XLSX; spreadsheets remain local parsing only.
-- Image MIME allowlist covers PNG/JPEG/WebP/HEIC/HEIF and rejects extension/MIME mismatches.
-- These are technical safeguards, not commercial quotas.
-
-## DONE — regulatory engine / evidence / Twin
-- Versioned EU regulatory engine with candidate category, rules, obligations, uncertainty and official sources.
+## DONE — regulatory engine / Twin / Radar foundation
+- Versioned EU regulatory engine with candidate category, applicable acts, obligations, uncertainty and official HTTPS sources.
 - Product Regulatory Twin uses persisted evidence readiness.
-- Evidence traceability: requirement → status → document → page/section → note → HTTPS URL.
-- Evidence UI, PDF traceability and Excel `Evidencia` worksheet implemented.
-- Composite `(analysis_id,user_id)` FK prevents evidence from being linked to another account's analysis even outside RLS.
-
-## DONE — Regulatory Impact Radar foundation
-- Persistent `regulatory_change_events` store applied in production.
-- Authenticated `/api/regulatory-changes` read endpoint.
-- Official event normalization: HTTPS EU allowlist, size limits, date normalization, stable fingerprint, deduplication.
-- Protected server-only `/api/internal/regulatory-ingest` and `/api/internal/regulatory-refresh`; bearer secret >=32 chars.
-- EUR-Lex adapter uses official RSS 162/161/222, timeout/size guards, CELEX/ELI extraction and product-compliance keyword classification.
-- GitHub workflow `regulatory-radar.yml` is configured for manual execution plus every 6 hours at minute 17 and calls the canonical production refresh endpoint with repository secret only.
-- `REGULATORY_RADAR_LIVE=true` is release-valid only with a strong ingest secret; UI live status also requires official persisted events.
-- Production last checked with **0 Radar events**; do not claim live regulatory monitoring yet.
-- Safety Gate remains future second official source; do not invent undocumented APIs.
+- Regulatory Impact Radar has a persistent event store, authenticated read API, protected ingest/refresh endpoints, stable fingerprints/deduplication and EUR-Lex RSS adapter.
+- GitHub `regulatory-radar.yml` supports manual and scheduled 6-hour refresh calls to the canonical production endpoint using a repository secret.
+- `REGULATORY_RADAR_LIVE=true` is release-valid only with a strong ingest secret and UI live status still requires real persisted official events.
+- Last production check had 0 Radar events; do not claim live monitoring yet.
 
 ## DONE — PWA/mobile/security
-- PWA manifest/service worker/registration implemented.
-- `/dashboard`, `/api`, `/auth`, reset/private content excluded from offline cache.
-- ImportVerifier-owned app icon assets exist and make no institutional/EU-certification claim.
-- Global security headers include HSTS, frame denial, no-sniff, strict referrer, restrictive permissions, same-origin-allow-popups and conservative CSP.
-- `sameOrigin` fails closed if `NEXT_PUBLIC_SITE_URL` is missing/malformed.
-- Intelligence Suite mobile CSS enforces 44px touch targets, keyboard focus visibility, safe areas, wrapping and 16px iOS form controls.
+- PWA manifest/service worker/registration implemented; dashboard/API/auth/reset/private content is excluded from offline caching.
+- Own-brand icon assets make no institutional/EU-certification claim.
+- HSTS, frame denial, no-sniff, strict referrer, restrictive permissions, conservative CSP and fail-closed canonical-origin checks are in place.
+- Mobile CSS covers 44px touch targets, focus visibility, safe areas, wrapping and 16px iOS form controls.
 
 ## DONE — localization / reports
-- `dashboard-copy-v2.ts` is wired structurally into `Dashboard.tsx`; navigation, notices/errors, quota, import, onboarding, KPIs, results, history, reports, settings, privacy and dates follow ES/EN/FR/DE/IT/PT.
-- Dashboard passes selected language explicitly to PDF and Excel exporters and displays Unlimited with exact two-decimal EUR pricing instead of rounding 9.95 to 10.
-- Landing Intelligence (AI/Twin/Radar) and pricing labels no longer leak hardcoded Spanish in secondary languages.
-- Reset-password invalid/expired-session redirect preserves validated language.
-- `report-i18n.ts`, `guide-i18n.ts` and EU `documentationFor(...)` provide six-language visible structure/documentary guidance.
-- Excel now passes selected language explicitly into nested documentary and regulatory worksheets; server-side English tests cover these paths.
-- PDF now localizes visible market name, market operator label, missing-field labels and documentary guidance.
-- `market-i18n.ts` provides display name/short name/operator labels for EU/US/CN/GB/JP in all six supported languages; integration into every remaining report surface is still in progress.
+- Main dashboard navigation, notices/errors, quota, import, onboarding, KPIs, results, history, reports, settings, privacy and dates follow ES/EN/FR/DE/IT/PT.
+- Dashboard exports receive the selected language explicitly and Unlimited pricing uses exact two-decimal EUR formatting.
+- Landing Intelligence/pricing and reset-password language flow are localized.
+- Report/guide/documentation layers provide six-language visible structure and documentary guidance.
+- PDF localizes market/operator/missing-field/documentary surfaces; Excel passes language explicitly into nested documentary and regulatory worksheets.
+- EU regulatory narrative now has deterministic localization for category, applicability reasons, obligations, evidence requests, uncertainty and disclaimer while official act titles/references/URLs stay unchanged.
+- `RegulatoryAssessment` and the latest-regulatory wrapper now use the selected UI language rather than hardcoded Spanish.
+- Readiness/evidence UI is localized in six languages. Localized obligation/evidence text is displayed while persistence continues to use canonical evidence keys, preventing language-switch data loss.
+- Deterministic readiness labels/blockers/actions are localized with regression coverage.
+- `market-i18n.ts` provides market display names/short names/operator labels for EU/US/CN/GB/JP in all six languages; remaining report-surface integration is still in progress.
 - Stable worksheet tab names remain Spanish for formula/backward compatibility at present.
-- **Remaining deep language gap:** the EU regulatory engine's candidate category/reason/obligation/uncertainty narrative originates in Spanish. It needs deterministic ID/reference-based localization before reports can be called fully translated end-to-end.
-- Future-market documentary narratives (US/CN/GB/JP) remain Spanish internally; those markets are not active in customer UX and must be localized before activation.
+- Future-market documentary narratives (US/CN/GB/JP) remain Spanish internally; those markets are not customer-active and must be localized before activation.
 
-## DONE — auth hardening
-- OAuth callback only accepts safe internal destinations.
-- Callback validates/preserves `lang` and has canonical ImportVerifier fallback origin when site URL is missing/malformed.
-- `AuthForm.tsx` propagates selected language through Google OAuth, email signup confirmation and password-reset callback.
-- Google button includes the multicolor Google mark visibly in the UI.
-- Production Auth logs observed successful OAuth flows from a legacy Netlify referer; canonical `importverifier.netlify.app` OAuth must still be explicitly verified after redirect allowlists are confirmed.
-
-## DONE — SEO / public indexing
-- Sitemap includes canonical homepage, Privacy and Terms.
-- Production robots excludes dashboard/API/auth/login/reset surfaces; preview/branch deploys disallow all indexing.
-- Root metadata/canonical/OpenGraph branding uses ImportVerifier/Import Rules Verifier and canonical domain.
-- Dynamic 1200x630 `app/opengraph-image.tsx` exists with own-brand regulatory positioning.
+## DONE — auth / SEO
+- OAuth callback accepts only safe internal destinations, validates/preserves language and has canonical ImportVerifier fallback origin.
+- Google/email signup/reset flows propagate language; Google button has the visible multicolor Google mark.
+- Sitemap, production robots exclusions, canonical metadata/OpenGraph branding and dynamic 1200x630 own-brand OG image are implemented.
 
 ## Production facts last checked 2026-08-31
 - Supabase project: `hfuwwjdcyudflamwwnon`.
-- Free-usage rows checked: no account counter above 5 after normalization.
+- No free-usage counter remained above 5 after normalization.
 - Active Stripe subscriptions in Supabase at check time: 0.
-- Stripe webhook event rows at check time: 0 (webhook was created afterwards and still needs its signing secret in Netlify).
-- Radar events = 0 at last check; do not enable live claim.
+- Stripe webhook event rows at check time: 0 before webhook creation.
+- Radar events: 0 at last check; do not enable live claim.
 - `pg_cron` and `pg_net` are not enabled; do not add hidden dependencies on them.
 
-## LATEST VERIFIED BUILD
-- Commit `c243704fa5c1b449a9b8e505d4997f07d8c94bf7` completed `ImportVerifier release check` run #478 successfully: tests + typecheck + build green.
-- Later legal/config/continuity commits must be checked at their exact HEAD before claiming exact-HEAD green.
+## LATEST CI STATE
+- Starting HEAD for this pass was `0b6858fc4ae879bd7a16f4980a384b8177e87351`; `ImportVerifier release check` run #504 completed successfully.
+- Localization/readiness work then advanced the branch through `d54527772960ef73d81817afb66151b50d558d05`.
+- Run #512 on predecessor `da15c5c8d3cd2978284600d556a3590a083e71aa` passed tests and typecheck and was building when last inspected; exact latest HEAD must still be rechecked before claiming it green.
 - PR #4 remains open, unmerged and mergeable.
 
-## IN PROGRESS — execute without asking
+## IN PROGRESS / NEXT — execute without asking
 1. Keep exact latest HEAD CI green; fix any failure immediately.
-2. Finish deterministic localization of EU regulatory-engine narrative in PDF/Excel/dashboard AI surfaces while preserving official titles/references/URLs verbatim where legally appropriate.
-3. Integrate `marketDisplayFor(...)` into remaining Excel/PDF visible market/operator surfaces without altering canonical market codes or formulas.
-4. Audit remaining price formatting so EUR 9.95 is never rounded to 10 on any customer surface.
-5. Continue security/account/billing sweep and targeted regression tests.
-6. Continue desktop/iPhone/iPad/PWA QA, especially upload/export flows and safe-area/keyboard behavior.
+2. Integrate `marketDisplayFor(...)` into remaining Excel/PDF visible market/operator surfaces without altering canonical market codes or formulas.
+3. Audit remaining customer-visible price formatting so EUR 9.95 is never rounded to 10.
+4. Continue security/account/billing sweep and add targeted regression tests where an invariant is not yet covered.
+5. Continue desktop/iPhone/iPad/PWA QA, especially upload/export flows, table overflow, touch targets, safe-area and keyboard behavior.
+6. Audit ImportVerifier AI/Twin/Radar visible surfaces for any remaining Spanish leakage in EN/FR/DE/IT/PT.
 7. Localize US/CN/GB/JP documentary narratives before any of those markets becomes customer-active.
-8. Refresh `WORK-HANDOFF-IMPORTVERIFIER.md` after the next material architecture/release-state pass.
+8. Refresh `WORK-HANDOFF-IMPORTVERIFIER.md` after the next material architecture/release-state pass or when external production wiring changes.
 
 ## BLOCKED EXTERNAL / USER OR WORK BROWSER NEEDED
-- Netlify: confirm production site `https://importverifier.netlify.app/` deploys the latest PR #4 branch and its production env.
-- Netlify: set the newly created live webhook signing secret as `STRIPE_WEBHOOK_SECRET` (secret must not be copied into chat/repository).
-- Netlify: confirm `STRIPE_PRICE_STARTER=price_1UAJy5HJnO8odw1Mn4jMVjFt`.
-- Netlify: configure `SILICONFLOW_API_KEY`, `AI_COST_POLICY=free_only` and SiliconFlow model vars.
-- Netlify + GitHub repository secret: configure the same >=32-char `REGULATORY_INGEST_SECRET`.
-- Only after scheduled refresh works and official events persist, set `REGULATORY_RADAR_LIVE=true`.
-- Supabase Auth dashboard: enable leaked-password protection and CAPTCHA/signup abuse controls.
+- Netlify: confirm production site deploys latest PR #4 branch and correct production env.
+- Netlify: set live `STRIPE_WEBHOOK_SECRET` securely; confirm canonical `STRIPE_PRICE_STARTER`.
+- Netlify: configure `SILICONFLOW_API_KEY`, `AI_COST_POLICY=free_only` and free-model vars.
+- Netlify + GitHub repository secret: configure the same >=32-char `REGULATORY_INGEST_SECRET`; only after successful official ingestion set `REGULATORY_RADAR_LIVE=true`.
+- Supabase Auth dashboard: enable leaked-password protection and suitable CAPTCHA/signup-abuse controls.
 - Verify Supabase/Google OAuth redirect allowlists for `https://importverifier.netlify.app`.
 - Verify production SMTP/signup/reset on a non-owner email.
 - Configure truthful legal provider identity/address/tax/jurisdiction/refund policy; paid checkout deliberately remains blocked until then.
@@ -163,4 +121,4 @@
 Keep working while any safe/actionable task remains. Human-only blockers go to the external list and must not stop work elsewhere. Never repeat DONE work. Never merge PR #4 without explicit owner instruction.
 
 ## Definition of finished
-Do not call ImportVerifier finished until: exact current CI is green; canonical Netlify runs latest code; 5-product lifetime trial works end-to-end; legal provider data is published; Unlimited checkout/webhook/portal/cancellation pass; production free-only AI works without premium leakage; supported inputs behave honestly; dashboard/reports follow user language; evidence/account isolation passes; Radar claims match actual ingestion; connectors are either truly working or clearly unavailable; and desktop/iPhone/iPad/PWA QA passes.
+Do not call ImportVerifier finished until exact current CI is green; canonical Netlify runs latest code; 5-product lifetime trial works end-to-end; legal provider data is published; Unlimited checkout/webhook/portal/cancellation pass; production free-only AI works without premium leakage; supported inputs behave honestly; dashboard/reports follow user language; evidence/account isolation passes; Radar claims match actual ingestion; connectors are either truly working or clearly unavailable; and desktop/iPhone/iPad/PWA QA passes.
