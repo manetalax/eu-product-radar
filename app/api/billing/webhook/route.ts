@@ -26,6 +26,10 @@ async function syncAudit(session: Stripe.Checkout.Session) {
   if (error) throw error;
 }
 
+async function retrieveLatestSubscription(subscriptionId: string) {
+  return stripeClient().subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] });
+}
+
 export async function POST(request: Request) {
   const signature = request.headers.get('stripe-signature');
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -66,10 +70,11 @@ export async function POST(request: Request) {
         await syncAudit(session);
       } else {
         const subscriptionId = stripeObjectId(session.subscription);
-        if (subscriptionId) await syncStripeSubscription(await stripeClient().subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] }));
+        if (subscriptionId) await syncStripeSubscription(await retrieveLatestSubscription(subscriptionId));
       }
     } else if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
-      await syncStripeSubscription(event.data.object as Stripe.Subscription);
+      const snapshot = event.data.object as Stripe.Subscription;
+      await syncStripeSubscription(await retrieveLatestSubscription(snapshot.id));
     }
 
     const completedAt = new Date().toISOString();
