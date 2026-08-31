@@ -13,11 +13,12 @@ test('Google, signup and password reset preserve the selected language', () => {
   assert.match(authForm, /resetPasswordForEmail\(email\.trim\(\), callbackUrl\('\/reset-password'\)\)/);
 });
 
-test('client auth callbacks only trust a valid HTTPS configured public origin', () => {
-  assert.match(authForm, /let origin = window\.location\.origin/);
-  assert.match(authForm, /const parsed = new URL\(configured\)/);
-  assert.match(authForm, /if \(parsed\.protocol === 'https:'\) origin = parsed\.origin/);
-  assert.doesNotMatch(authForm, /const siteUrl = process\.env\.NEXT_PUBLIC_SITE_URL \|\| window\.location\.origin/);
+test('production auth callbacks are pinned to the canonical ImportVerifier origin', () => {
+  assert.match(authForm, /IMPORTVERIFIER_PRODUCTION_URL/);
+  assert.match(authForm, /const localDevelopment = window\.location\.hostname === 'localhost' \|\| window\.location\.hostname === '127\.0\.0\.1'/);
+  assert.match(authForm, /const origin = localDevelopment \? currentOrigin : IMPORTVERIFIER_PRODUCTION_URL/);
+  assert.doesNotMatch(authForm, /NEXT_PUBLIC_SITE_URL/);
+  assert.doesNotMatch(authForm, /euproductradar\.netlify\.app/);
 });
 
 test('the OAuth callback only propagates validated language values', () => {
