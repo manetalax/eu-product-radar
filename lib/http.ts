@@ -4,7 +4,13 @@ export const MAX_BODY_BYTES = 2 * 1024 * 1024;
 export function sameOrigin(request: Request) {
   const expected = process.env.NEXT_PUBLIC_SITE_URL;
   if (!expected) return false;
-  return request.headers.get('origin') === new URL(expected).origin;
+  try {
+    const expectedUrl = new URL(expected);
+    if (expectedUrl.protocol !== 'https:' && expectedUrl.hostname !== 'localhost') return false;
+    return request.headers.get('origin') === expectedUrl.origin;
+  } catch {
+    return false;
+  }
 }
 
 export async function readJsonBody(request: Request): Promise<unknown> {
