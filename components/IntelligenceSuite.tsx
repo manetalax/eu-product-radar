@@ -109,17 +109,15 @@ export default function IntelligenceSuite() {
     if (!analysis || !product || !result || !question.trim() || aiBusy) return;
     setAiBusy(true); setAnswer(''); setError('');
     try {
-      const context = JSON.stringify({
-        product,
-        result,
-        evidence,
-        radar: relevantOfficialEvents.slice(0, 5),
-        analysis: { filename: analysis.filename, ruleVersion: analysis.rule_version, marketCode: analysis.market_code ?? 'EU' },
-      });
       const response = await fetch('/api/regulatory-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: question.trim(), context, language: navigator.language || 'es' }),
+        body: JSON.stringify({
+          question: question.trim(),
+          analysisId: analysis.id,
+          productIndex: selected,
+          language: navigator.language || 'es',
+        }),
       });
       const body = await response.json() as { answer?: string; error?: string };
       if (!response.ok || !body.answer) throw new Error(body.error || 'No se ha podido consultar ImportVerifier AI.');
@@ -139,14 +137,14 @@ export default function IntelligenceSuite() {
 
     {loading ? <div className={styles.empty}>Preparando la inteligencia de tu último análisis…</div> : !analysis ? <div className={styles.empty}>Crea tu primer análisis para activar ImportVerifier AI, Regulatory Twin e Impact Radar.</div> : <div className={styles.grid}>
       <article className={`${styles.card} ${styles.wide}`}>
-        <div className={styles.cardHead}><div><h3>ImportVerifier AI</h3><p>Asistente regulatorio contextual. Responde a partir de tu producto, reglas y evidencias disponibles.</p></div><span className={styles.status}>ACTIVO</span></div>
+        <div className={styles.cardHead}><div><h3>ImportVerifier AI</h3><p>Asistente regulatorio contextual. Responde a partir de tu producto, reglas y evidencias guardadas en tu cuenta.</p></div><span className={styles.status}>ACTIVO</span></div>
         <select className={styles.productSelect} value={selected} onChange={e => { setSelected(Number(e.target.value)); setAnswer(''); }} aria-label="Producto para consultar">
           {analysis.products.map((item, index) => <option value={index} key={`${item.name}-${index}`}>{item.name}</option>)}
         </select>
         <form className={styles.aiForm} onSubmit={askAi}><input className={styles.aiInput} value={question} maxLength={2000} onChange={e => setQuestion(e.target.value)} placeholder="Pregunta qué falta, qué pedir al proveedor o por qué aplica una norma…" /><button className={styles.button} disabled={aiBusy || !question.trim()}>{aiBusy ? 'Analizando…' : 'Preguntar a ImportVerifier AI'}</button></form>
         {answer && <div className={styles.answer}>{answer}</div>}
         {error && <div className={styles.error}>{error}</div>}
-        <div className={styles.disclaimer}>Asistencia orientativa. ImportVerifier no emite certificaciones ni sustituye evaluación jurídica o técnica especializada.</div>
+        <div className={styles.disclaimer}>El contexto se reconstruye en el servidor desde tu análisis y evidencia guardada. Asistencia orientativa; ImportVerifier no emite certificaciones ni sustituye evaluación jurídica o técnica especializada.</div>
       </article>
 
       <article className={styles.card}>
