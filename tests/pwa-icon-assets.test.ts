@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { manifestFor } from '../lib/pwa-manifest';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const manifest = JSON.parse(readFileSync(join(root, 'public/manifest.webmanifest'), 'utf8')) as { icons?: { src?: string }[] };
+const manifest = manifestFor('en');
 
 test('every manifest icon points to a real public asset', () => {
   assert.ok(Array.isArray(manifest.icons) && manifest.icons.length > 0);
