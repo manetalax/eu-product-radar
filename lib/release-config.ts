@@ -15,6 +15,16 @@ const requiredSecrets = [
 
 const requiredPublic = ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'] as const;
 
+function safeHttpsProviderUrl(value: string | undefined) {
+  if (!value) return true;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'https:' && Boolean(parsed.hostname) && !parsed.username && !parsed.password;
+  } catch {
+    return false;
+  }
+}
+
 export function checkReleaseConfig(env: NodeJS.ProcessEnv = process.env): ReleaseConfigCheck {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -48,6 +58,7 @@ export function checkReleaseConfig(env: NodeJS.ProcessEnv = process.env): Releas
   if (production && costPolicy !== 'free_only') errors.push('Producción debe usar AI_COST_POLICY=free_only para impedir consumo de IA de pago.');
   if (!env.SILICONFLOW_API_KEY && !env.OPENAI_API_KEY) errors.push('Configura al menos un proveedor de IA.');
   if (costPolicy === 'free_only' && !env.SILICONFLOW_API_KEY) errors.push('AI_COST_POLICY=free_only requiere SILICONFLOW_API_KEY.');
+  if (production && !safeHttpsProviderUrl(env.SILICONFLOW_BASE_URL)) errors.push('SILICONFLOW_BASE_URL debe ser una URL HTTPS válida y sin credenciales embebidas.');
   if (!env.SILICONFLOW_API_KEY) warnings.push('SiliconFlow no configurado: no habrá ruta de IA gratuita.');
   if (!env.OPENAI_API_KEY && costPolicy !== 'free_only') warnings.push('OpenAI no configurado: PDF/Word complejos no tendrán fallback documental hasta disponer de parser local.');
 
