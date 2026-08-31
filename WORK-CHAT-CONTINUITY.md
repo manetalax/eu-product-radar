@@ -54,18 +54,20 @@
 - Upload UI supports spreadsheet/document/photo inputs and declares `.heic`, `.heif` and `image/*`.
 - **Mobile photo MIME robustness hardened 2026-08-31:** Product Extraction now validates PNG/JPEG/WebP/HEIC/HEIF from binary signatures plus filename extension and any MIME metadata that exists. Legitimate Safari/iOS/iPadOS images with blank/`application/octet-stream` MIME are accepted only when their magic bytes agree; extension spoofing and MIME/signature disagreement remain fail-closed. The image `data:` payload is normalized to the detected MIME before calling vision.
 - **Multi-file drag/drop ambiguity removed 2026-08-31:** Dashboard now rejects drops containing more than one file without processing any of them, shows localized ES/EN/FR/DE/IT/PT guidance, and ignores drag/drop imports while busy/loading or when the free quota is exhausted. The touch/file picker remains intentionally single-file. Regression coverage prevents silently returning to `files[0]` behavior.
+- **Dedicated mobile camera capture completed 2026-08-31:** Dashboard now keeps the broad universal picker intact and adds a separate image-only `capture="environment"` input for direct iPhone/iPad/mobile camera use. The camera affordance is localized ES/EN/FR/DE/IT/PT, uses the same `load()` pipeline, quota/idempotency checks and server-side binary-signature validation, and resets after processing so the same camera path can be used repeatedly. Static regression coverage locks the separation between universal picker and camera capture.
 - Mobile cards wrap long unbroken filenames and constrain flex children.
 - PDF/XLSX/template downloads use explicit filenames, Blob URLs and 60-second delayed revocation for Safari/iPadOS save-to-Files robustness.
 - Dashboard API parsing is defensive against malformed/non-object JSON.
 - **Intelligence Suite client API boundary hardened 2026-08-31:** history, detail, Evidence, Radar and ImportVerifier AI responses are parsed as defensive JSON objects; failed history/detail HTTP states no longer continue as trusted data; malformed/non-object JSON degrades safely; AI responses require a non-empty string answer; raw server/provider `body.error` values are never rendered to customers. Regression coverage prevents reintroducing parser/provider error leakage.
+- **Trial/Unlimited client quota boundary hardened 2026-08-31:** `FreeTrialUpgradePrompt` and `UnlimitedExperience` no longer infer plan state from optional-chain access on arbitrary 2xx JSON. Both require a successful non-array JSON object and reuse `productQuotaFromUnknown` before showing exhausted-trial or Unlimited state. Malformed/failing responses fail closed; the trial CTA retains its existing trusted Stripe Checkout navigation boundary. Regression coverage locks these properties.
 - PDF/Excel reports include localized regulatory narrative, evidence and source traceability; spreadsheet formula injection is avoided by writing user strings as strings.
 - Public/developer docs no longer point to the obsolete production domain, monthly free reset or legacy public pricing tiers.
 - `ACTIVE_MARKET_CODES` remains EU-only; US/CN/GB/JP are structurally isolated and inactive.
 
 ## CI / HEAD last verified 2026-08-31
-- Functional head `317e07e7556ff82a6907302aae67564b45d837f2` contains the Supabase OAuth navigation allowlist, auth-service enforcement and regression coverage.
-- GitHub `ImportVerifier release check` **#1131 SUCCESS** on that exact functional head completed `npm ci`, tests, `npm run typecheck` and `npm run build` successfully.
-- Previous integrated head `34eb5fc9a6eb3c1c1c6dff2721479484e0d9c79d` has `ImportVerifier release check` **#1125 SUCCESS** with tests, typecheck and build green.
+- Functional head `e4d15f73445eb5b7a09464a7b5ba48f85fd43663` contains the dedicated camera capture, localized camera copy, runtime validation for trial/Unlimited quota clients and regression coverage.
+- GitHub `ImportVerifier release check` **#1149 SUCCESS** on that exact functional head completed `npm ci`, tests, `npm run typecheck` and `npm run build` successfully.
+- Previous head `ffa9b82fcd9a0cd8cdf92965f6ed9a140e522ca9` had `ImportVerifier release check` **#1139 SUCCESS**.
 - This continuity update creates a newer documentation-only HEAD; reconfirm exact newest HEAD CI and Netlify Deploy Preview at the start of the next execution.
 - PR #4 remains **open** and **not merged**.
 
@@ -81,12 +83,13 @@
 
 ## IN PROGRESS / NEXT — execute without asking
 1. Reconfirm exact newest HEAD GitHub CI and Netlify Deploy Preview after this continuity commit; repair any regression immediately.
-2. Continue static mobile/iPhone/iPad/PWA QA around direct camera/photo entry, drag/drop edge states and save-to-Files; real-device validation remains external. Next concrete UX candidate: add a dedicated, fully localized image-only camera affordance using the mobile camera capture path while retaining the existing universal single-file picker and the server-side signature validation.
-3. Continue the remaining customer-facing client API response-shape sweep outside Dashboard/Intelligence/Evidence/latest-assessment/review-gate, prioritizing authenticated surfaces that still place arbitrary 2xx JSON directly into state.
-4. Continue security sweep of remaining customer-facing external links without duplicating already-protected market/evidence/Radar/Stripe/Supabase-OAuth URL work.
-5. Recheck production Auth logs after Supabase/Netlify domain wiring is corrected; canonical Google login must never return to the old domain.
-6. Use `/importverifier-sample-5-products.csv` for final new-account acceptance once canonical Auth works; prove history/PDF/XLSX end-to-end from that account.
-7. Keep EU as the only active market; do not remove historical plan IDs/monthly schema merely for naming cleanliness.
+2. Begin the queued premium PDF redesign in `REPORT-PREMIUM-TODO.md`: stronger ImportVerifier cover/header identity, premium editorial hierarchy, repeated localized footer/context treatment and regression coverage while preserving issuer identity, evidence traceability and export correctness.
+3. Continue static mobile/iPhone/iPad/PWA QA around camera return/cancel edge states, drag/drop edge states and save-to-Files; real-device validation remains external.
+4. Continue the remaining customer-facing client API response-shape sweep, prioritizing any authenticated surface discovered later that still places arbitrary 2xx JSON directly into state; Dashboard/Intelligence/Evidence/latest-assessment/review-gate/trial/Unlimited are already hardened and should not be duplicated.
+5. Continue security sweep of remaining customer-facing external links without duplicating already-protected market/evidence/Radar/Stripe/Supabase-OAuth URL work.
+6. Recheck production Auth logs after Supabase/Netlify domain wiring is corrected; canonical Google login must never return to the old domain.
+7. Use `/importverifier-sample-5-products.csv` for final new-account acceptance once canonical Auth works; prove history/PDF/XLSX end-to-end from that account.
+8. Keep EU as the only active market; do not remove historical plan IDs/monthly schema merely for naming cleanliness.
 
 ## BLOCKED EXTERNAL / browser or service-console work
 - Supabase Auth: set Site URL to `https://importverifier.netlify.app` and canonical callbacks; retest Google login and Auth logs.
