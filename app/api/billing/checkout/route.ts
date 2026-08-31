@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     }, { idempotencyKey: `checkout-${user.id}-${UNLIMITED_INTERNAL_PLAN_ID}-${new Date().toISOString().slice(0, 13)}` });
     if (!session.url) throw new Error(b('stripePage'));
     return json({ url: session.url });
-  } catch (error) {
-    return json({ error: error instanceof Error ? error.message : b('paymentOpen') }, 503);
+  } catch {
+    return json({ error: b('paymentOpen') }, 503);
   }
 }
