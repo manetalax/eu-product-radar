@@ -25,12 +25,17 @@ test('normaliza eventos UE y genera un fingerprint estable', () => {
   assert.equal(first.last_seen_at, '2026-08-31T10:00:00.000Z');
 });
 
-test('rechaza fuentes no oficiales, HTTP, credenciales, espacios y campos obligatorios vacíos', () => {
-  assert.throws(() => normalizeRegulatoryEvent({ ...sample, sourceUrl: 'https://example.com/alerta' }), /dominio oficial UE/);
-  assert.throws(() => normalizeRegulatoryEvent({ ...sample, sourceUrl: 'http://ec.europa.eu/alerta' }), /dominio oficial UE/);
-  assert.throws(() => normalizeRegulatoryEvent({ ...sample, sourceUrl: 'https://user:secret@ec.europa.eu/alerta' }), /HTTPS segura/);
-  assert.throws(() => normalizeRegulatoryEvent({ ...sample, sourceUrl: 'https://ec.europa.eu/alerta con espacios' }), /formato no es válido/);
-  assert.throws(() => normalizeRegulatoryEvent({ ...sample, sourceUrl: 'not-a-url' }), /no es válida/);
+test('rechaza fuentes no oficiales, HTTP, credenciales, espacios y URLs malformadas', () => {
+  for (const sourceUrl of [
+    'https://example.com/alerta',
+    'https://eur-lex.europa.eu.evil.test/alerta',
+    'http://ec.europa.eu/alerta',
+    'https://user:secret@ec.europa.eu/alerta',
+    'https://ec.europa.eu/alerta con espacios',
+    'not-a-url',
+  ]) {
+    assert.throws(() => normalizeRegulatoryEvent({ ...sample, sourceUrl }), /URL HTTPS segura|dominio oficial UE/);
+  }
   assert.throws(() => normalizeRegulatoryEvent({ ...sample, title: '   ' }), /obligatorios/);
 });
 
