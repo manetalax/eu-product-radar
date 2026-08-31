@@ -8,28 +8,37 @@ import TrustMark from '@/components/TrustMark';
 import { AccountDeletionErrorCode, DELETE_ACCOUNT_CONFIRMATION } from '@/lib/account';
 import { accountCopy } from '@/lib/account-i18n';
 import { Analysis, AnalysisSummary, analysisMarket, analyze, MAX_FILE_BYTES, supportsRuleVersion } from '@/lib/analysis';
-import { ProductQuota } from '@/lib/quota';
-import { documentationFor, GUIDE_SCOPE } from '@/lib/documentation';
+import { dashboardText, type DashboardCopyKey } from '@/lib/dashboard-copy-v2';
+import { documentationFor } from '@/lib/documentation';
+import { guideScopeFor } from '@/lib/guide-i18n';
+import { landingCopy, localeFor } from '@/lib/landing-i18n';
 import { isActiveMarketCode, MarketCode, MARKETS, MARKETS_BY_RANK } from '@/lib/markets';
-import { formatPrice } from '@/lib/landing-i18n';
 import { UNLIMITED_PLAN } from '@/lib/plans';
+import { ProductQuota } from '@/lib/quota';
+import { reportLabels } from '@/lib/report-i18n';
 import { authService } from '@/lib/services/auth-client';
 import { clearPlanIntent, readPlanIntent } from '@/lib/services/plan-interest';
 import { useLanguage } from '@/lib/use-language';
 
 type Tab = 'dashboard' | 'products' | 'history' | 'reports' | 'settings';
-const tabs: [Tab, string, string][] = [
-  ['dashboard', 'Resumen', 'Vista general'],
-  ['products', 'Productos', 'Resultados del análisis'],
-  ['history', 'Historial', 'Análisis guardados'],
-  ['reports', 'Informes', 'Excel, PDF y documentación'],
-  ['settings', 'Mi cuenta', 'Plan, privacidad y seguridad'],
-];
-const when = (value: string) => new Date(value).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
 
 export default function Dashboard({ email }: { email: string }) {
   const { language } = useLanguage();
   const accountT = accountCopy[language];
+  const reportT = reportLabels[language];
+  const trustT = landingCopy[language].trust;
+  const d = (key: DashboardCopyKey, values: Record<string, string | number> = {}) => dashboardText(language, key, values);
+  const tabs: [Tab, string, string][] = [
+    ['dashboard', d('tabDashboard'), d('tabDashboardDesc')],
+    ['products', d('tabProducts'), d('tabProductsDesc')],
+    ['history', d('tabHistory'), d('tabHistoryDesc')],
+    ['reports', d('tabReports'), d('tabReportsDesc')],
+    ['settings', d('tabSettings'), d('tabSettingsDesc')],
+  ];
+  const when = (value: string) => new Date(value).toLocaleString(localeFor(language), { dateStyle: 'medium', timeStyle: 'short' });
+  const marketName = (code: MarketCode) => landingCopy[language].markets.cards[code].name;
+  const monthlyPrice = new Intl.NumberFormat(localeFor(language), { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(UNLIMITED_PLAN.monthlyPriceEur);
+
   const [tab, setTab] = useState<Tab>('dashboard');
   const [selectedMarket, setSelectedMarket] = useState<MarketCode>('EU');
   const [current, setCurrent] = useState<Analysis | null>(null);
@@ -60,8 +69,18 @@ export default function Dashboard({ email }: { email: string }) {
   const quotaBlocked = free && quota?.remaining === 0;
   const quotaPercent = free && quota ? Math.min(100, Math.round((quota.used / quota.limit) * 100)) : 0;
   const firstName = email.split('@')[0].replace(/[._-]+/g, ' ');
+  const operatorDisplay = current?.products[0]
+    ? documentationFor(current.products[0], currentMarketCode, language)[1]?.title ?? currentMarket.operatorFieldLabel
+    : currentMarket.operatorFieldLabel;
   const canDeleteAccount = deleteEmail.trim().toLocaleLowerCase('en-US') === email.trim().toLocaleLowerCase('en-US')
     && deleteConfirmation === DELETE_ACCOUNT_CONFIRMATION;
+
+  const priorityLabel = (priority: 'ALTA' | 'MEDIA' | 'BAJA') => priority === 'ALTA' ? reportT.high : priority === 'MEDIA' ? reportT.medium : reportT.low;
+  const missingLabel = (value: string) => value === 'Fabricante'
+    ? reportT.manufacturer
+    : value === 'Seguridad/advertencias'
+      ? reportT.warnings
+      : value === currentMarket.operatorFieldLabel ? operatorDisplay : value;
 
   async function api(url: string, options?: RequestInit) {
     const response = await fetch(url, { ...options, cache: 'no-store' });
@@ -69,7 +88,7 @@ export default function Dashboard({ email }: { email: string }) {
     if (response.status === 401) window.location.replace(`/login?lang=${language}`);
     if (body.quota) setQuota(body.quota);
     if (!response.ok) {
-      const apiError = new Error(body.error || body.errorCode || 'No se ha podido completar la operación.') as Error & { code?: AccountDeletionErrorCode };
+      const apiError = new Error(body.error || body.errorCode || d('importError')) as Error & { code?: AccountDeletionErrorCode };
       if (body.errorCode) apiError.code = body.errorCode as AccountDeletionErrorCode;
       throw apiError;
     }
@@ -86,16 +105,16 @@ export default function Dashboard({ email }: { email: string }) {
         setQuota(body.quota);
       }
     }).catch(e => {
-      if (!controller.signal.aborted) setError(e instanceof Error ? e.message : 'No se puede leer el historial.');
+      if (!controller.signal.aborted) setError(e instanceof Error ? e.message : d('historyError'));
     }).finally(() => {
       if (!controller.signal.aborted) setLoading(false);
     });
     return () => controller.abort();
-  }, [page]);
+  }, [page, language]);
 
   useEffect(() => {
     const unsubscribe = authService.onAuthStateChange(event => {
-      if (event === 'SIGNED_OUT') window.location.replace('/login');
+      if (event === 'SIGNED_OUT') window.location.replace(`/login?lang=${language}`);
     });
     const refresh = (event: PageTransitionEvent) => { if (event.persisted) window.location.reload(); };
     window.addEventListener('pageshow', refresh);
@@ -103,13 +122,13 @@ export default function Dashboard({ email }: { email: string }) {
       unsubscribe();
       window.removeEventListener('pageshow', refresh);
     };
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     const planId = readPlanIntent();
     const checkout = new URLSearchParams(window.location.search).get('checkout');
-    if (checkout === 'success') setNotice('Pago recibido. Stripe está confirmando Unlimited; el acceso se actualizará automáticamente.');
-    if (checkout === 'cancelled') setNotice('No se ha realizado ningún cobro. Tus 5 productos gratuitos siguen disponibles según el uso de tu cuenta.');
+    if (checkout === 'success') setNotice(d('checkoutSuccess'));
+    if (checkout === 'cancelled') setNotice(d('checkoutCancelled'));
     if (planId) void startCheckout();
   }, []);
 
@@ -119,9 +138,9 @@ export default function Dashboard({ email }: { email: string }) {
     setNotice('');
     setBusy(true);
     try {
-      if (!isActiveMarketCode(selectedMarket)) throw new Error('Este mercado todavía está en preparación.');
-      if (file.size > MAX_FILE_BYTES) throw new Error('El archivo supera el límite de 5 MB.');
-      if (file.name.length > 120) throw new Error('Acorta el nombre del archivo a 120 caracteres como máximo.');
+      if (!isActiveMarketCode(selectedMarket)) throw new Error(d('unsupportedMarket'));
+      if (file.size > MAX_FILE_BYTES) throw new Error(d('fileTooLarge'));
+      if (file.name.length > 120) throw new Error(d('fileNameTooLong'));
       const bytes = await file.arrayBuffer();
       let products;
       if (/\.(csv|xls|xlsx)$/i.test(file.name)) {
@@ -129,8 +148,8 @@ export default function Dashboard({ email }: { email: string }) {
       } else {
         const dataUrl = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('No se ha podido leer el archivo.'));
-          reader.onerror = () => reject(new Error('No se ha podido leer el archivo.'));
+          reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error(d('fileReadError')));
+          reader.onerror = () => reject(new Error(d('fileReadError')));
           reader.readAsDataURL(file);
         });
         const extracted = await api('/api/product-extraction', {
@@ -153,7 +172,7 @@ export default function Dashboard({ email }: { email: string }) {
       setQuota(updatedQuota);
       setCurrent(analysis);
       setTab('products');
-      setNotice(`Catálogo analizado para ${MARKETS[selectedMarket].name} y guardado en tu cuenta.`);
+      setNotice(d('analysisSaved', { market: marketName(selectedMarket) }));
       pendingImport.current = null;
       setHistory(items => [{
         id: analysis.id,
@@ -165,7 +184,7 @@ export default function Dashboard({ email }: { email: string }) {
       }, ...items.filter(item => item.id !== analysis.id)].slice(0, 20));
       if (page !== 0) setPage(0);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se ha podido importar el archivo.');
+      setError(e instanceof Error ? e.message : d('importError'));
     } finally {
       setBusy(false);
       setDragging(false);
@@ -179,12 +198,12 @@ export default function Dashboard({ email }: { email: string }) {
     setBusy(true);
     try {
       const { analysis } = await api(`/api/analyses?id=${encodeURIComponent(id)}`);
-      if (!supportsRuleVersion(analysis.rule_version)) throw new Error('Esta versión de análisis todavía no es compatible con la aplicación.');
+      if (!supportsRuleVersion(analysis.rule_version)) throw new Error(d('unsupportedVersion'));
       setCurrent(analysis);
       setSelectedMarket(analysisMarket(analysis));
       setTab('products');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se puede abrir el análisis.');
+      setError(e instanceof Error ? e.message : d('openError'));
     } finally {
       setBusy(false);
     }
@@ -197,8 +216,8 @@ export default function Dashboard({ email }: { email: string }) {
     setNotice('');
     try {
       const bytes = format === 'pdf'
-        ? await (await import('@/lib/export-pdf')).pdfBytes(current)
-        : await (await import('@/lib/export-report')).reportBytes(current);
+        ? await (await import('@/lib/export-pdf')).pdfBytes(current, language)
+        : await (await import('@/lib/export-report')).reportBytes(current, language);
       const url = URL.createObjectURL(new Blob([bytes], { type: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
       const link = document.createElement('a');
       link.href = url;
@@ -208,26 +227,34 @@ export default function Dashboard({ email }: { email: string }) {
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 60000);
       setReportReady(true);
-      setNotice(format === 'pdf' ? 'PDF preparado con resumen, fichas y fuentes oficiales.' : 'Excel preparado con resumen, datos originales, trazabilidad y guía documental.');
+      setNotice(format === 'pdf' ? d('reportPdfReady') : d('reportExcelReady'));
     } catch {
-      setError('No se ha podido generar el informe. Vuelve a intentarlo; tu análisis sigue guardado.');
+      setError(d('reportError'));
     } finally {
       setBusy(false);
     }
   }
 
   function downloadTemplate() {
-    const csv = '\uFEFFnombre,fabricante,operador_mercado,advertencias_seguridad\nProducto de ejemplo,Fabricante SL,Importador Europa SL,Advertencia del modelo\n';
+    const samples = {
+      es: 'Producto de ejemplo,Fabricante SL,Importador Europa SL,Advertencia del modelo',
+      en: 'Example product,Example Manufacturer Ltd,EU Importer Ltd,Model warning',
+      fr: 'Produit exemple,Fabricant Exemple SAS,Importateur UE SAS,Avertissement du modèle',
+      de: 'Beispielprodukt,Beispiel Hersteller GmbH,EU Importeur GmbH,Modellwarnung',
+      it: 'Prodotto di esempio,Produttore Esempio SRL,Importatore UE SRL,Avvertenza del modello',
+      pt: 'Produto de exemplo,Fabricante Exemplo Lda,Importador UE Lda,Aviso do modelo',
+    } as const;
+    const csv = `\uFEFFname,manufacturer,eu_operator,warning\n${samples[language]}\n`;
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'plantilla-import-rules-verifier-europa.csv';
+    link.download = `importverifier-eu-template-${language}.csv`;
     document.body.appendChild(link);
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     setTemplateReady(true);
-    setNotice('Plantilla de Europa descargada. Sustituye el ejemplo por tus productos y conserva los cuatro encabezados.');
+    setNotice(d('templateDownloaded'));
   }
 
   async function startCheckout() {
@@ -240,7 +267,7 @@ export default function Dashboard({ email }: { email: string }) {
       clearPlanIntent();
       window.location.assign(url);
     } catch (checkoutError) {
-      setError(checkoutError instanceof Error ? checkoutError.message : 'No se ha podido abrir el pago.');
+      setError(checkoutError instanceof Error ? checkoutError.message : d('paymentError'));
       setBusy(false);
     }
   }
@@ -252,7 +279,7 @@ export default function Dashboard({ email }: { email: string }) {
       const { url } = await api('/api/billing/portal', { method: 'POST' });
       window.location.assign(url);
     } catch (portalError) {
-      setError(portalError instanceof Error ? portalError.message : 'No se ha podido abrir la gestión del plan.');
+      setError(portalError instanceof Error ? portalError.message : d('portalError'));
       setBusy(false);
     }
   }
@@ -263,9 +290,9 @@ export default function Dashboard({ email }: { email: string }) {
     try {
       const { error: signOutError } = await authService.signOut();
       if (signOutError) throw signOutError;
-      window.location.replace('/login');
+      window.location.replace(`/login?lang=${language}`);
     } catch {
-      setError('No se ha podido cerrar la sesión. Comprueba tu conexión y vuelve a intentarlo.');
+      setError(d('signOutError'));
       setBusy(false);
     }
   }
@@ -303,78 +330,78 @@ export default function Dashboard({ email }: { email: string }) {
   return <main className="shell app-shell">
     <header className="toprow account-header app-header">
       <Brand market={current ? currentMarketCode : undefined} />
-      <div className="header-actions"><span className="privacy-badge">Sesión privada</span><button className="btn ghost" disabled={busy} onClick={signOut}>Cerrar sesión</button></div>
+      <div className="header-actions"><span className="privacy-badge">{d('privateSession')}</span><button className="btn ghost" disabled={busy} onClick={signOut}>{d('signOut')}</button></div>
     </header>
 
     <div className="dashboard premium-dashboard">
       <aside className="side premium-side">
-        <div className="side-intro"><span className="side-kicker">ESPACIO DE TRABAJO</span><h2>{firstName || 'Tu cuenta'}</h2><p className="account-email">{email}</p></div>
-        <nav aria-label="Secciones del panel" className="side-nav">
+        <div className="side-intro"><span className="side-kicker">{d('workspace')}</span><h2>{firstName || d('yourAccount')}</h2><p className="account-email">{email}</p></div>
+        <nav aria-label={d('sections')} className="side-nav">
           {tabs.map(([id, label, description]) => <button key={id} aria-current={tab === id ? 'page' : undefined} className={tab === id ? 'active' : ''} onClick={() => { setTab(id); setNotice(''); }}><strong>{label}</strong><span>{description}</span></button>)}
         </nav>
         <div className="side-quota">
-          <div className="toprow"><span>Plan {unlimited ? 'Unlimited' : 'Gratis'}</span><strong>{unlimited ? 'Ilimitado' : quota ? `${quota.remaining} libres` : '—'}</strong></div>
-          {!unlimited && <><div className="quota-track" aria-label="Uso gratuito"><span style={{ width: `${quotaPercent}%` }} /></div><small>{quota ? `${quota.used} de ${quota.limit} productos gratuitos utilizados` : 'Calculando uso…'}</small></>}
-          {!unlimited && <button className="side-upgrade" onClick={() => setTab('settings')}>Ver Unlimited →</button>}
+          <div className="toprow"><span>{d('plan')} {unlimited ? 'Unlimited' : d('free')}</span><strong>{unlimited ? d('unlimited') : quota ? d('remaining', { n: quota.remaining }) : '—'}</strong></div>
+          {!unlimited && <><div className="quota-track" aria-label={d('freeUsage')}><span style={{ width: `${quotaPercent}%` }} /></div><small>{quota ? d('used', { used: quota.used, limit: quota.limit }) : d('calculating')}</small></>}
+          {!unlimited && <button className="side-upgrade" onClick={() => setTab('settings')}>{d('viewUnlimited')}</button>}
         </div>
       </aside>
 
       <section className="workspace" aria-busy={busy}>
         <div className="workspace-heading">
-          <div><span className="eyebrow">{tabs.find(([id]) => id === tab)?.[1]}</span><h1>{tab === 'dashboard' ? `Hola, ${firstName || 'bienvenido'}` : tabs.find(([id]) => id === tab)?.[1]}</h1></div>
-          {tab !== 'settings' && <button className="btn primary compact-cta" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{quotaBlocked ? '5 productos gratuitos usados' : 'Nuevo análisis'}</button>}
+          <div><span className="eyebrow">{tabs.find(([id]) => id === tab)?.[1]}</span><h1>{tab === 'dashboard' ? d('hello', { name: firstName || d('welcome') }) : tabs.find(([id]) => id === tab)?.[1]}</h1></div>
+          {tab !== 'settings' && <button className="btn primary compact-cta" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{quotaBlocked ? d('freeUsed') : d('newAnalysis')}</button>}
         </div>
-        <p className="workspace-subtitle">{tab === 'dashboard' ? 'Prepara tu catálogo europeo, prioriza la información incompleta y conserva una trazabilidad clara.' : tabs.find(([id]) => id === tab)?.[2]}</p>
+        <p className="workspace-subtitle">{tab === 'dashboard' ? d('dashboardSubtitle') : tabs.find(([id]) => id === tab)?.[2]}</p>
 
-        <div className="market-rail" aria-label="Cobertura por mercado">
+        <div className="market-rail" aria-label={d('marketCoverage')}>
           {MARKETS_BY_RANK.map(market => {
             const active = isActiveMarketCode(market.code);
-            return <button key={market.code} type="button" className={`${selectedMarket === market.code ? 'selected' : ''} ${active ? '' : 'upcoming'}`} disabled={!active} onClick={() => setSelectedMarket(market.code)} aria-label={`${market.name}: ${active ? 'disponible' : 'en preparación'}`}>
-              <span className="market-flag" aria-hidden="true">{market.flag}</span><span><strong>{market.shortName}</strong><small>{active ? 'Disponible' : 'Próximamente'}</small></span>
+            return <button key={market.code} type="button" className={`${selectedMarket === market.code ? 'selected' : ''} ${active ? '' : 'upcoming'}`} disabled={!active} onClick={() => setSelectedMarket(market.code)} aria-label={`${marketName(market.code)}: ${active ? d('available') : d('preparing')}`}>
+              <span className="market-flag" aria-hidden="true">{market.flag}</span><span><strong>{market.code}</strong><small>{active ? d('available') : d('upcoming')}</small></span>
             </button>;
           })}
         </div>
 
-        <div className="notice trust-notice"><strong>Europa activa:</strong> el verificador detecta campos básicos incompletos y genera una guía basada en fuentes oficiales. <span>No certifica conformidad ni sustituye una evaluación jurídica o técnica.</span></div>
+        <div className="notice trust-notice"><strong>{d('euActiveTitle')}</strong> {d('euActiveBody')} <span>{d('euDisclaimer')}</span></div>
         {error && <p role="alert" className="message error">{error}</p>}
         {notice && <p role="status" className="message success">{notice}</p>}
-        <input ref={input} className="file-input" aria-label="Importar productos desde foto, documento, texto, CSV o Excel" type="file" accept=".csv,.xls,.xlsx,.pdf,.doc,.docx,.rtf,.odt,.txt,.md,.json,.png,.jpg,.jpeg,.webp,.heic,image/*" disabled={busy || loading || quotaBlocked} onChange={event => { const file = event.target.files?.[0]; if (file) void load(file); }} />
+        <input ref={input} className="file-input" aria-label={d('importAria')} type="file" accept=".csv,.xls,.xlsx,.pdf,.doc,.docx,.rtf,.odt,.txt,.md,.json,.png,.jpg,.jpeg,.webp,.heic,image/*" disabled={busy || loading || quotaBlocked} onChange={event => { const file = event.target.files?.[0]; if (file) void load(file); }} />
 
         {(tab === 'dashboard' || tab === 'products') && <div className="card import-card premium-import" onDragEnter={event => { event.preventDefault(); setDragging(true); }} onDragOver={event => event.preventDefault()} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false); }} onDrop={event => { event.preventDefault(); setDragging(false); const file = event.dataTransfer.files?.[0]; if (file) void load(file); }} data-dragging={dragging}>
           <div className="import-icon" aria-hidden="true">↑</div>
-          <div className="import-copy"><div className="import-title-row"><h2>{quotaBlocked ? 'Has utilizado tus 5 productos gratuitos' : `Analiza para ${MARKETS[selectedMarket].name}`}</h2><span className="market-live">ACTIVO</span></div><p>Arrastra una foto, PDF, Word, texto, CSV o Excel de hasta 5 MB. Identificaremos los productos y conservaremos el análisis en tu historial privado.</p><div className="format-chips"><span>FOTO</span><span>PDF/WORD</span><span>TEXTO</span><span>CSV/EXCEL</span><span>Máx. 5 MB</span></div></div>
-          <div className="import-actions"><button className="btn primary import-cta" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{busy ? 'Analizando…' : quotaBlocked ? 'Pasar a Unlimited' : 'Elegir archivo'}</button><button className="text-button template-link" onClick={downloadTemplate}>Descargar plantilla</button></div>
-          <div className="quota-inline"><span>{unlimited ? 'Unlimited · análisis sin cuota comercial de productos' : quota ? `${quota.remaining} de ${quota.limit} productos gratuitos disponibles` : 'Calculando prueba gratuita…'}</span>{!unlimited && <div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div>}</div>
+          <div className="import-copy"><div className="import-title-row"><h2>{quotaBlocked ? d('quotaTitle') : d('analyzeFor', { market: marketName(selectedMarket) })}</h2><span className="market-live">{d('active')}</span></div><p>{d('importBody')}</p><div className="format-chips"><span>{d('photo')}</span><span>PDF/WORD</span><span>{d('text')}</span><span>CSV/EXCEL</span><span>{d('max5mb')}</span></div></div>
+          <div className="import-actions"><button className="btn primary import-cta" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{busy ? d('analyzing') : quotaBlocked ? d('upgrade') : d('chooseFile')}</button><button className="text-button template-link" onClick={downloadTemplate}>{d('downloadTemplate')}</button></div>
+          <div className="quota-inline"><span>{unlimited ? d('unlimitedUsage') : quota ? d('freeAvailable', { remaining: quota.remaining, limit: quota.limit }) : d('calculatingTrial')}</span>{!unlimited && <div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div>}</div>
         </div>}
-        {(tab === 'dashboard' || tab === 'products') && <BrandLogos group="commerce" label="Compatible con exportaciones de" note="Sube fotos, documentos, texto, CSV o Excel. La extracción inteligente identifica los productos y marca como vacíos los datos que no puede verificar." compact />}
+        {(tab === 'dashboard' || tab === 'products') && <BrandLogos group="commerce" label={d('commerceLabel')} note={d('commerceNote')} compact />}
 
         {tab === 'dashboard' && <>
-          <div className="onboarding-card card"><div><span className="eyebrow">PUESTA EN MARCHA</span><h2>Tu primera revisión, sin dudas.</h2></div><ol><li className="done"><span>1</span><div><strong>Mercado</strong><small>Europa seleccionada</small></div></li><li className={templateReady ? 'done' : ''}><span>2</span><div><strong>Plantilla</strong><small>{templateReady ? 'Descargada' : 'Lista para descargar'}</small></div></li><li className={current ? 'done' : ''}><span>3</span><div><strong>Análisis</strong><small>{current ? 'Catálogo guardado' : 'Sube tu catálogo'}</small></div></li><li className={reportReady ? 'done' : ''}><span>4</span><div><strong>Informe</strong><small>{reportReady ? 'Exportado' : 'Excel o PDF'}</small></div></li></ol></div>
-          <div className="section-heading"><div><span className="eyebrow">PANORÁMICA</span><h2>{current ? 'Análisis seleccionado' : 'Tu panel está listo'}</h2></div>{current && <button className="text-button" onClick={() => setTab('products')}>Ver productos →</button>}</div>
+          <div className="onboarding-card card"><div><span className="eyebrow">{d('onboarding')}</span><h2>{d('firstReview')}</h2></div><ol><li className="done"><span>1</span><div><strong>{d('market')}</strong><small>{d('europeSelected')}</small></div></li><li className={templateReady ? 'done' : ''}><span>2</span><div><strong>{d('template')}</strong><small>{templateReady ? d('downloaded') : d('readyDownload')}</small></div></li><li className={current ? 'done' : ''}><span>3</span><div><strong>{d('analysis')}</strong><small>{current ? d('catalogueSaved') : d('uploadCatalogue')}</small></div></li><li className={reportReady ? 'done' : ''}><span>4</span><div><strong>{d('report')}</strong><small>{reportReady ? d('exported') : 'Excel / PDF'}</small></div></li></ol></div>
+          <div className="section-heading"><div><span className="eyebrow">{d('overview')}</span><h2>{current ? d('selectedAnalysis') : d('panelReady')}</h2></div>{current && <button className="text-button" onClick={() => setTab('products')}>{d('viewProducts')}</button>}</div>
           <div className="kpis premium-kpis">
-            <div className="kpi"><span>Productos</span><strong>{results.length || '—'}</strong><small>{current ? 'en el análisis abierto' : 'sin análisis seleccionado'}</small></div>
-            <div className="kpi"><span>Indicador medio</span><strong>{current ? avg : '—'}</strong><small>{current ? 'campos incompletos / 100' : 'aparecerá tras analizar'}</small></div>
-            <div className="kpi"><span>Prioridad alta</span><strong>{current ? highCount : '—'}</strong><small>{current ? 'productos a revisar primero' : 'sin datos todavía'}</small></div>
-            <div className="kpi"><span>Mercado</span><strong className="market-kpi">{current ? currentMarket.flag : '🇪🇺'}</strong><small>{current ? currentMarket.name : 'Europa disponible'}</small></div>
+            <div className="kpi"><span>{d('products')}</span><strong>{results.length || '—'}</strong><small>{current ? d('inOpenAnalysis') : d('noAnalysisSelected')}</small></div>
+            <div className="kpi"><span>{d('averageIndicator')}</span><strong>{current ? avg : '—'}</strong><small>{current ? d('incomplete100') : d('afterAnalysis')}</small></div>
+            <div className="kpi"><span>{d('highPriority')}</span><strong>{current ? highCount : '—'}</strong><small>{current ? d('reviewFirst') : d('noData')}</small></div>
+            <div className="kpi"><span>{d('market')}</span><strong className="market-kpi">{current ? currentMarket.flag : '🇪🇺'}</strong><small>{current ? marketName(currentMarketCode) : d('europeAvailable')}</small></div>
           </div>
-          {!current ? <div className="card empty-state"><div className="empty-mark">◎</div><h3>Empieza por un catálogo pequeño</h3><p>Con unos pocos productos verás qué información básica falta, qué pedir al proveedor y dónde comprobar las fuentes.</p><button className="btn primary" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>Analizar mi primer catálogo</button><button className="text-button" onClick={downloadTemplate}>Prefiero usar la plantilla</button></div> : <div className="card selected-analysis"><div><span className="eyebrow">SELECCIONADO · {currentMarket.shortName}</span><h3>{current.filename}</h3><p className="muted">{when(current.created_at)} · {results.length} productos</p></div><div className="selected-actions"><button className="btn ghost" onClick={() => setTab('products')}>Ver resultados</button><button className="btn ghost" disabled={busy} onClick={() => exportReport('pdf')}>PDF</button></div></div>}
+          {!current ? <div className="card empty-state"><div className="empty-mark">◎</div><h3>{d('smallCatalogueTitle')}</h3><p>{d('smallCatalogueBody')}</p><button className="btn primary" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{d('firstCatalogue')}</button><button className="text-button" onClick={downloadTemplate}>{d('preferTemplate')}</button></div> : <div className="card selected-analysis"><div><span className="eyebrow">{d('selected')} · {currentMarketCode}</span><h3>{current.filename}</h3><p className="muted">{when(current.created_at)} · {results.length} {d('productWord')}</p></div><div className="selected-actions"><button className="btn ghost" onClick={() => setTab('products')}>{d('viewResults')}</button><button className="btn ghost" disabled={busy} onClick={() => exportReport('pdf')}>PDF</button></div></div>}
         </>}
 
         {tab === 'products' && <div className="card content-card">
-          <div className="toprow"><div><span className="eyebrow">RESULTADOS · {currentMarket.shortName}</span><h2>{current?.filename ?? 'Sin análisis seleccionado'}</h2>{current && <p className="muted">Guardado {when(current.created_at)} · reglas {current.rule_version}</p>}</div>{current && <div className="report-actions"><button className="btn ghost" disabled={busy} onClick={() => exportReport()}>Excel</button><button className="btn primary" disabled={busy} onClick={() => exportReport('pdf')}>PDF</button></div>}</div>
-          {current ? <div className="results"><table><caption>Indicador de campos incompletos; no equivale a riesgo legal ni a una certificación.</caption><thead><tr><th>PRODUCTO</th><th>INDICADOR</th><th>PRIORIDAD</th><th>CAMPOS POR REVISAR</th></tr></thead><tbody>{results.map((result, index) => <tr key={index}><td><strong>{result.name}</strong></td><td>{result.score}/100</td><td><span className={`pill ${result.priority === 'ALTA' ? 'high' : result.priority === 'MEDIA' ? 'medium' : 'low'}`}>{result.priority}</span></td><td>{result.missing.join(', ') || 'Sin campos básicos vacíos'}</td></tr>)}</tbody></table></div> : <div className="empty-state compact"><div className="empty-mark">↗</div><h3>No hay un análisis abierto</h3><p>Importa un catálogo nuevo o recupera uno de tu historial.</p><button className="btn primary" onClick={() => input.current?.click()}>Importar catálogo</button></div>}
+          <div className="toprow"><div><span className="eyebrow">{d('results')} · {currentMarketCode}</span><h2>{current?.filename ?? d('noAnalysisSelected')}</h2>{current && <p className="muted">{d('saved')} {when(current.created_at)} · {d('rules')} {current.rule_version}</p>}</div>{current && <div className="report-actions"><button className="btn ghost" disabled={busy} onClick={() => exportReport()}>Excel</button><button className="btn primary" disabled={busy} onClick={() => exportReport('pdf')}>PDF</button></div>}</div>
+          {current ? <div className="results"><table><caption>{d('resultsCaption')}</caption><thead><tr><th>{d('product')}</th><th>{d('indicator')}</th><th>{d('priority')}</th><th>{d('fieldsReview')}</th></tr></thead><tbody>{results.map((result, index) => <tr key={index}><td><strong>{result.name}</strong></td><td>{result.score}/100</td><td><span className={`pill ${result.priority === 'ALTA' ? 'high' : result.priority === 'MEDIA' ? 'medium' : 'low'}`}>{priorityLabel(result.priority)}</span></td><td>{result.missing.map(missingLabel).join(', ') || d('noBasicMissing')}</td></tr>)}</tbody></table></div> : <div className="empty-state compact"><div className="empty-mark">↗</div><h3>{d('noOpenAnalysis')}</h3><p>{d('noOpenAnalysisBody')}</p><button className="btn primary" onClick={() => input.current?.click()}>{d('importCatalogue')}</button></div>}
         </div>}
 
-        {tab === 'history' && <div className="card content-card"><div className="section-heading"><div><span className="eyebrow">ARCHIVO</span><h2>Historial de análisis</h2></div><span className="muted">Página {page + 1}</span></div>{loading ? <div className="empty-state compact"><p role="status">Cargando tus análisis…</p></div> : history.length ? <ul className="history-list premium-history">{history.map(item => { const market = MARKETS[analysisMarket(item)]; return <li key={item.id}><div className="history-file"><span className="file-mark">{market.flag}</span><div><strong>{item.filename}</strong><p>{when(item.created_at)} · {item.product_count} productos · {market.shortName}</p></div></div><button className="btn ghost" disabled={busy} onClick={() => open(item.id)}>Abrir</button></li>; })}</ul> : <div className="empty-state"><div className="empty-mark">□</div><h3>Aquí aparecerá todo lo que analices</h3><p>Los análisis quedan vinculados a tu cuenta para que puedas volver a ellos cuando los necesites.</p><button className="btn primary" disabled={quotaBlocked} onClick={() => input.current?.click()}>Crear primer análisis</button></div>}<div className="history-pagination"><button className="btn ghost" disabled={page === 0 || loading || busy} onClick={() => setPage(value => value - 1)}>← Anterior</button><button className="btn ghost" disabled={!hasMore || loading || busy} onClick={() => setPage(value => value + 1)}>Siguiente →</button></div></div>}
+        {tab === 'history' && <div className="card content-card"><div className="section-heading"><div><span className="eyebrow">{d('archive')}</span><h2>{d('analysisHistory')}</h2></div><span className="muted">{d('page', { n: page + 1 })}</span></div>{loading ? <div className="empty-state compact"><p role="status">{d('loadingHistory')}</p></div> : history.length ? <ul className="history-list premium-history">{history.map(item => { const marketCode = analysisMarket(item); const market = MARKETS[marketCode]; return <li key={item.id}><div className="history-file"><span className="file-mark">{market.flag}</span><div><strong>{item.filename}</strong><p>{when(item.created_at)} · {item.product_count} {d('productWord')} · {marketCode}</p></div></div><button className="btn ghost" disabled={busy} onClick={() => open(item.id)}>{d('open')}</button></li>; })}</ul> : <div className="empty-state"><div className="empty-mark">□</div><h3>{d('historyEmptyTitle')}</h3><p>{d('historyEmptyBody')}</p><button className="btn primary" disabled={quotaBlocked} onClick={() => input.current?.click()}>{d('createFirst')}</button></div>}<div className="history-pagination"><button className="btn ghost" disabled={page === 0 || loading || busy} onClick={() => setPage(value => value - 1)}>{d('previous')}</button><button className="btn ghost" disabled={!hasMore || loading || busy} onClick={() => setPage(value => value + 1)}>{d('next')}</button></div></div>}
 
-        {tab === 'reports' && <><div className="card content-card"><span className="eyebrow">EXPORTACIÓN · {currentMarket.shortName}</span><h2>Informes listos para trabajar</h2><p className="muted">{current ? `Estás trabajando con ${current.filename}.` : 'Abre un análisis desde el historial para activar las descargas.'}</p><div className="report-grid"><button className="report-option" disabled={!current || busy} onClick={() => exportReport()}><strong>Excel detallado</strong><span>Resumen, productos, datos originales, reglas, evidencia y guía documental.</span><b>Descargar .xlsx →</b></button><button className="report-option" disabled={!current || busy} onClick={() => exportReport('pdf')}><strong>PDF ejecutivo</strong><span>Resumen, fichas por producto, evidencia guardada y fuentes oficiales.</span><b>Descargar .pdf →</b></button></div></div>{current && <div className="card content-card documentation-card"><span className="eyebrow">GUÍA DOCUMENTAL · {currentMarket.name}</span><h2>Qué pedir y qué comprobar</h2><p className="muted">{GUIDE_SCOPE}</p>{current.products.map((product, index) => <details key={index}><summary>{product.name}</summary><div className="documentation-body">{documentationFor(product, currentMarketCode).map(action => <section key={action.title}><h3>{action.title}</h3><p><strong>{action.status}</strong> · {action.condition}</p><p><strong>Dónde conseguirlo:</strong> {action.obtain}</p><p><strong>Qué comprobar:</strong> {action.check}</p><a href={action.source} target="_blank" rel="noopener noreferrer">Consultar fuente oficial ↗</a></section>)}</div></details>)}</div>}</>}
+        {tab === 'reports' && <><div className="card content-card"><span className="eyebrow">{d('export')} · {currentMarketCode}</span><h2>{d('reportsReady')}</h2><p className="muted">{current ? d('workingWith', { file: current.filename }) : d('openFromHistory')}</p><div className="report-grid"><button className="report-option" disabled={!current || busy} onClick={() => exportReport()}><strong>{d('detailedExcel')}</strong><span>{d('excelBody')}</span><b>{d('downloadXlsx')}</b></button><button className="report-option" disabled={!current || busy} onClick={() => exportReport('pdf')}><strong>{d('executivePdf')}</strong><span>{d('pdfBody')}</span><b>{d('downloadPdf')}</b></button></div></div>{current && <div className="card content-card documentation-card"><span className="eyebrow">{d('documentaryGuide')} · {marketName(currentMarketCode)}</span><h2>{d('whatToRequest')}</h2><p className="muted">{guideScopeFor(language)}</p>{current.products.map((product, index) => <details key={index}><summary>{product.name}</summary><div className="documentation-body">{documentationFor(product, currentMarketCode, language).map(action => <section key={action.title}><h3>{action.title}</h3><p><strong>{action.status}</strong> · {action.condition}</p><p><strong>{d('whereGet')}</strong> {action.obtain}</p><p><strong>{d('whatCheck')}</strong> {action.check}</p><a href={action.source} target="_blank" rel="noopener noreferrer">{d('officialSource')}</a></section>)}</div></details>)}</div>}</>}
 
         {tab === 'settings' && <div className="settings-grid">
-          <div className="card content-card"><span className="eyebrow">CUENTA</span><h2>Tu perfil</h2><p className="account-email settings-email">{email}</p><Link className="btn ghost" href="/reset-password">Cambiar contraseña</Link></div>
-          <div className="card content-card"><span className="eyebrow">PLAN ACTUAL</span><h2>{unlimited ? 'Unlimited' : 'Gratis'}</h2>{unlimited ? <><div className="settings-quota"><strong>∞</strong><span>productos</span></div><p className="muted">Uso ilimitado comercialmente. Solo se mantienen protecciones técnicas razonables contra abuso automatizado.</p><button className="btn ghost" disabled={busy} onClick={manageSubscription}>Gestionar suscripción</button></> : <><div className="settings-quota"><strong>{quota?.remaining ?? '—'}</strong><span>de 5 productos gratis disponibles</span></div><div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div><p className="muted">Cada cuenta puede analizar exactamente 5 productos gratis, sin tarjeta. Después puedes pasar a Unlimited.</p></>}</div>
-          <div className="card content-card plan-interest"><span className="eyebrow">ÚNICA SUSCRIPCIÓN</span><h2>ImportVerifier Unlimited</h2><p>Analiza productos sin cuota comercial, utiliza ImportVerifier AI, Regulatory Twin, Impact Radar e informes PDF/Excel desde un único plan.</p><button className="btn primary" disabled={busy || unlimited} onClick={() => void startCheckout()}>{unlimited ? 'Unlimited activo' : `Contratar por ${formatPrice('es', UNLIMITED_PLAN.monthlyPriceEur)}/mes`}</button><p className="muted">Pago seguro con Stripe. Puedes consultar facturas, cambiar el método de pago o cancelar desde el portal de cliente.</p></div>
-          <div className="card content-card expansion-card"><span className="eyebrow">EXPANSIÓN INTERNACIONAL</span><h2>Un núcleo, cada mercado como módulo.</h2><p>Europa está activa. EE. UU., China, Reino Unido y Japón son los siguientes destinos preparados en la arquitectura.</p><div className="expansion-flags">{MARKETS_BY_RANK.map(market => <span key={market.code} title={market.name}>{market.flag}</span>)}</div></div>
-          <div className="card content-card settings-security"><span className="eyebrow">PRIVACIDAD</span><h2>Tu información permanece separada</h2><p>Los análisis de esta cuenta no son visibles desde otras cuentas.</p><p className="muted">Evita subir datos personales innecesarios o información confidencial que no sea necesaria para analizar tus productos.</p><TrustMark title="IRV Trust Mark" detail="Comprobaciones internas de transparencia" httpsLabel="Conexión HTTPS segura" explanation="Sello interno de Import Rules Verifier. No es una certificación externa ni acredita la conformidad de un producto." compact /></div>
+          <div className="card content-card"><span className="eyebrow">{d('accountHeading')}</span><h2>{d('profile')}</h2><p className="account-email settings-email">{email}</p><Link className="btn ghost" href={`/reset-password?lang=${language}`}>{d('changePassword')}</Link></div>
+          <div className="card content-card"><span className="eyebrow">{d('currentPlan')}</span><h2>{unlimited ? 'Unlimited' : d('free')}</h2>{unlimited ? <><div className="settings-quota"><strong>∞</strong><span>{d('productWord')}</span></div><p className="muted">{d('unlimitedTechnical')}</p><button className="btn ghost" disabled={busy} onClick={manageSubscription}>{d('manageSubscription')}</button></> : <><div className="settings-quota"><strong>{quota?.remaining ?? '—'}</strong><span>{d('ofFiveFree')}</span></div><div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div><p className="muted">{d('freePlanBody')}</p></>}</div>
+          <div className="card content-card plan-interest"><span className="eyebrow">{d('onlySubscription')}</span><h2>ImportVerifier Unlimited</h2><p>{d('unlimitedBody')}</p><button className="btn primary" disabled={busy || unlimited} onClick={() => void startCheckout()}>{unlimited ? d('unlimitedActive') : d('subscribeFor', { price: monthlyPrice })}</button><p className="muted">{d('stripeBody')}</p></div>
+          <div className="card content-card expansion-card"><span className="eyebrow">{d('expansion')}</span><h2>{d('expansionTitle')}</h2><p>{d('expansionBody')}</p><div className="expansion-flags">{MARKETS_BY_RANK.map(market => <span key={market.code} title={marketName(market.code)}>{market.flag}</span>)}</div></div>
+          <div className="card content-card settings-security"><span className="eyebrow">{d('privacy')}</span><h2>{d('privacyTitle')}</h2><p>{d('privacyBody')}</p><p className="muted">{d('privacyCaution')}</p><TrustMark title={trustT.title} detail={trustT.detail} httpsLabel={trustT.https} explanation={trustT.explanation} compact /></div>
           <div className="card content-card account-danger-zone">
             <div className="danger-zone-heading"><div><span className="eyebrow">{accountT.eyebrow}</span><h2>{accountT.title}</h2></div>{!deleteAccountOpen && <button className="btn danger-outline" disabled={busy} onClick={() => { setDeleteAccountOpen(true); setError(''); setNotice(''); }}>{accountT.open}</button>}</div>
             <p className="muted">{accountT.description}</p>
