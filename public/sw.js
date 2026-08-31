@@ -1,7 +1,8 @@
-const CACHE = 'importverifier-shell-v5';
-const SHELL = ['/', '/login', '/privacy', '/terms', '/icon.svg'];
+const CACHE = 'importverifier-shell-v6';
+const LANDING_LANGUAGES = new Set(['es', 'en', 'fr', 'de', 'it', 'pt']);
+const SHELL = ['/es', '/en', '/fr', '/de', '/it', '/pt', '/icon.svg'];
 const PRIVATE_PREFIXES = ['/api/', '/auth/', '/dashboard', '/reset-password'];
-const CACHEABLE_NAVIGATIONS = new Set(['/', '/login', '/privacy', '/terms']);
+const CACHEABLE_NAVIGATIONS = new Set(['/es', '/en', '/fr', '/de', '/it', '/pt']);
 const CACHEABLE_ASSET_DESTINATIONS = new Set(['style', 'script', 'image', 'font']);
 
 function responseAllowsCaching(response) {
@@ -17,6 +18,11 @@ function responseAllowsCaching(response) {
 
 function publicShellRequest(path) {
   return new Request(path, { credentials: 'omit', cache: 'reload' });
+}
+
+function requestedLandingLanguage(url) {
+  const value = url.searchParams.get('lang')?.slice(0, 2).toLowerCase();
+  return value && LANDING_LANGUAGES.has(value) ? value : null;
 }
 
 self.addEventListener('install', event => {
@@ -43,6 +49,28 @@ self.addEventListener('fetch', event => {
   if (PRIVATE_PREFIXES.some(prefix => url.pathname.startsWith(prefix))) return;
   if (url.pathname === '/manifest.webmanifest') return;
 
+  if (request.mode === 'navigate' && url.pathname === '/') {
+    const language = requestedLandingLanguage(url);
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          if (language && responseAllowsCaching(response)) {
+            const copy = response.clone();
+            caches.open(CACHE).then(cache => cache.put(`/${language}`, copy));
+          }
+          return response;
+        })
+        .catch(async () => {
+          if (language) {
+            const localized = await caches.match(`/${language}`);
+            if (localized) return localized;
+          }
+          return (await caches.match('/es')) || Response.error();
+        })
+    );
+    return;
+  }
+
   if (request.mode === 'navigate') {
     if (!CACHEABLE_NAVIGATIONS.has(url.pathname) || url.search) return;
     event.respondWith(
@@ -54,7 +82,7 @@ self.addEventListener('fetch', event => {
           }
           return response;
         })
-        .catch(async () => (await caches.match(url.pathname)) || (await caches.match('/')))
+        .catch(async () => (await caches.match(url.pathname)) || (await caches.match('/es')) || Response.error())
     );
     return;
   }
