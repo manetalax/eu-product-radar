@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { PRIVATE_HEADERS, readJsonBody } from '@/lib/http';
+import { PRIVATE_HEADERS, readJsonBody, RequestBodyTooLargeError } from '@/lib/http';
 import { persistRegulatoryEvents } from '@/lib/regulatory-change-store';
 import type { RawRegulatoryEvent } from '@/lib/regulatory-change-ingestion';
 
@@ -26,6 +26,8 @@ export async function POST(request: Request) {
   const secret = configuredSecret();
   if (!secret) return json({ error: 'Ingesta regulatoria no configurada.' }, 503);
   if (!authorized(request, secret)) return json({ error: 'No autorizado.' }, 401);
+  const contentType = request.headers.get('content-type')?.toLowerCase() ?? '';
+  if (!contentType.startsWith('application/json')) return json({ error: 'El contenido debe enviarse como JSON.' }, 415);
 
   try {
     const body = await readJsonBody(request) as { events?: RawRegulatoryEvent[] } | null;
@@ -35,6 +37,9 @@ export async function POST(request: Request) {
     const result = await persistRegulatoryEvents(body.events);
     return json(result, 200);
   } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return json({ error: 'El lote supera el límite permitido.' }, 413);
+    }
     console.error('regulatory_ingest_failed', error);
     return json({ error: 'No se ha podido ejecutar la ingesta regulatoria.' }, 400);
   }
