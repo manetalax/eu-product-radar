@@ -25,3 +25,9 @@ test('legalConfig normaliza y rechaza campos incompletos', () => {
   const parsed = legalConfig({ ...complete, LEGAL_PROVIDER_NAME: '  Example Provider SL  ' } as NodeJS.ProcessEnv);
   assert.equal(parsed?.providerName, 'Example Provider SL');
 });
+
+test('legalConfig rechaza placeholders que podrían habilitar cobros por accidente', () => {
+  for (const placeholder of ['TBD', 'TODO', 'pending', 'CHANGE_ME', 'your company', 'por completar']) {
+    assert.equal(legalConfig({ ...complete, LEGAL_PROVIDER_NAME: placeholder } as NodeJS.ProcessEnv), null, placeholder);
+  }
+});
