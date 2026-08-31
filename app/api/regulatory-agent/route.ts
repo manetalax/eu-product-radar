@@ -3,7 +3,7 @@ import { analyze } from '@/lib/analysis';
 import { generateText } from '@/lib/ai-provider';
 import { recordAiUsage } from '@/lib/ai-telemetry';
 import { consumeApiRateLimit } from '@/lib/api-rate-limit';
-import { sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
+import { readJsonBody, sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { isLanguage } from '@/lib/landing-i18n';
 import { relevantRadarChanges } from '@/lib/radar-match';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -20,8 +20,8 @@ export async function POST(request: Request) {
   if (authError || !user) return json({ error: 'Inicia sesión para usar el asistente regulatorio.' }, 401);
 
   let body: { question?: unknown; analysisId?: unknown; productIndex?: unknown; language?: unknown };
-  try { body = await request.json(); }
-  catch { return json({ error: 'Solicitud no válida.' }, 400); }
+  try { body = await readJsonBody(request) as typeof body; }
+  catch (error) { return json({ error: error instanceof Error ? error.message : 'Solicitud no válida.' }, 400); }
 
   const question = typeof body.question === 'string' ? body.question.trim() : '';
   const analysisId = typeof body.analysisId === 'string' ? body.analysisId : '';
