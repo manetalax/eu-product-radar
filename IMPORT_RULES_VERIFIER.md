@@ -1,16 +1,40 @@
-# Import Rules Verifier
+# ImportVerifier
 
-Parallel product identity based on the exact HEAD of PR #3 (`64821798bfd335e9670dce43bd9cc361cbd86cdf`).
+ImportVerifier is the canonical product identity for the work in PR #4.
 
-- Product: **Import Rules Verifier**
-- Target URL: **https://importverifier.netlify.app**
-- Source branch: `feat/import-rules-verifier-branding`
-- Original `feat/account-deletion-security` remains untouched.
+- Product: **ImportVerifier / Import Rules Verifier**
+- Production URL: **https://importverifier.netlify.app**
+- Repository: `manetalax/eu-product-radar`
+- Branch: `feat/import-rules-verifier-branding`
+- PR: `#4`
+- Operational source of truth: `WORK-CHAT-CONTINUITY.md`
 
-## Deployment variables
+Do not create a replacement project, switch production back to the legacy EU Product Radar domain or merge PR #4 unless the owner explicitly asks.
 
-Set `NEXT_PUBLIC_SITE_URL=https://importverifier.netlify.app` in the parallel Netlify site. Preserve the same required Supabase/Stripe/provider variables as the source deployment, using secrets only in the deployment environment.
+## Commercial invariant
 
-## External configuration checklist
+- Exactly **5 products free total per account**, without card or monthly reset.
+- After the free allowance, the only public paid offer is **ImportVerifier Unlimited · 9,95 €/month**.
+- `starter` remains an internal compatibility identifier only.
 
-For the parallel deployment, add `https://importverifier.netlify.app/auth/callback` and the required password-confirm/reset callback paths to the authorized redirect URLs in Supabase/Google OAuth. Do not remove the existing EU Product Radar URLs while both products remain active.
+## Deployment
+
+Production must use:
+
+```text
+NEXT_PUBLIC_SITE_URL=https://importverifier.netlify.app
+```
+
+Secrets for Supabase, Stripe, free-only AI, Radar and legal configuration belong only in deployment/provider environments and must never be committed.
+
+## Auth configuration
+
+Supabase Auth must use `https://importverifier.netlify.app` as Site URL and allow the canonical application callback, including:
+
+```text
+https://importverifier.netlify.app/auth/callback
+```
+
+Production Auth flows must not fall back to `euproductradar.netlify.app`. Google OAuth must return through the canonical Supabase callback and then to ImportVerifier.
+
+For full current release blockers and acceptance steps, use `WORK-CHAT-CONTINUITY.md` and `SETUP.md`.
