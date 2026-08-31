@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { billingStatus, stripePriceId } from '@/lib/billing';
-import { sameOrigin, PRIVATE_HEADERS, readJsonBody } from '@/lib/http';
+import { configuredSiteOrigin, sameOrigin, PRIVATE_HEADERS, readJsonBody } from '@/lib/http';
 import { assertPaidCheckoutLegalReady } from '@/lib/legal-config';
 import { stripeClient } from '@/lib/stripe/server';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -40,11 +40,11 @@ export async function POST(request: Request) {
       if (saveError) throw new Error('No se ha podido preparar el pago.');
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    if (!siteUrl) throw new Error('Falta configurar NEXT_PUBLIC_SITE_URL en Netlify.');
+    const siteOrigin = configuredSiteOrigin();
+    if (!siteOrigin) throw new Error('NEXT_PUBLIC_SITE_URL no es una URL segura.');
 
     if (billingStatus(record).planId !== 'free' && customerId) {
-      const portal = await stripe.billingPortal.sessions.create({ customer: customerId, return_url: `${siteUrl}/dashboard` });
+      const portal = await stripe.billingPortal.sessions.create({ customer: customerId, return_url: `${siteOrigin}/dashboard` });
       return json({ url: portal.url });
     }
 
@@ -64,8 +64,8 @@ export async function POST(request: Request) {
       client_reference_id: user.id,
       line_items: [{ price: priceId, quantity: 1 }],
       allow_promotion_codes: true,
-      success_url: `${siteUrl}/dashboard?checkout=success`,
-      cancel_url: `${siteUrl}/dashboard?checkout=cancelled`,
+      success_url: `${siteOrigin}/dashboard?checkout=success`,
+      cancel_url: `${siteOrigin}/dashboard?checkout=cancelled`,
       metadata: { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID },
       subscription_data: { metadata: { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID } },
     }, { idempotencyKey: `checkout-${user.id}-${UNLIMITED_INTERNAL_PLAN_ID}-${new Date().toISOString().slice(0, 13)}` });
