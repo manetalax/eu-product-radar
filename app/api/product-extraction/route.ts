@@ -5,12 +5,13 @@ import { sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { createClient } from '@/lib/supabase/server';
 import { aiCostPolicy, generateText, generateVisionText } from '@/lib/ai-provider';
 import { recordAiUsage } from '@/lib/ai-telemetry';
+import { extractLocalDocumentText } from '@/lib/local-document-text';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
 const ALLOWED_EXTENSIONS = /\.(pdf|doc|docx|rtf|odt|txt|md|json|csv|xls|xlsx|png|jpe?g|webp|heic)$/i;
-const LOCAL_TEXT_EXTENSIONS = /\.(txt|md|json|rtf)$/i;
+const LOCALLY_EXTRACTABLE = /\.(pdf|docx|rtf|odt|txt|md|json)$/i;
 const PRODUCT_PROMPT = `Identifica todos los productos reales presentes en el material. No inventes. Devuelve exclusivamente JSON válido con esta forma: {"products":[{"name":"","manufacturer":"","responsible":"","warning":"","description":"","materials":"","intendedUse":"","audience":"","power":"","connectivity":"","composition":""}]}. Usa cadena vacía cuando un dato no esté explícito o claramente sustentado. Conserva el idioma original. Los campos responsible/importador UE, advertencias, materiales, alimentación, conectividad y composición se usarán para clasificar normativa: no los completes por suposición.`;
 
 function outputText(response: Record<string, unknown>) {
@@ -36,36 +37,33 @@ function parseProductsJson(text: string): unknown[] {
   return Array.isArray(parsed.products) ? parsed.products : [];
 }
 
-function rtfToPlainText(input: string): string {
-  return input
-    .replace(/\\par[d]?\b/g, '\n')
-    .replace(/\\tab\b/g, '\t')
-    .replace(/\\'[0-9a-fA-F]{2}/g, match => String.fromCharCode(parseInt(match.slice(2), 16)))
-    .replace(/\\u(-?\d+)\??/g, (_match, value: string) => {
-      const point = Number(value);
-      return Number.isFinite(point) ? String.fromCharCode(point < 0 ? point + 65536 : point) : '';
-    })
-    .replace(/\\[a-zA-Z]+-?\d* ?/g, '')
-    .replace(/\\[{}\\]/g, match => match.slice(1))
-    .replace(/[{}]/g, '')
-    .replace(/\r/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
-function decodeTextDataUrl(dataUrl: string, filename: string): string {
+function dataUrlBuffer(dataUrl: string): Buffer {
   const marker = ';base64,';
   const index = dataUrl.indexOf(marker);
-  if (index < 0) throw new Error('Archivo de texto no válido.');
-  const decoded = Buffer.from(dataUrl.slice(index + marker.length), 'base64').toString('utf8');
-  const text = /\.rtf$/i.test(filename) ? rtfToPlainText(decoded) : decoded;
-  if (!text.trim()) throw new Error('El archivo no contiene texto utilizable.');
-  return text.slice(0, 500_000);
+  if (index < 0) throw new Error('Archivo no válido.');
+  return Buffer.from(dataUrl.slice(index + marker.length), 'base64');
+}
+
+async function structureLocalText(filename: string, text: string, started: number) {
+  const result = await generateText([
+    { role: 'system', content: PRODUCT_PROMPT },
+    { role: 'user', content: text.slice(0, 500_000) },
+  ], { maxTokens: 3500, temperature: 0 });
+  void recordAiUsage({
+    task: 'product_text',
+    provider: result.provider,
+    model: result.model,
+    fallback: result.provider === 'openai' && Boolean(process.env.SILICONFLOW_API_KEY),
+    latencyMs: Date.now() - started,
+  });
+  const products = parseProductsJson(result.text);
+  if (!products.length) throw new Error(`No se han encontrado productos identificables en ${filename}.`);
+  return products;
 }
 
 async function extractDocumentWithOpenAi(filename: string, mimeType: string, dataUrl: string) {
   if (aiCostPolicy() === 'free_only') {
-    throw new Error('Este formato aún no está disponible en modo gratuito. Usa una imagen, TXT, Markdown, JSON, RTF, CSV o Excel mientras terminamos el parser local de PDF/Word.');
+    throw new Error('Este documento no contiene una capa de texto utilizable en modo gratuito. Si es un PDF escaneado, exporta sus páginas como imágenes; los .doc antiguos deben guardarse como DOCX, ODT o PDF con texto.');
   }
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error('Este formato requiere temporalmente el proveedor documental de respaldo.');
@@ -135,20 +133,14 @@ export async function POST(request: Request) {
         fallback: result.provider === 'openai' && Boolean(process.env.SILICONFLOW_API_KEY),
         latencyMs: Date.now() - started,
       });
-    } else if (LOCAL_TEXT_EXTENSIONS.test(filename)) {
-      const sourceText = decodeTextDataUrl(dataUrl, filename);
-      const result = await generateText([
-        { role: 'system', content: PRODUCT_PROMPT },
-        { role: 'user', content: sourceText },
-      ], { maxTokens: 3500, temperature: 0 });
-      products = parseProductsJson(result.text);
-      void recordAiUsage({
-        task: 'product_text',
-        provider: result.provider,
-        model: result.model,
-        fallback: result.provider === 'openai' && Boolean(process.env.SILICONFLOW_API_KEY),
-        latencyMs: Date.now() - started,
-      });
+    } else if (LOCALLY_EXTRACTABLE.test(filename)) {
+      const sourceText = extractLocalDocumentText(filename, dataUrlBuffer(dataUrl));
+      if (sourceText) products = await structureLocalText(filename, sourceText, started);
+      else {
+        const result = await extractDocumentWithOpenAi(filename, mimeType, dataUrl);
+        products = result.products;
+        void recordAiUsage({ task: 'product_document', provider: 'openai', model: result.model, latencyMs: Date.now() - started });
+      }
     } else {
       const result = await extractDocumentWithOpenAi(filename, mimeType, dataUrl);
       products = result.products;
