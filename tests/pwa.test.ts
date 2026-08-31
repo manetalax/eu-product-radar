@@ -10,7 +10,7 @@ const pwaRegister = readFileSync(new URL('../components/PwaRegister.tsx', import
 test('el manifest conserva identidad e instalación standalone en todos los idiomas', () => {
   for (const language of LANGUAGES) {
     const manifest = manifestFor(language);
-    assert.equal(manifest.name, 'Import Rules Verifier');
+    assert.equal(manifest.name, 'ImportVerifier');
     assert.equal(manifest.short_name, 'ImportVerifier');
     assert.equal(manifest.start_url, `/${language}`);
     assert.equal(manifest.scope, '/');
