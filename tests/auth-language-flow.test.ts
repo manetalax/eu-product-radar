@@ -13,6 +13,13 @@ test('Google, signup and password reset preserve the selected language', () => {
   assert.match(authForm, /resetPasswordForEmail\(email\.trim\(\), callbackUrl\('\/reset-password'\)\)/);
 });
 
+test('client auth callbacks only trust a valid HTTPS configured public origin', () => {
+  assert.match(authForm, /let origin = window\.location\.origin/);
+  assert.match(authForm, /const parsed = new URL\(configured\)/);
+  assert.match(authForm, /if \(parsed\.protocol === 'https:'\) origin = parsed\.origin/);
+  assert.doesNotMatch(authForm, /const siteUrl = process\.env\.NEXT_PUBLIC_SITE_URL \|\| window\.location\.origin/);
+});
+
 test('the OAuth callback only propagates validated language values', () => {
   assert.match(callback, /const requestedLanguage = request\.nextUrl\.searchParams\.get\('lang'\)/);
   assert.match(callback, /const language = isLanguage\(requestedLanguage\) \? requestedLanguage : null/);
