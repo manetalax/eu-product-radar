@@ -94,6 +94,13 @@ export async function POST(request: Request) {
     const latestQuota = await readQuota(supabase, user.id, language).catch(() => quota);
     return json({ error: quotaExceededMessage(products.length, latestQuota, language), quota: latestQuota }, 429);
   }
+  if (error?.code === '23505') {
+    const duplicate = await supabase.from('analyses').select('id,filename,created_at,rule_version,market_code,products').eq('id', requestId).eq('user_id', user.id).maybeSingle();
+    if (!duplicate.error && duplicate.data) {
+      const latestQuota = await readQuota(supabase, user.id, language).catch(() => quota);
+      return json({ analysis: duplicate.data, quota: latestQuota });
+    }
+  }
   if (error) return json({ error: a('saveAnalysis') }, 503);
   const updatedQuota = await readQuota(supabase, user.id, language).catch(() => productQuota(quota.used + products.length, new Date(), quota.billing));
   return json({ analysis: data, quota: updatedQuota }, 201);
