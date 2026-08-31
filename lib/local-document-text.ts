@@ -2,6 +2,9 @@ import { inflateRawSync, inflateSync } from 'node:zlib';
 
 const MAX_EXTRACTED_TEXT = 500_000;
 const MAX_ZIP_ENTRY_BYTES = 8 * 1024 * 1024;
+const MAX_PDF_STREAMS = 256;
+const MAX_PDF_DECODED_BYTES = 16 * 1024 * 1024;
+const MAX_PDF_PIECES = 20_000;
 
 function normalizeText(value: string): string {
   return value
@@ -137,19 +140,35 @@ function extractPdfOperators(source: string): string[] {
 
 export function extractPdfText(buffer: Buffer): string {
   const raw = buffer.toString('latin1');
-  const pieces = extractPdfOperators(raw);
+  const pieces = extractPdfOperators(raw).slice(0, MAX_PDF_PIECES);
   const streamPattern = /stream\r?\n/g;
+  let streamCount = 0;
+  let decodedBytes = 0;
+
   for (const match of raw.matchAll(streamPattern)) {
+    if (streamCount >= MAX_PDF_STREAMS || decodedBytes >= MAX_PDF_DECODED_BYTES || pieces.length >= MAX_PDF_PIECES) break;
+    streamCount++;
     const start = (match.index ?? 0) + match[0].length;
     const end = raw.indexOf('endstream', start);
     if (end < 0) continue;
     const dictionary = raw.slice(Math.max(0, (match.index ?? 0) - 800), match.index ?? 0);
     const bytes = buffer.subarray(start, end);
+    const remainingBytes = MAX_PDF_DECODED_BYTES - decodedBytes;
+    if (remainingBytes <= 0) break;
+
     try {
-      const decoded = /\/FlateDecode\b/.test(dictionary) ? inflateSync(bytes, { maxOutputLength: MAX_ZIP_ENTRY_BYTES }) : bytes;
-      pieces.push(...extractPdfOperators(decoded.toString('latin1')));
+      let decoded: Buffer;
+      if (/\/FlateDecode\b/.test(dictionary)) {
+        decoded = inflateSync(bytes, { maxOutputLength: Math.min(MAX_ZIP_ENTRY_BYTES, remainingBytes) });
+      } else {
+        if (bytes.length > remainingBytes) break;
+        decoded = bytes;
+      }
+      decodedBytes += decoded.length;
+      const availablePieces = MAX_PDF_PIECES - pieces.length;
+      pieces.push(...extractPdfOperators(decoded.toString('latin1')).slice(0, availablePieces));
     } catch {
-      // Ignore an individual unsupported/corrupt stream and continue scanning.
+      // Ignore an individual unsupported/corrupt/oversized stream and continue scanning.
     }
   }
   const text = normalizeText(pieces.join('\n'));
