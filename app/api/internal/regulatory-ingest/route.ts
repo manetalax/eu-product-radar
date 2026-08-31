@@ -35,6 +35,7 @@ export async function POST(request: Request) {
     const result = await persistRegulatoryEvents(body.events);
     return json(result, 200);
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'No se ha podido ejecutar la ingesta regulatoria.' }, 400);
+    console.error('regulatory_ingest_failed', error);
+    return json({ error: 'No se ha podido ejecutar la ingesta regulatoria.' }, 400);
   }
 }
