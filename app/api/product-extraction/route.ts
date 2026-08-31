@@ -4,6 +4,7 @@ import { normalizeExtractedProducts } from '@/lib/product-ingestion';
 import { sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { createClient } from '@/lib/supabase/server';
 import { generateText, generateVisionText } from '@/lib/ai-provider';
+import { recordAiUsage } from '@/lib/ai-telemetry';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -47,11 +48,12 @@ function decodeTextDataUrl(dataUrl: string): string {
 async function extractDocumentWithOpenAi(filename: string, mimeType: string, dataUrl: string) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error('Este formato requiere temporalmente el proveedor documental de respaldo.');
+  const model = process.env.OPENAI_PRODUCT_EXTRACT_MODEL || 'gpt-5.6-terra';
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: process.env.OPENAI_PRODUCT_EXTRACT_MODEL || 'gpt-5.6-terra',
+      model,
       store: false,
       instructions: PRODUCT_PROMPT,
       input: [{ role: 'user', content: [
@@ -74,7 +76,7 @@ async function extractDocumentWithOpenAi(filename: string, mimeType: string, dat
   if (!response.ok) throw new Error('No se ha podido interpretar el documento.');
   const text = outputText(body);
   if (!text) throw new Error('No se han encontrado productos identificables.');
-  return parseProductsJson(text);
+  return { products: parseProductsJson(text), model };
 }
 
 export async function POST(request: Request) {
@@ -96,21 +98,40 @@ export async function POST(request: Request) {
   if (!filename || filename.length > 120 || !ALLOWED_EXTENSIONS.test(filename)) return json({ error: 'Formato no compatible. Usa foto, PDF, Word, texto, CSV o Excel.' }, 400);
   if (!dataUrl.startsWith('data:') || !dataUrl.includes(';base64,') || dataUrl.length > Math.ceil(MAX_FILE_BYTES * 4 / 3) + 500) return json({ error: 'El archivo está vacío o supera el límite de 5 MB.' }, 400);
 
+  const started = Date.now();
   try {
     let products: unknown[];
     let kind: 'image' | 'document' = 'document';
 
     if (mimeType.startsWith('image/')) {
       kind = 'image';
-      products = parseProductsJson((await generateVisionText(dataUrl, PRODUCT_PROMPT, { maxTokens: 3500 })).text);
+      const result = await generateVisionText(dataUrl, PRODUCT_PROMPT, { maxTokens: 3500 });
+      products = parseProductsJson(result.text);
+      void recordAiUsage({
+        task: 'product_vision',
+        provider: result.provider,
+        model: result.model,
+        fallback: result.provider === 'openai' && Boolean(process.env.SILICONFLOW_API_KEY),
+        latencyMs: Date.now() - started,
+      });
     } else if (LOCAL_TEXT_EXTENSIONS.test(filename)) {
       const sourceText = decodeTextDataUrl(dataUrl);
-      products = parseProductsJson((await generateText([
+      const result = await generateText([
         { role: 'system', content: PRODUCT_PROMPT },
         { role: 'user', content: sourceText },
-      ], { maxTokens: 3500, temperature: 0 })).text);
+      ], { maxTokens: 3500, temperature: 0 });
+      products = parseProductsJson(result.text);
+      void recordAiUsage({
+        task: 'product_text',
+        provider: result.provider,
+        model: result.model,
+        fallback: result.provider === 'openai' && Boolean(process.env.SILICONFLOW_API_KEY),
+        latencyMs: Date.now() - started,
+      });
     } else {
-      products = await extractDocumentWithOpenAi(filename, mimeType, dataUrl);
+      const result = await extractDocumentWithOpenAi(filename, mimeType, dataUrl);
+      products = result.products;
+      void recordAiUsage({ task: 'product_document', provider: 'openai', model: result.model, latencyMs: Date.now() - started });
     }
 
     if (!products.length) throw new Error('No se han encontrado productos identificables.');
