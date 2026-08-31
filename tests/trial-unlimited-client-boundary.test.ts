@@ -18,3 +18,11 @@ test('trial upgrade still validates Stripe checkout navigation before redirectin
   assert.match(trial, /trustedStripeNavigationUrl\(body\.url, 'checkout'\)/);
   assert.match(trial, /!response\.ok \|\| !navigationUrl/);
 });
+
+test('trial exhaustion shows concrete retained value before the paid continuation', () => {
+  assert.match(trial, /trial-upgrade-benefits/);
+  assert.match(trial, /ImportVerifier AI \+ Regulatory Twin/);
+  assert.match(trial, /PDF y Excel con historial y trazabilidad/);
+  assert.match(trial, /Pago seguro mediante Stripe · facturación mensual/);
+  assert.doesNotMatch(trial, /countdown|limited time|only today/i);
+});
