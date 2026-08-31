@@ -23,4 +23,5 @@ jobs:
             -X POST \
             -H "Authorization: Bearer $REGULATORY_INGEST_SECRET" \
             -H "Content-Type: application/json" \
+            --data '{}' \
             https://importverifier.netlify.app/api/internal/regulatory-refresh
