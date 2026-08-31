@@ -22,9 +22,10 @@ export async function syncStripeSubscription(subscription: Stripe.Subscription) 
 
   const pricePlanId = planIdForStripePrice(priceId);
   const metadataPlanId = isPlanId(subscription.metadata.plan_id) ? subscription.metadata.plan_id : null;
-  if (pricePlanId && metadataPlanId && pricePlanId !== metadataPlanId) throw new Error('subscription_plan_price_mismatch');
-  const planId = pricePlanId ?? metadataPlanId;
-  if (!userId || !planId || !customerId) throw new Error('unrecognized_subscription_identity');
+  if (!pricePlanId) throw new Error('unrecognized_subscription_price');
+  if (metadataPlanId && pricePlanId !== metadataPlanId) throw new Error('subscription_plan_price_mismatch');
+  const planId = pricePlanId;
+  if (!userId || !customerId) throw new Error('unrecognized_subscription_identity');
 
   const periodEnd = Number.isFinite(subscription.items.data[0].current_period_end)
     ? new Date(subscription.items.data[0].current_period_end * 1000).toISOString()
