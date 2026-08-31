@@ -2,11 +2,14 @@
 
 import { useEffect } from 'react';
 
+const REGISTRATION_DELAY_MS = 1200;
+
 export default function PwaRegister() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
     let registration: ServiceWorkerRegistration | null = null;
     let cancelled = false;
+    let registrationTimer: number | null = null;
 
     const updateRegistration = async () => {
       if (cancelled || !registration) return;
@@ -18,6 +21,8 @@ export default function PwaRegister() {
     };
 
     const register = async () => {
+      registrationTimer = null;
+      if (cancelled) return;
       try {
         const nextRegistration = await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' });
         if (cancelled) return;
@@ -27,16 +32,22 @@ export default function PwaRegister() {
         registration = null;
       }
     };
+
+    const scheduleRegistration = () => {
+      if (cancelled || registration || registrationTimer !== null) return;
+      registrationTimer = window.setTimeout(() => { void register(); }, REGISTRATION_DELAY_MS);
+    };
     const refresh = () => { if (!document.hidden) void updateRegistration(); };
 
-    if (document.readyState === 'complete') void register();
-    else window.addEventListener('load', register, { once: true });
+    if (document.readyState === 'complete') scheduleRegistration();
+    else window.addEventListener('load', scheduleRegistration, { once: true });
     document.addEventListener('visibilitychange', refresh);
     window.addEventListener('online', refresh);
 
     return () => {
       cancelled = true;
-      window.removeEventListener('load', register);
+      if (registrationTimer !== null) window.clearTimeout(registrationTimer);
+      window.removeEventListener('load', scheduleRegistration);
       document.removeEventListener('visibilitychange', refresh);
       window.removeEventListener('online', refresh);
     };
