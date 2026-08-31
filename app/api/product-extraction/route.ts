@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { MAX_FILE_BYTES } from '@/lib/analysis';
-import { normalizeExtractedProducts } from '@/lib/product-ingestion';
+import { normalizeExtractedProducts, type ExtractedProduct } from '@/lib/product-ingestion';
 import { sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { createClient } from '@/lib/supabase/server';
 import { aiCostPolicy, generateText, generateVisionText } from '@/lib/ai-provider';
@@ -28,13 +28,14 @@ function outputText(response: Record<string, unknown>) {
   return '';
 }
 
-function parseProductsJson(text: string): unknown[] {
+function parseProductsJson(text: string): ExtractedProduct[] {
   const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
   const start = cleaned.indexOf('{');
   const end = cleaned.lastIndexOf('}');
   const candidate = start >= 0 && end > start ? cleaned.slice(start, end + 1) : cleaned;
   const parsed = JSON.parse(candidate) as { products?: unknown };
-  return Array.isArray(parsed.products) ? parsed.products : [];
+  if (!Array.isArray(parsed.products)) return [];
+  return parsed.products.filter((item): item is ExtractedProduct => Boolean(item) && typeof item === 'object' && !Array.isArray(item));
 }
 
 function dataUrlBuffer(dataUrl: string): Buffer {
@@ -44,7 +45,7 @@ function dataUrlBuffer(dataUrl: string): Buffer {
   return Buffer.from(dataUrl.slice(index + marker.length), 'base64');
 }
 
-async function structureLocalText(filename: string, text: string, started: number) {
+async function structureLocalText(filename: string, text: string, started: number): Promise<ExtractedProduct[]> {
   const result = await generateText([
     { role: 'system', content: PRODUCT_PROMPT },
     { role: 'user', content: text.slice(0, 500_000) },
@@ -119,7 +120,7 @@ export async function POST(request: Request) {
 
   const started = Date.now();
   try {
-    let products: unknown[];
+    let products: ExtractedProduct[];
     let kind: 'image' | 'document' = 'document';
 
     if (mimeType.startsWith('image/')) {
