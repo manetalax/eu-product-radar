@@ -5,6 +5,7 @@ import { isLanguage } from '@/lib/landing-i18n';
 import { IMPORTVERIFIER_PRODUCTION_URL } from '@/lib/release-config';
 
 function callbackOrigin(): string {
+  if (process.env.NODE_ENV === 'production') return IMPORTVERIFIER_PRODUCTION_URL;
   return configuredSiteOrigin() ?? IMPORTVERIFIER_PRODUCTION_URL;
 }
 
