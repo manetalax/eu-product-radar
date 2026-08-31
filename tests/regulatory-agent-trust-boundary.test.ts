@@ -14,6 +14,7 @@ test('regulatory agent validates language and treats stored context as untrusted
   assert.match(agent, /DATOS NO CONFIABLES/);
   assert.match(agent, /no instrucciones/i);
   assert.match(agent, /localizeEuRegulatoryAssessment\(rawRegulatory, language\)/);
+  assert.match(agent, /source_url: safeOfficialRegulatoryUrl\(event\.source_url\)/);
   assert.doesNotMatch(agent, /body\.language\.slice/);
 });
 

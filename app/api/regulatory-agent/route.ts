@@ -9,6 +9,7 @@ import { readJsonBody, sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { isLanguage } from '@/lib/landing-i18n';
 import { relevantRadarChanges } from '@/lib/radar-match';
 import { regulatoryAgentText } from '@/lib/regulatory-agent-i18n';
+import { safeOfficialRegulatoryUrl } from '@/lib/regulatory-source-url';
 import { requestLanguage } from '@/lib/request-language';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
@@ -83,6 +84,7 @@ export async function POST(request: Request) {
   const radar = relevantRadarChanges(
     (radarResult.data ?? []).map(event => ({
       ...event,
+      source_url: safeOfficialRegulatoryUrl(event.source_url),
       affected_keywords: Array.isArray(event.affected_keywords) ? event.affected_keywords : [],
       official_reference: event.official_reference ?? '',
     })),
