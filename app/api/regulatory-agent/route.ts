@@ -3,9 +3,11 @@ import { analyze } from '@/lib/analysis';
 import { generateText } from '@/lib/ai-provider';
 import { recordAiUsage } from '@/lib/ai-telemetry';
 import { consumeApiRateLimit } from '@/lib/api-rate-limit';
+import { localizeEuRegulatoryAssessment } from '@/lib/eu-regulatory-i18n';
 import { readJsonBody, sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
 import { isLanguage } from '@/lib/landing-i18n';
 import { relevantRadarChanges } from '@/lib/radar-match';
+import { regulatoryAgentText } from '@/lib/regulatory-agent-i18n';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
@@ -14,24 +16,26 @@ const json = (body: unknown, status = 200) => NextResponse.json(body, { status, 
 const uuid = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
 export async function POST(request: Request) {
-  if (!sameOrigin(request)) return json({ error: 'Origen de solicitud no permitido.' }, 403);
+  let body: { question?: unknown; analysisId?: unknown; productIndex?: unknown; language?: unknown } = {};
+  try { body = await readJsonBody(request) as typeof body; }
+  catch {}
+  const language = isLanguage(body.language) ? body.language : 'es';
+  const a = (key: Parameters<typeof regulatoryAgentText>[1]) => regulatoryAgentText(language, key);
+
+  if (!sameOrigin(request)) return json({ error: a('origin') }, 403);
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return json({ error: 'Inicia sesión para usar el asistente regulatorio.' }, 401);
+  if (authError || !user) return json({ error: a('signIn') }, 401);
 
-  let body: { question?: unknown; analysisId?: unknown; productIndex?: unknown; language?: unknown };
-  try { body = await readJsonBody(request) as typeof body; }
-  catch (error) { return json({ error: error instanceof Error ? error.message : 'Solicitud no válida.' }, 400); }
-
+  if (!Object.keys(body).length) return json({ error: a('invalidRequest') }, 400);
   const question = typeof body.question === 'string' ? body.question.trim() : '';
   const analysisId = typeof body.analysisId === 'string' ? body.analysisId : '';
   const productIndex = Number(body.productIndex);
-  const language = isLanguage(body.language) ? body.language : 'es';
-  if (!question || question.length > 2000) return json({ error: 'Escribe una pregunta de hasta 2.000 caracteres.' }, 400);
-  if (!uuid.test(analysisId) || !Number.isInteger(productIndex) || productIndex < 0 || productIndex >= 1000) return json({ error: 'El producto seleccionado no es válido.' }, 400);
+  if (!question || question.length > 2000) return json({ error: a('question') }, 400);
+  if (!uuid.test(analysisId) || !Number.isInteger(productIndex) || productIndex < 0 || productIndex >= 1000) return json({ error: a('productInvalid') }, 400);
 
   const allowed = await consumeApiRateLimit({ userId: user.id, route: 'regulatory_agent', limit: 60, windowSeconds: 3600 });
-  if (!allowed) return json({ error: 'Hay demasiadas consultas seguidas. Vuelve a intentarlo más tarde.' }, 429);
+  if (!allowed) return json({ error: a('rateLimit') }, 429);
 
   const { data: analysis, error: analysisError } = await supabase
     .from('analyses')
@@ -39,15 +43,19 @@ export async function POST(request: Request) {
     .eq('id', analysisId)
     .eq('user_id', user.id)
     .maybeSingle();
-  if (analysisError) return json({ error: 'No se ha podido cargar el análisis.' }, 503);
-  if (!analysis) return json({ error: 'Análisis no encontrado.' }, 404);
+  if (analysisError) return json({ error: a('analysisLoad') }, 503);
+  if (!analysis) return json({ error: a('analysisMissing') }, 404);
 
   const products = Array.isArray(analysis.products) ? analysis.products : [];
-  if (productIndex >= products.length) return json({ error: 'El producto seleccionado no existe en este análisis.' }, 400);
+  if (productIndex >= products.length) return json({ error: a('productMissing') }, 400);
   const typedProducts = products as Parameters<typeof analyze>[0];
   const results = analyze(typedProducts, analysis.market_code ?? 'EU');
   const product = typedProducts[productIndex];
   const result = results[productIndex];
+  const rawRegulatory = result?.regulatory;
+  const localizedResult = rawRegulatory
+    ? { ...result, regulatory: localizeEuRegulatoryAssessment(rawRegulatory, language) }
+    : result;
 
   const [evidenceResult, radarResult] = await Promise.all([
     supabase.from('analysis_evidence')
@@ -61,8 +69,8 @@ export async function POST(request: Request) {
       .order('published_at', { ascending: false, nullsFirst: false })
       .limit(30),
   ]);
-  if (evidenceResult.error) return json({ error: 'No se ha podido cargar la evidencia del producto.' }, 503);
-  if (radarResult.error) return json({ error: 'No se ha podido cargar el contexto regulatorio oficial.' }, 503);
+  if (evidenceResult.error) return json({ error: a('evidenceLoad') }, 503);
+  if (radarResult.error) return json({ error: a('radarLoad') }, 503);
 
   const radar = relevantRadarChanges(
     (radarResult.data ?? []).map(event => ({
@@ -71,12 +79,12 @@ export async function POST(request: Request) {
       official_reference: event.official_reference ?? '',
     })),
     product,
-    result?.regulatory?.category ?? '',
+    rawRegulatory?.category ?? '',
   ).slice(0, 5);
 
   const context = JSON.stringify({
     product,
-    result,
+    result: localizedResult,
     evidence: evidenceResult.data ?? [],
     radar,
     analysis: { filename: analysis.filename, ruleVersion: analysis.rule_version, marketCode: analysis.market_code ?? 'EU' },
@@ -112,9 +120,9 @@ export async function POST(request: Request) {
 
     return json({
       answer: resultAi.text,
-      disclaimer: 'Asistencia regulatoria orientativa. No constituye certificación, dictamen jurídico ni aprobación de una autoridad.',
+      disclaimer: a('disclaimer'),
     });
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'No se ha podido consultar el asistente.' }, 502);
+    return json({ error: error instanceof Error && error.message ? error.message : a('assistantFailure') }, 502);
   }
 }
