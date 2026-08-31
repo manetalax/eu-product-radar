@@ -8,8 +8,20 @@ export type TextGenerationResult = {
 
 export type AiCostPolicy = 'free_only' | 'free_first' | 'premium_allowed';
 
+const AI_PROVIDER_TIMEOUT_MS = 30_000;
+
 function siliconFlowBaseUrl() {
   return (process.env.SILICONFLOW_BASE_URL || 'https://api.siliconflow.com/v1').replace(/\/$/, '');
+}
+
+async function providerFetch(input: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), AI_PROVIDER_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export function aiCostPolicy(env: NodeJS.ProcessEnv = process.env): AiCostPolicy {
@@ -26,7 +38,7 @@ async function siliconFlowText(messages: TextMessage[], options?: { maxTokens?: 
   const siliconKey = process.env.SILICONFLOW_API_KEY;
   if (!siliconKey) return null;
   const model = process.env.SILICONFLOW_TEXT_MODEL || 'THUDM/GLM-Z1-9B-0414';
-  const response = await fetch(`${siliconFlowBaseUrl()}/chat/completions`, {
+  const response = await providerFetch(`${siliconFlowBaseUrl()}/chat/completions`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${siliconKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, messages, stream: false, max_tokens: options?.maxTokens ?? 1800, temperature: options?.temperature ?? 0.1 }),
@@ -43,7 +55,7 @@ async function openAiText(messages: TextMessage[]): Promise<TextGenerationResult
   const model = process.env.OPENAI_REGULATORY_AGENT_MODEL || process.env.OPENAI_PRODUCT_EXTRACT_MODEL || 'gpt-5.6-terra';
   const instructions = messages.filter(message => message.role === 'system').map(message => message.content).join(' ');
   const input = messages.filter(message => message.role !== 'system').map(message => ({ role: message.role, content: [{ type: 'input_text', text: message.content }] }));
-  const response = await fetch('https://api.openai.com/v1/responses', {
+  const response = await providerFetch('https://api.openai.com/v1/responses', {
     method: 'POST', headers: { Authorization: `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, store: false, instructions, input }),
   });
@@ -72,7 +84,7 @@ export async function generateVisionText(dataUrl: string, prompt: string, option
   const siliconKey = process.env.SILICONFLOW_API_KEY;
   if (siliconKey) {
     const model = process.env.SILICONFLOW_VISION_MODEL || process.env.SILICONFLOW_OCR_MODEL || 'PaddlePaddle/PaddleOCR-VL-1.5';
-    const response = await fetch(`${siliconFlowBaseUrl()}/chat/completions`, {
+    const response = await providerFetch(`${siliconFlowBaseUrl()}/chat/completions`, {
       method: 'POST', headers: { Authorization: `Bearer ${siliconKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model, stream: false, max_tokens: options?.maxTokens ?? 3000, temperature: 0.1, messages: [{ role: 'user', content: [{ type: 'image_url', image_url: { url: dataUrl, detail: 'high' } }, { type: 'text', text: prompt }] }] }),
     });
@@ -86,7 +98,7 @@ export async function generateVisionText(dataUrl: string, prompt: string, option
   const openaiKey = process.env.OPENAI_API_KEY;
   if (!openaiKey) throw new Error('No hay ningún proveedor de visión configurado.');
   const model = process.env.OPENAI_PRODUCT_EXTRACT_MODEL || 'gpt-5.6-terra';
-  const response = await fetch('https://api.openai.com/v1/responses', {
+  const response = await providerFetch('https://api.openai.com/v1/responses', {
     method: 'POST', headers: { Authorization: `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, store: false, input: [{ role: 'user', content: [{ type: 'input_image', image_url: dataUrl, detail: 'high' }, { type: 'input_text', text: prompt }] }] }),
   });
