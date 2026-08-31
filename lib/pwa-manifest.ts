@@ -14,7 +14,7 @@ export function manifestFor(language: Language): MetadataRoute.Manifest {
   const shortcuts = shortcutCopy[language];
   return {
     id: '/',
-    name: 'Import Rules Verifier',
+    name: 'ImportVerifier',
     short_name: 'ImportVerifier',
     description: landingCopy[language].hero.lead,
     lang: language,
