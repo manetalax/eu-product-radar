@@ -1,4 +1,5 @@
 import type { Product } from './analysis';
+import { safeOfficialRegulatoryUrl } from './regulatory-source-url';
 
 export type RadarChange = {
   id: string;
@@ -6,6 +7,7 @@ export type RadarChange = {
   summary: string;
   affected_keywords: string[];
   official_reference?: string;
+  source_url?: string;
 };
 
 const normalize = (value: string) => value
@@ -37,7 +39,13 @@ export function radarMatchScore(change: RadarChange, product: Product, category 
 
 export function relevantRadarChanges<T extends RadarChange>(changes: T[], product: Product, category = ''): T[] {
   return changes
-    .map(change => ({ change, score: radarMatchScore(change, product, category) }))
+    .map(change => ({
+      change: {
+        ...change,
+        ...(typeof change.source_url === 'string' ? { source_url: safeOfficialRegulatoryUrl(change.source_url) } : {}),
+      } as T,
+      score: radarMatchScore(change, product, category),
+    }))
     .filter(item => item.score > 0)
     .sort((a, b) => b.score - a.score)
     .map(item => item.change);
