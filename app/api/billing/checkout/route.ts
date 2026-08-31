@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       client_reference_id: user.id,
       line_items: [{ price: priceId, quantity: 1 }],
       allow_promotion_codes: true,
-      success_url: `${siteOrigin}/dashboard?checkout=success`,
+      success_url: `${siteOrigin}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteOrigin}/dashboard?checkout=cancelled`,
       metadata: { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID },
       subscription_data: { metadata: { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID } },
