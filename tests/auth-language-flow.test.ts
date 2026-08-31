@@ -40,7 +40,8 @@ test('the OAuth callback only propagates validated language values', () => {
   assert.match(callback, /failure\.searchParams\.set\('lang', language\)/);
 });
 
-test('an invalid or expired reset session keeps a validated language on the login error redirect', () => {
-  assert.match(resetPage, /const language = isLanguage\(lang\) \? lang : undefined/);
-  assert.match(resetPage, /message=link_error\$\{language \? `&lang=\$\{language\}` : ''\}/);
+test('password reset seeds its language and preserves it on an invalid or expired session', () => {
+  assert.match(resetPage, /const language = await serverLanguage\(lang\)/);
+  assert.match(resetPage, /redirect\(`\/login\?message=link_error&lang=\$\{language\}`\)/);
+  assert.match(resetPage, /<LanguageProvider initialLanguage=\{language\}><AuthForm initialMode="reset" \/><\/LanguageProvider>/);
 });
