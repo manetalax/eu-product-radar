@@ -37,3 +37,10 @@ test('legal pages resolve language server-side and retain truthful configured le
   assert.match(privacyPage, /legal\.providerName/);
   assert.match(termsPage, /legal\.providerName/);
 });
+
+test('legal pages return directly to the selected static landing locale', () => {
+  for (const page of [privacyPage, termsPage]) {
+    assert.match(page, /href=\{`\/\$\{language\}`\}/);
+    assert.doesNotMatch(page, /href=\{`\/\?lang=\$\{language\}`\}/);
+  }
+});
