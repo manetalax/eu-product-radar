@@ -21,8 +21,9 @@ export function addRegulatoryWorksheet(workbook: ExcelJS.Workbook, results: Resu
   if (!regulatory.length) return;
   const language = activeLanguage(requestedLanguage);
   const t = reportLabels[language];
+  const worksheetName = local(language, 'Evaluación regulatoria', 'Regulatory assessment', 'Évaluation réglementaire', 'Regulatorische Bewertung', 'Valutazione normativa', 'Avaliação regulamentar');
 
-  const ws = workbook.addWorksheet('Evaluación regulatoria', {
+  const ws = workbook.addWorksheet(worksheetName, {
     views: [{ state: 'frozen', ySplit: 4, showGridLines: false }],
     properties: { defaultRowHeight: 24 },
   });
