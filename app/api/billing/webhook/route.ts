@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { isPlanId, ONE_TIME_AUDIT, PLANS_BY_ID } from '@/lib/plans';
 import { planIdForStripePrice } from '@/lib/billing';
+import { readTextBody } from '@/lib/http';
 import { stripeClient } from '@/lib/stripe/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
+const STRIPE_WEBHOOK_MAX_BYTES = 1024 * 1024;
 
 function id(value: string | { id: string } | null): string | null {
   return typeof value === 'string' ? value : value?.id ?? null;
@@ -22,16 +24,6 @@ async function syncSubscription(subscription: Stripe.Subscription) {
   }
   const planId = isPlanId(subscription.metadata.plan_id) ? subscription.metadata.plan_id : planIdForStripePrice(priceId);
   if (!userId || !planId || !customerId) throw new Error('La suscripción no contiene una cuenta y un plan reconocibles.');
-
-  // Account deletion cancels Stripe first and then removes the Supabase user. Stripe can
-  // deliver the cancellation webhook after the user row has disappeared; acknowledge that
-  // terminal event instead of retrying forever against a foreign-key that can no longer exist.
-  const { data: userLookup, error: userLookupError } = await admin.auth.admin.getUserById(userId);
-  if (userLookupError || !userLookup.user) {
-    if (subscription.status === 'canceled') return;
-    throw new Error('La cuenta asociada a la suscripción no existe.');
-  }
-
   const ends = subscription.items.data.map(item => item.current_period_end).filter(Number.isFinite);
   const periodEnd = ends.length ? new Date(Math.max(...ends) * 1000).toISOString() : null;
   const { error } = await admin.from('subscriptions').upsert({
@@ -46,7 +38,10 @@ async function syncSubscription(subscription: Stripe.Subscription) {
     cancel_at_period_end: subscription.cancel_at_period_end,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id' });
-  if (error) throw error;
+  if (error) {
+    if (subscription.status === 'canceled' && error.code === '23503') return;
+    throw error;
+  }
 }
 
 async function syncAudit(session: Stripe.Checkout.Session) {
@@ -72,9 +67,10 @@ export async function POST(request: Request) {
   if (!signature || !secret?.startsWith('whsec_')) return NextResponse.json({ error: 'Webhook de Stripe no configurado.' }, { status: 503 });
   let event: Stripe.Event;
   try {
-    event = stripeClient().webhooks.constructEvent(await request.text(), signature, secret);
+    const rawBody = await readTextBody(request, STRIPE_WEBHOOK_MAX_BYTES);
+    event = stripeClient().webhooks.constructEvent(rawBody, signature, secret);
   } catch {
-    return NextResponse.json({ error: 'Firma de Stripe no válida.' }, { status: 400 });
+    return NextResponse.json({ error: 'Firma de Stripe no válida o contenido excesivo.' }, { status: 400 });
   }
 
   const admin = createAdminClient();
