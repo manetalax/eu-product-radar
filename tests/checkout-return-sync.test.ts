@@ -7,6 +7,7 @@ const confirm = readFileSync(new URL('../app/api/billing/confirm/route.ts', impo
 const webhook = readFileSync(new URL('../app/api/billing/webhook/route.ts', import.meta.url), 'utf8');
 const returnSync = readFileSync(new URL('../components/CheckoutReturnSync.tsx', import.meta.url), 'utf8');
 const dashboardPage = readFileSync(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8');
+const proxy = readFileSync(new URL('../proxy.ts', import.meta.url), 'utf8');
 
 test('Stripe success return includes the canonical Checkout Session placeholder', () => {
   assert.match(checkout, /checkout=success&session_id=\{CHECKOUT_SESSION_ID\}/);
@@ -27,6 +28,10 @@ test('webhook and synchronous checkout confirmation share one entitlement synchr
   assert.match(webhook, /syncStripeSubscription/);
   assert.match(confirm, /syncStripeSubscription/);
   assert.doesNotMatch(webhook, /async function syncSubscription/);
+});
+
+test('checkout confirmation is covered by Supabase session-refresh proxy', () => {
+  assert.match(proxy, /'\/api\/billing\/confirm'/);
 });
 
 test('dashboard return sync confirms once, reloads with synced marker and cleans URL parameters', () => {
