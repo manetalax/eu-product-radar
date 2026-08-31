@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Analysis, analyze } from '@/lib/analysis';
 import { localizeEuRegulatoryAssessment } from '@/lib/eu-regulatory-i18n';
 import { intelligenceCopy } from '@/lib/intelligence-i18n';
+import { platformCapabilityLabel } from '@/lib/platform-capability-i18n';
 import { PLATFORM_CONNECTORS, detectPlatform } from '@/lib/platform-connectors';
 import { relevantRadarChanges } from '@/lib/radar-match';
 import { regulatoryReadiness, type RegulatoryEvidenceLink } from '@/lib/regulatory-twin';
@@ -173,7 +174,7 @@ export default function IntelligenceSuite() {
 
       <article className={`${styles.card} ${styles.wide}`}>
         <div className={styles.cardHead}><div><h3>Connect</h3><p>{t.connectLead}</p></div><span className={styles.status}>3 {t.connectors}</span></div>
-        <div className={styles.platforms}>{PLATFORM_CONNECTORS.map(connector => <div className={styles.platform} key={connector.id}><strong>{connector.name}</strong><small>{connector.capabilities.map(item => item.replaceAll('-', ' ')).join(' · ')}</small><button type="button" disabled aria-label={`${t.upcomingAuthorize} ${connector.name}`}>{t.upcomingAuthorize} {connector.name}</button></div>)}</div>
+        <div className={styles.platforms}>{PLATFORM_CONNECTORS.map(connector => <div className={styles.platform} key={connector.id}><strong>{connector.name}</strong><small>{connector.capabilities.map(item => platformCapabilityLabel(language, item)).join(' · ')}</small><button type="button" disabled aria-label={`${t.upcomingAuthorize} ${connector.name}`}>{t.upcomingAuthorize} {connector.name}</button></div>)}</div>
         <div className={styles.urlRow}><input value={platformUrl} onChange={e => setPlatformUrl(e.target.value)} placeholder={t.platformPlaceholder} inputMode="url" autoCapitalize="none" autoCorrect="off" /><button className={styles.button} type="button" disabled={!platformUrl.trim()}>{t.detect}</button></div>
         {platformUrl.trim() && <div className={styles.detected}>{detected ? `${t.platformDetected}: ${PLATFORM_CONNECTORS.find(item => item.id === detected)?.name}. ${t.authorizationPending}` : t.unknownPlatform}</div>}
       </article>
