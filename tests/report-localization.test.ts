@@ -20,6 +20,8 @@ test('el Excel en inglés traduce superficies visibles sin romper fórmulas inte
   const summary = wb.getWorksheet('Resumen')!;
   const products = wb.getWorksheet('Productos')!;
   const evidence = wb.getWorksheet('Evidencia')!;
+  const guide = wb.getWorksheet('Guía documental')!;
+  const regulatory = wb.getWorksheet('Evaluación regulatoria')!;
 
   assert.match(String(summary.getCell('A2').value), /CATALOGUE REPORT/i);
   assert.equal(summary.getCell('A4').value, 'File');
@@ -28,6 +30,10 @@ test('el Excel en inglés traduce superficies visibles sin romper fórmulas inte
   assert.equal(products.getCell('C5').value, 'High');
   assert.equal((summary.getCell('B9').value as { formula?: string }).formula, `COUNTIF('Productos'!C5:C6,"High")`);
   assert.match(String(evidence.getCell('A1').value), /SAVED EVIDENCE/i);
+  assert.match(String(guide.getCell('A1').value), /DOCUMENTARY GUIDE/i);
+  assert.match(String(guide.getCell('B5').value), /manufacturer/i);
+  assert.match(String(regulatory.getCell('A1').value), /EU REGULATORY ASSESSMENT/i);
+  assert.match(String(regulatory.getCell('E4').value), /Reason\/applicability/i);
 });
 
 test('el Excel por defecto conserva español para servidor y compatibilidad histórica', async () => {
