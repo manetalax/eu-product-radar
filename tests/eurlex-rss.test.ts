@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { EURLEX_RSS_SOURCES, parseEurLexRss } from '../lib/eurlex-rss';
+import { EURLEX_RSS_SOURCES, fetchEurLexEvents, parseEurLexRss } from '../lib/eurlex-rss';
 
 const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel><title>EUR-Lex</title>
@@ -47,4 +47,20 @@ test('detecta familias regulatorias útiles para catálogos', () => {
   assert.ok(event.affectedKeywords?.includes('rohs'));
   assert.ok(event.affectedKeywords?.includes('weee'));
   assert.ok(event.affectedKeywords?.includes('labelling traceability'));
+});
+
+test('rechaza un RSS cuyo tamaño declarado supera 4 MB antes de materializar el cuerpo', async () => {
+  const fakeFetch = async () => new Response('', { status: 200, headers: { 'content-length': String(4 * 1024 * 1024 + 1) } });
+  await assert.rejects(() => fetchEurLexEvents(fakeFetch as typeof fetch), /tamaño permitido/);
+});
+
+test('rechaza un RSS que supera 4 MB durante streaming aunque no declare Content-Length', async () => {
+  const chunk = new Uint8Array(1024 * 1024);
+  const fakeFetch = async () => new Response(new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (let i = 0; i < 5; i++) controller.enqueue(chunk);
+      controller.close();
+    },
+  }), { status: 200 });
+  await assert.rejects(() => fetchEurLexEvents(fakeFetch as typeof fetch), /tamaño permitido/);
 });
