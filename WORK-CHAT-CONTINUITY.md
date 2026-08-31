@@ -9,113 +9,86 @@
 
 ## Read order
 1. This file — latest operational state and source of truth.
-2. `WORK-HANDOFF-IMPORTVERIFIER.md` — detailed current architecture.
-3. Latest PR #4 HEAD + exact-HEAD CI.
+2. `WORK-HANDOFF-IMPORTVERIFIER.md` — detailed architecture.
+3. Latest PR #4 HEAD + exact-HEAD CI/Deploy Preview.
 4. `AGENTS.md` — autonomous execution standard.
 
 ## Owner operating instruction
-- Continue autonomously through all actionable work until the product is finished or only manual/external-input tasks remain.
-- Never stop merely because one task is BLOCKED EXTERNAL; record it and immediately continue with another actionable item.
-- Batch manual credentials/browser/device work for the end wherever possible.
-- Before ending an execution, record exact HEAD/CI/preview state and leave a clear NEXT while unfinished.
+Continue autonomously through every actionable task. Never stop because one task is BLOCKED EXTERNAL; record it and continue. Batch browser/credential/device work for the end. Do not merge without explicit owner instruction.
 
 ## Commercial invariants
 - Exactly **5 free products total per account**, no card and no monthly reset.
-- After free allowance: only **ImportVerifier Unlimited · €9.95/month**.
-- `starter` is only the internal compatibility ID for Unlimited.
+- After the free allowance: only **ImportVerifier Unlimited · €9.95/month**.
+- `starter` is only the internal Stripe/database compatibility ID for Unlimited.
 - End users see **ImportVerifier AI**, never provider/model names.
 - Production AI cost policy is fail-closed `AI_COST_POLICY=free_only`.
-- Paid checkout remains fail-closed until truthful legal provider data exists.
+- Paid checkout remains fail-closed until truthful legal-provider variables exist.
 
-## DONE — release-critical foundations
-- Lifetime 5-product quota is enforced cumulatively in production by `free_account_usage`/`enforce_free_lifetime_product_quota`; a transactional production probe accepted five products, rejected the sixth and rolled back cleanly. Zero observed free accounts exceed five.
-- Analysis creation is idempotent for mobile/network retries; duplicate `requestId` races recover the existing authenticated analysis without double-consuming quota.
-- Public acceptance sample `public/importverifier-sample-5-products.csv` contains exactly five distinct EU products and is regression-tested.
-- Stripe live canonical offer is `ImportVerifier Unlimited` at EUR 9.95/month (`price_1UAJy5HJnO8odw1Mn4jMVjFt`). Checkout revalidates price/currency/amount/month interval and only accepts internal `starter`.
-- Checkout/portal server and client navigation are allowlisted to exact credential-free canonical Stripe HTTPS surfaces; lookalikes, wrong surfaces, ports and unsafe schemes fail closed.
-- Checkout-return confirmation requires a structurally valid `confirmed === true`; raw parser/provider failures are not shown to customers.
-- Dashboard billing, account, history, analysis-create/detail, extraction and quota success payloads pass runtime validation before state mutation.
-- Latest Regulatory Assessment, Analysis Review Gate, Evidence, Intelligence Suite, Trial and Unlimited success payloads have dedicated runtime trust boundaries; malformed 2xx data fails closed.
+## DONE — release-critical product
+- Lifetime free quota is enforced cumulatively in production by `free_account_usage` + `enforce_free_lifetime_product_quota`. Current production aggregate check: zero accounts over five; maximum observed usage is exactly five.
+- Analysis creation is idempotent for retries/races; five-product acceptance sample is regression-tested.
+- Stripe live canonical offer is `ImportVerifier Unlimited`, EUR 9.95/month, price `price_1UAJy5HJnO8odw1Mn4jMVjFt`; Checkout revalidates amount/currency/monthly recurrence and only accepts internal `starter`.
+- Live Stripe webhook endpoint is enabled at `https://importverifier.netlify.app/api/billing/webhook` for Checkout completion and subscription create/update/delete events.
+- Stripe/DB currently both contain zero subscriptions, so there is no observed entitlement drift before launch.
+- Checkout/Portal navigation is final-boundary allowlisted to exact Stripe HTTPS surfaces; return confirmation is structurally validated and provider errors are not shown to customers.
+- Dashboard, Latest Regulatory Assessment, Analysis Review Gate, Evidence, Intelligence Suite, Trial and Unlimited success payloads have runtime trust boundaries; malformed 2xx data fails closed.
 - RLS/account isolation, evidence ownership, privileged-table deny-all posture and server-only privilege hardening are implemented.
-- Evidence URLs are sanitized at persistence/API/render/export/AI-context boundaries; evidence supports document/page/URL/note traceability.
-- Official Radar/regulatory/guidance URLs are HTTPS allowlisted and revalidated at ingestion/API/render/export/AI-context boundaries; credentials, lookalikes and non-default ports are rejected.
-- Production AI policy is `free_only`; CSV/XLS/XLSX stay local, supported text/doc/image paths use free-compatible extraction when configured, and unsupported scanned/legacy formats fail honestly instead of leaking premium spend.
-- External AI calls are bounded by abort timeouts; unsafe provider base URLs fail release/runtime validation; provider/model information is hidden from end users.
-- Oversized request paths preserve HTTP 413 where implemented; internal Radar ingestion also requires JSON and protects its internal endpoint.
-- Canonical site-origin validation is fail-closed and exact-origin protected.
-- Supabase session refresh middleware covers authenticated client APIs while excluding Stripe webhook/internal endpoints.
+- Evidence and official regulatory URLs are sanitized at persistence/API/render/export/AI-context boundaries.
+- Production AI policy is `free_only`; CSV/XLS/XLSX stay local; supported text/doc/image paths use free-compatible extraction when configured; unsupported scanned/legacy paths fail honestly instead of leaking premium spend.
+- External AI calls have bounded abort timeouts; unsafe provider URLs fail closed; provider/model details stay server-side.
 - EU regulatory engine, Product Regulatory Twin, persisted Evidence and Regulatory Impact Radar architecture are implemented.
-- Official EUR-Lex RSS adapter, normalization, deduplication and protected refresh/ingest endpoints exist. Radar live claims remain disabled while production event count is 0.
-- Shopify/Amazon/Etsy connector architecture exists; OAuth/API remains unavailable until official credentials exist.
+- Official EUR-Lex RSS adapter, normalization, deduplication and protected ingest/refresh endpoints exist. Production Radar event count remains **0**, so live Radar claims remain disabled.
+- Shopify/Amazon/Etsy connector architecture exists; direct OAuth/API remains inactive until official credentials exist.
 - Dashboard/auth/legal/intelligence/report surfaces are localized in ES/EN/FR/DE/IT/PT where customer-active.
-- Google auth button includes a visible Google mark; production code pins Google/signup/recovery return flow to the canonical ImportVerifier domain.
-- Supabase OAuth SDK-returned navigation is validated: exact configured Supabase origin + `/auth/v1/authorize`; remote HTTP, credentials, lookalikes, unexpected paths and nonstandard ports fail closed.
-- PWA private-cache hardening, localized manifest, own-brand icons, safe areas, touch targets, iOS form sizing and modal keyboard/scroll behavior are covered.
-- PWA public-shell precache uses credential-free fetches, refuses Cookie/Authorization/private/no-store/no-cache responses, prevents query-navigation cache poisoning and deletes only ImportVerifier caches.
-- PWA visibility/online service-worker update failures are contained so Safari/iPadOS/offline transitions cannot create unhandled rejections.
-- Upload UI supports spreadsheet/document/photo input and explicitly declares `.heic`, `.heif` and `image/*`.
-- Image extraction identifies PNG/JPEG/WebP/HEIC/HEIF from binary signatures; blank/octet-stream iOS MIME is accepted only when signature/extension agree; spoofing fails closed.
-- Multi-file drag/drop is rejected without processing or quota consumption.
-- Dedicated mobile camera capture keeps the broad universal picker intact and adds separate image-only `capture="environment"`; both reuse the same secure load/quota/idempotency pipeline.
-- Camera/file-picker cancellation is regression-tested to avoid entering the import pipeline; universal picker is regression-locked against forced capture.
-- Mobile cards handle long filenames; PDF/XLSX/template Blob URLs use delayed revocation for Safari/iPadOS save-to-Files robustness.
-- PDF/Excel reports include localized regulatory narrative, evidence and source traceability; spreadsheet user strings avoid formula injection.
+- Google OAuth button has visible Google identity; code pins auth returns to canonical ImportVerifier and validates SDK-returned Supabase OAuth destinations.
+- Current Supabase Auth logs show successful Google OAuth/token/user traffic with referer `https://importverifier.netlify.app` and callback `https://importverifier.netlify.app/auth/callback`. Old `euproductradar.netlify.app` entries are historical earlier traffic, not the latest observed flow.
+- PWA private-cache hardening, language-keyed offline landing cache, own-brand icons, safe areas, touch targets and iOS form/modal behavior are covered.
+- Universal uploads support spreadsheets/documents/photos including HEIC/HEIF; binary signatures are validated and spoofing fails closed.
+- Dedicated mobile camera capture uses `capture="environment"` without breaking the broad file picker; cancellation/multi-file ambiguity do not consume quota.
+- PDF/XLSX/template browser downloads use delayed object-URL revocation for Safari/iPad save-to-Files robustness.
+- Premium PDF includes PDF-native ImportVerifier identity, executive hierarchy, localized ImportVerifier `VERIFIED` review seal, evidence/source traceability and repeated issuer/EU-context footer. It does not claim government/EU certification.
+- Landing conversion pass clearly states five lifetime free products/no card, one Unlimited plan at €9.95/month, truthful value proof and strong trial-exhaustion conversion without fabricated scarcity/social proof.
+- Third-party commerce/payment marks are larger/responsive but copy does not imply unsupported PayPal/payment methods or partnerships.
 
-## DONE — premium PDF + conversion pass (2026-08-31)
-- **Premium PDF v2:** `lib/export-pdf.ts` now has a PDF-native geometric ImportVerifier brand mark instead of the provisional `IV` monogram, dark institutional cover, localized regulatory document classification, executive metrics, stronger section hierarchy and branded interior chrome.
-- PDF red `VERIFIED` seal is explicitly localized as an **ImportVerifier review** mark; it does not claim EU/government certification.
-- Every PDF page has restrained ImportVerifier issuer identity, EU regulatory-context/traceability footer and pagination; Evidence document/page/URL, official-source references, independence notice and regulatory disclaimers remain intact.
-- Country/ministry context is intentionally **not inferred from language alone**. Add only when country and permitted authority/asset usage are reliable; otherwise use verified authority name/source rather than a logo.
-- Landing hero now clearly communicates the truthful five-product lifetime free entry/no-card offer, exact Unlimited continuation and PDF+Excel value.
-- Large responsive red `VERIFIED · ImportVerifier review` hero seal added as a decorative brand trust element, not certification.
-- Commerce/payment/institutional marks have stronger responsive visual presence while explanatory compatibility/payment copy remains truthful; do not imply unsupported PayPal/payment methods or partnerships.
-- Pricing reinforces one paid plan/everything included; no fake tier grid, fake scarcity, countdown, ratings/customer counts, invented savings or false compliance claims.
-- Trial exhaustion now gives a high-intent localized upgrade surface with concrete value: Unlimited catalogue analysis, ImportVerifier AI + Regulatory Twin, PDF/Excel history/traceability and secure monthly Stripe wording.
-- `REPORT-PREMIUM-TODO.md` now records completed premium work and only conditional/remaining polish.
+## DONE — landing performance/PWA pass
+- Public landing is server-rendered rather than page-wide client React.
+- Language switching is a tiny client island; smooth-scroll JS was replaced by native anchors.
+- Dashboard-only CSS is not loaded by the public shell; PWA registration is deferred outside critical load.
+- Six landing variants `/es`, `/en`, `/fr`, `/de`, `/it`, `/pt` are statically generated; root selection happens before Supabase session work.
+- Service Worker v6 stores public landing cache per language and no longer treats `/` as one language-neutral offline document.
+- Exact preview Lighthouse after these changes is currently **Performance 17 / Accessibility 100 / Best Practices 92 / SEO 100**. The aggregate confirms performance is still poor, but the detailed Netlify Lighthouse breakdown is not exposed through available connectors; avoid speculative visual/architecture churn without metric-level evidence.
 
-## DONE — landing performance architecture (2026-08-31)
-- Public `app/page.tsx` was converted from page-wide client rendering to an async server-rendered page.
-- JavaScript `scrollIntoView` navigation was replaced by native anchors.
-- Language switching is isolated to tiny `components/LandingLanguagePicker.tsx`; it persists `iv_lang` + existing localStorage preference before navigation.
-- Root `LanguageProvider` no longer imports the ~44 KB landing-copy module into client runtime; it keeps a small supported-language tuple locally.
-- Regression coverage locks server rendering, tiny language island, preference persistence and removal of client scroll handlers.
-- This work targets the historically poor preview performance score; re-measure current exact preview before deciding the next optimization.
+## Latest exact verification — 2026-08-31
+- Functional HEAD before this handoff update: **`17e4b06eceb6a7e087542a52a746803af284ed2e`** (`test: lock language-keyed offline landing cache`).
+- GitHub `ImportVerifier release check` **#1247 SUCCESS** on that exact head.
+- Netlify bot confirms Deploy Preview READY for exact `17e4b06...` on the correct `importverifier` project: `https://deploy-preview-4--importverifier.netlify.app`.
+- PR #4 is **open, mergeable, not merged**.
+- This handoff update creates a newer docs-only HEAD; reconfirm its exact CI/preview before calling it release head.
 
-## Latest functional verification — 2026-08-31
-- Exact functional head **`707bf9efb6e63919b0d6e84b3d7d57677d09b47a`** repaired the only regression from Premium PDF v2: an obsolete test still expected the removed `drawMonogram`; it now validates `drawBrandMark` + current hierarchy.
-- GitHub `ImportVerifier release check` **#1209 SUCCESS** on exact functional head `707bf9ef...`: `npm ci`, full tests, `npm run typecheck` and `npm run build` all succeeded.
-- Netlify bot confirms **Deploy Preview READY on the correct `importverifier` project for exact functional head `707bf9ef...`**: `https://deploy-preview-4--importverifier.netlify.app`.
-- PR #4 remains **open, mergeable and not merged**.
-- Documentation was updated after that functional head (`REPORT-PREMIUM-TODO.md`, refreshed long handoff, then this short handoff), creating a newer docs-only HEAD. Reconfirm exact newest docs HEAD CI/preview before relying on it as release head.
-
-## Production facts last checked 2026-08-31
+## Production service facts checked in this continuation
 - Supabase project: `hfuwwjdcyudflamwwnon`.
-- Free usage read-only check: maximum observed lifetime usage is 5 and zero accounts exceed 5.
-- `subscriptions` had no persisted subscription rows at last read-only check.
-- Historical recent Auth logs still showed requests/referers from `https://euproductradar.netlify.app/`; repository code is canonical, so Supabase Site URL/redirect allowlist and/or a higher-precedence Netlify environment override still require external correction and real retest.
-- Supabase connector available in prior execution did not expose Auth Site URL/redirect writes: **BLOCKED EXTERNAL**.
-- Supabase leaked-password protection remained disabled: **BLOCKED EXTERNAL** dashboard setting.
-- Stripe live webhook exists on the canonical endpoint; matching live Netlify secret/config requires external verification.
-- Radar persisted events remain 0; keep `REGULATORY_RADAR_LIVE=false` until official ingestion succeeds.
+- Production aggregate: `free_accounts_over_limit=0`, `max_free_products_used=5`, `subscriptions_count=0`, `radar_events_count=0`, `ai_usage_events_count=0`.
+- Production function/trigger names are the lifetime versions (`enforce_free_lifetime_product_quota`, `analyses_enforce_free_lifetime_product_quota`).
+- Supabase security advisor has no new release-critical database vulnerability. It reports intentional no-policy RLS on server-only tables and one real Auth warning: **leaked-password protection disabled**.
+- Supabase performance advisor only reports currently-unused indexes; with launch-scale data this is not evidence they should be removed.
+- Stripe live account exposes one active canonical Unlimited product/price and one enabled canonical ImportVerifier webhook; no Stripe subscriptions exist yet.
 
-## IN PROGRESS / NEXT — execute without asking
-1. Reconfirm the newest docs-only HEAD GitHub CI and correct `importverifier` Deploy Preview; repair any regression immediately.
-2. Measure current post-server-render Deploy Preview performance/Web Vitals. Optimize only current verified bottlenecks; do not chase the stale historical Lighthouse score.
-3. Continue static mobile/iPhone/iPad/PWA QA on export/share/save-to-Files and responsive premium-seal/report edge cases; physical-device validation remains external.
-4. Continue customer-facing API/link trust-boundary sweep only if an actually unvalidated path is discovered; do not duplicate already-hardened Dashboard/Intelligence/Evidence/latest-assessment/review-gate/trial/Unlimited/Stripe/OAuth/source-URL work.
-5. Review Premium PDF overflow/typography against real multi-product acceptance output and fix observed issues; do not add national-authority logos without reliable country + permitted usage.
-6. Keep Radar/AI/Evidence failure states honest while production secrets/ingestion are absent.
-7. After canonical Supabase/Netlify Auth wiring is corrected externally, run `/importverifier-sample-5-products.csv` through a genuinely new account and prove: canonical login → five accepted → sixth rejected → isolated history → PDF → Excel → Stripe/portal lifecycle.
-8. Keep EU as the only active market; do not remove historical plan IDs/schema solely for naming cleanliness.
+## NEXT — execute without asking
+1. Reconfirm exact CI + correct `importverifier` Deploy Preview for the newest docs-only HEAD; fix any regression immediately.
+2. Do not make speculative Lighthouse changes until detailed metric/audit data can be obtained; current aggregate score is 17 and code-side high-confidence optimizations are already applied.
+3. Continue only genuinely new trust-boundary/security findings; do not repeat hardened Dashboard/Intelligence/Evidence/Latest/Review/Trial/Unlimited/Stripe/OAuth/source-URL work.
+4. During real production acceptance, run `/importverifier-sample-5-products.csv` with a genuinely new account: canonical signup/login → five accepted → sixth rejected → isolated history → premium PDF → Excel → Checkout → webhook entitlement → Portal/cancel lifecycle.
+5. Keep Radar live disabled until a strong shared ingest secret exists and official EUR-Lex ingestion produces persisted events.
+6. Keep EU as the only active market and marketplace connectors inactive until legitimate credentials exist.
 
-## BLOCKED EXTERNAL / browser or service-console work
-- Supabase Auth: set Site URL to `https://importverifier.netlify.app` and canonical callback/redirect allowlist; retest Google login and Auth logs.
-- Netlify: confirm production branch/env override, live `STRIPE_WEBHOOK_SECRET`, canonical Stripe env, SiliconFlow/free-only AI vars and truthful legal-provider variables; promote correct release when ready.
-- Netlify + GitHub: configure the same strong `REGULATORY_INGEST_SECRET`; ingest real EUR-Lex events before enabling Radar live.
-- Supabase Auth dashboard: enable leaked-password protection and suitable CAPTCHA/signup-abuse controls.
-- Configure/test production SMTP/signup/reset with a non-owner email.
-- Real iPhone/iPad/PWA upload/export/save-to-Files/rotation QA requires a real browser/device.
-- Official Shopify/Amazon/Etsy apps and credentials are required before connectors can become active.
+## BLOCKED EXTERNAL / requires service-console, secret or physical device
+- Netlify has no available connector in this chat. Confirm production branch is `feat/import-rules-verifier-branding`, production env precedence, live `STRIPE_WEBHOOK_SECRET`, canonical Stripe vars, truthful legal-provider vars, SiliconFlow/free-only AI vars, then promote the intended release if production is not already exact HEAD.
+- Configure the same strong `REGULATORY_INGEST_SECRET` in Netlify and GitHub scheduler; ingest real official EUR-Lex events before `REGULATORY_RADAR_LIVE=true`.
+- Supabase Auth dashboard: enable leaked-password protection and appropriate CAPTCHA/signup-abuse controls. The available Supabase connector exposes the warning but no Auth-config mutation endpoint.
+- Production SMTP/signup/reset acceptance with a genuinely new non-owner email still needs a real mailbox/browser flow.
+- Physical iPhone/iPad/Safari/PWA upload/photo/export/save-to-Files/rotation QA needs a real device/browser.
+- Official Shopify/Amazon/Etsy applications, credentials and scopes are required before direct connectors can become active.
+- Truthful legal-provider identity/address/tax/jurisdiction/refund values must be supplied before paid checkout can intentionally pass the production legal guard.
 
 ## Definition of finished
-Do not call ImportVerifier finished until exact current CI is green; canonical Netlify production runs the intended release; a genuinely new user can complete login on the canonical domain and consume exactly five free products lifetime; sixth-product rejection is proven; history isolation and premium PDF/XLSX work end-to-end; production free-only AI works without premium leakage; legal/billing/webhook/portal/cancellation pass; Radar claims match real ingestion; inactive markets/connectors remain honest; and desktop/iPhone/iPad/PWA QA passes.
+Do not call ImportVerifier fully launched until current exact CI is green; canonical Netlify production runs the intended release; a genuinely new user proves five-free-lifetime + sixth rejection + isolated history + PDF/XLSX; free-only AI is configured and works without premium leakage; legal/billing/webhook/Portal/cancellation pass; Radar claims match real ingestion; inactive markets/connectors remain honest; leaked-password/signup-abuse controls are enabled; and desktop/iPhone/iPad/PWA QA passes.
