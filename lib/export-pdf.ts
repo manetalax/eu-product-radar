@@ -2,6 +2,7 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { Analysis, analysisMarket, analyze, supportsRuleVersion, validateProducts } from './analysis';
 import { documentationFor, GUIDE_SCOPE, GUIDE_VERSION } from './documentation';
 import { BRAND_DOCUMENT_FOOTER, BRAND_DOCUMENT_TITLE, BRAND_INDEPENDENCE_NOTICE, BRAND_NAME, BRAND_SITE_URL, BRAND_TAGLINE } from './brand';
+import { fetchEvidenceForAnalysis, evidenceForProduct } from './evidence';
 import { MARKETS } from './markets';
 
 export const pdfText = (text: string) => Array.from(text).map(c => {
@@ -13,6 +14,7 @@ export async function pdfBytes(analysis: Analysis): Promise<Uint8Array<ArrayBuff
   if (!supportsRuleVersion(analysis.rule_version)) throw new Error('Versión de reglas no compatible.');
   const marketCode = analysisMarket(analysis), market = MARKETS[marketCode];
   const products = validateProducts(analysis.products), results = analyze(products, marketCode);
+  const persistedEvidence = await fetchEvidenceForAnalysis(analysis.id);
   const doc = await PDFDocument.create();
   doc.setTitle(`${BRAND_NAME} - Informe regulatorio orientativo · ${market.name}`);
   doc.setAuthor(BRAND_NAME);
@@ -94,6 +96,20 @@ export async function pdfBytes(analysis: Analysis): Promise<Uint8Array<ArrayBuff
         regulatory.uncertainties.forEach(item => lineBlock('• ' + item, 9));
       }
       lineBlock(regulatory.disclaimer, 8);
+    }
+
+    const productEvidence = evidenceForProduct(persistedEvidence, i);
+    if (productEvidence.length) {
+      lineBlock('EVIDENCIA GUARDADA Y TRAZABILIDAD', 13, true);
+      productEvidence.forEach(item => {
+        if (y < 150) newPage();
+        const status = item.status === 'available' ? 'Disponible' : item.status === 'not_applicable' ? 'No aplica' : 'Pendiente';
+        lineBlock(`${item.evidence_key} · ${status}`, 10, true);
+        if (item.source_document) lineBlock(`Documento: ${item.source_document}`, 9);
+        if (item.source_page) lineBlock(`Página/sección: ${item.source_page}`, 9);
+        if (item.source_url) lineBlock(`URL de referencia: ${item.source_url}`, 8);
+        if (item.note) lineBlock(`Nota: ${item.note}`, 9);
+      });
     }
 
     lineBlock('GUÍA DOCUMENTAL', 13, true);
