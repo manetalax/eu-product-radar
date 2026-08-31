@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { analyze, type Product } from '@/lib/analysis';
 import { createClient } from '@/lib/supabase/server';
 import { PRIVATE_HEADERS, readJsonBody, sameOrigin } from '@/lib/http';
 
@@ -7,6 +8,14 @@ const json = (body: unknown, status = 200) => NextResponse.json(body, { status, 
 const uuid = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const allowed = new Set(['available', 'pending', 'not_applicable']);
 const httpsUrl = /^https:\/\//i;
+
+function regulatoryEvidenceKeys(product: Product, marketCode: string): Set<string> {
+  const result = analyze([product], marketCode)[0];
+  const keys = result?.regulatory?.obligations.flatMap(obligation =>
+    obligation.evidence.map(evidence => `${obligation.title}: ${evidence}`.slice(0, 120)),
+  ) ?? [];
+  return new Set(keys);
+}
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -43,6 +52,20 @@ export async function PUT(request: Request) {
       || sourcePage.length > 80
       || sourceUrl.length > 1000
       || (sourceUrl && !httpsUrl.test(sourceUrl))) throw new Error('Datos de evidencia no válidos.');
+
+    const { data: analysis, error: analysisError } = await supabase
+      .from('analyses')
+      .select('products,market_code')
+      .eq('id', analysisId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (analysisError) throw new Error('No se ha podido validar el análisis.');
+    const products = Array.isArray(analysis?.products) ? analysis.products as Product[] : [];
+    if (!analysis || productIndex >= products.length) throw new Error('El producto no existe en este análisis.');
+    if (!regulatoryEvidenceKeys(products[productIndex], analysis.market_code ?? 'EU').has(evidenceKey)) {
+      throw new Error('La evidencia no corresponde a un requisito regulatorio de este producto.');
+    }
+
     const { data, error } = await supabase.from('analysis_evidence').upsert({
       analysis_id: analysisId,
       user_id: user.id,
