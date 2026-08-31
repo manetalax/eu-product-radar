@@ -4,7 +4,7 @@ import { documentationFor, GUIDE_VERSION } from './documentation';
 import { guideScopeFor } from './guide-i18n';
 import { BRAND_DOCUMENT_FOOTER, BRAND_DOCUMENT_TITLE, BRAND_INDEPENDENCE_NOTICE, BRAND_NAME, BRAND_SITE_URL, BRAND_TAGLINE } from './brand';
 import { fetchEvidenceForAnalysis, evidenceForProduct } from './evidence';
-import { MARKETS } from './markets';
+import { marketDisplayFor } from './market-i18n';
 import type { Language } from './landing-i18n';
 import { reportLabels } from './report-i18n';
 
@@ -29,11 +29,11 @@ export async function pdfBytes(analysis: Analysis, requestedLanguage?: Language)
   if (!supportsRuleVersion(analysis.rule_version)) throw new Error('Versión de reglas no compatible.');
   const language = activeReportLanguage(requestedLanguage);
   const t = reportLabels[language];
-  const marketCode = analysisMarket(analysis), market = MARKETS[marketCode];
+  const marketCode = analysisMarket(analysis), marketDisplay = marketDisplayFor(language, marketCode);
   const products = validateProducts(analysis.products), results = analyze(products, marketCode);
   const persistedEvidence = await fetchEvidenceForAnalysis(analysis.id);
   const doc = await PDFDocument.create();
-  doc.setTitle(`${BRAND_NAME} - ${t.catalogueReport} · ${market.name}`);
+  doc.setTitle(`${BRAND_NAME} - ${t.catalogueReport} · ${marketDisplay.name}`);
   doc.setAuthor(BRAND_NAME);
   doc.setCreator(BRAND_NAME);
   doc.setProducer(BRAND_DOCUMENT_FOOTER);
@@ -66,7 +66,7 @@ export async function pdfBytes(analysis: Analysis, requestedLanguage?: Language)
   lineBlock(BRAND_DOCUMENT_TITLE, 24, true);
   lineBlock(BRAND_TAGLINE, 10);
   lineBlock(BRAND_SITE_URL, 9);
-  lineBlock(`${t.catalogueReport} · ${market.name}`, 16, true);
+  lineBlock(`${t.catalogueReport} · ${marketDisplay.name}`, 16, true);
   lineBlock(`${t.file}: ${analysis.filename}`);
   lineBlock(`${t.analysisUtc}: ${new Date(analysis.created_at).toISOString()}`);
   lineBlock(`${t.identifier}: ${analysis.id}`);
@@ -107,11 +107,12 @@ export async function pdfBytes(analysis: Analysis, requestedLanguage?: Language)
     newPage();
     const result = results[i];
     const priorityLabel = result.priority === 'ALTA' ? t.high : result.priority === 'MEDIA' ? t.medium : t.low;
+    const missingFields = result.missing.map(field => field === 'Fabricante' ? t.manufacturer : field === 'Seguridad/advertencias' ? t.warnings : field === 'Operador responsable UE' ? marketDisplay.operator : field);
     lineBlock(`${t.product} ${i + 1} / ${products.length}`, 14, true);
     lineBlock(p.name, 16, true);
     lineBlock(`${t.indicator}: ${result.score}/100 | ${t.priority}: ${priorityLabel}`);
-    lineBlock(`${t.emptyFields}: ${result.missing.join(', ') || t.noneBasic}`);
-    for (const [label, value] of [[t.manufacturer, p.manufacturer], [market.operatorFieldLabel, p.responsible], [t.warnings, p.warning]]) lineBlock(`${label}: ${value || t.notProvided}`);
+    lineBlock(`${t.emptyFields}: ${missingFields.join(', ') || t.noneBasic}`);
+    for (const [label, value] of [[t.manufacturer, p.manufacturer], [marketDisplay.operator, p.responsible], [t.warnings, p.warning]]) lineBlock(`${label}: ${value || t.notProvided}`);
 
     if (result.regulatory) {
       const regulatory = result.regulatory;
@@ -154,7 +155,7 @@ export async function pdfBytes(analysis: Analysis, requestedLanguage?: Language)
     }
 
     lineBlock(t.documentaryGuide, 13, true);
-    documentationFor(p, marketCode).forEach(a => {
+    documentationFor(p, marketCode, language).forEach(a => {
       if (y < 210) newPage();
       lineBlock(a.title + ' - ' + a.status, 12, true);
       lineBlock(`${t.applicability}: ${a.condition}`);
@@ -165,7 +166,7 @@ export async function pdfBytes(analysis: Analysis, requestedLanguage?: Language)
   });
   const pages = doc.getPages();
   pages.forEach((p, i) => {
-    p.drawText(`${BRAND_DOCUMENT_FOOTER} | ${market.shortName} · ${t.advisoryAssessment} | ${i + 1} / ${pages.length}`, { x: 48, y: 30, size: 8, font: regular, color: ink });
+    p.drawText(`${BRAND_DOCUMENT_FOOTER} | ${marketDisplay.shortName} · ${t.advisoryAssessment} | ${i + 1} / ${pages.length}`, { x: 48, y: 30, size: 8, font: regular, color: ink });
   });
   return new Uint8Array(await doc.save());
 }
