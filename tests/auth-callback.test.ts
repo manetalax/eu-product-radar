@@ -10,8 +10,9 @@ test('el callback OAuth conserva solo destinos internos y el idioma validado', (
   assert.match(callback, /searchParams\.set\('lang'/);
 });
 
-test('el callback tiene un origen canónico seguro si falla la configuración', () => {
+test('el callback usa el origen validado y fallback canónico', () => {
+  assert.match(callback, /configuredSiteOrigin/);
   assert.match(callback, /IMPORTVERIFIER_PRODUCTION_URL/);
-  assert.match(callback, /try\s*\{/);
-  assert.match(callback, /catch\s*\{/);
+  assert.match(callback, /configuredSiteOrigin\(\) \?\? IMPORTVERIFIER_PRODUCTION_URL/);
+  assert.doesNotMatch(callback, /new URL\(configured\)\.origin/);
 });
