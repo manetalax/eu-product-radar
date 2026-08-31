@@ -10,6 +10,7 @@ import { extractLocalDocumentText } from '@/lib/local-document-text';
 import type { Language } from '@/lib/landing-i18n';
 import { productExtractionText } from '@/lib/product-extraction-i18n';
 import { requestLanguage } from '@/lib/request-language';
+import { validateImageUploadType } from '@/lib/upload-image-type';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -68,7 +69,7 @@ function parseDataUrl(dataUrl: string, language: Language): { mimeType: string; 
   return { mimeType: match[1].toLowerCase(), bytes };
 }
 
-function validateUploadType(filename: string, declaredMime: string, dataMime: string, language: Language): 'image' | 'document' {
+function validateUploadType(filename: string, declaredMime: string, dataMime: string, bytes: Buffer, language: Language): 'image' | 'document' {
   const isImageExtension = IMAGE_EXTENSIONS.test(filename);
   const declared = declaredMime.toLowerCase();
   const data = dataMime.toLowerCase();
@@ -76,9 +77,10 @@ function validateUploadType(filename: string, declaredMime: string, dataMime: st
   const dataImage = IMAGE_MIME.test(data);
 
   if (isImageExtension) {
-    if (!declaredImage || !dataImage) throw new Error(productExtractionText(language, 'imageMime'));
-    if (declared !== data && !(declared === 'image/heic' && data === 'image/heif') && !(declared === 'image/heif' && data === 'image/heic')) {
-      throw new Error(productExtractionText(language, 'mimeMismatch'));
+    const validation = validateImageUploadType(filename, declared, data, bytes);
+    if (!validation.ok) {
+      const mimeMissing = declared === 'application/octet-stream' || data === 'application/octet-stream';
+      throw new Error(productExtractionText(language, mimeMissing ? 'imageMime' : 'mimeMismatch'));
     }
     return 'image';
   }
@@ -170,7 +172,7 @@ export async function POST(request: Request) {
   let kind: 'image' | 'document';
   try {
     upload = parseDataUrl(dataUrl, language);
-    kind = validateUploadType(filename, mimeType, upload.mimeType, language);
+    kind = validateUploadType(filename, mimeType, upload.mimeType, upload.bytes, language);
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : productExtractionText(language, 'genericType') }, 400);
   }
