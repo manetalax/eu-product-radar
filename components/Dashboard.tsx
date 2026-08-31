@@ -18,6 +18,7 @@ import { ProductQuota } from '@/lib/quota';
 import { reportLabels } from '@/lib/report-i18n';
 import { authService } from '@/lib/services/auth-client';
 import { clearPlanIntent, readPlanIntent } from '@/lib/services/plan-interest';
+import { trustedStripeNavigationUrl } from '@/lib/stripe-navigation';
 import { uploadCopy } from '@/lib/upload-i18n';
 import { useLanguage } from '@/lib/use-language';
 
@@ -100,11 +101,7 @@ export default function Dashboard({ email }: { email: string }) {
     if (response.status === 401) window.location.replace(`/login?lang=${language}`);
     if (body.quota) setQuota(body.quota as ProductQuota);
     if (!response.ok || !validJson) {
-      const apiError = new Error(
-        typeof body.error === 'string' ? body.error
-          : typeof body.errorCode === 'string' ? body.errorCode
-            : d('importError'),
-      ) as Error & { code?: AccountDeletionErrorCode };
+      const apiError = new Error(d('importError')) as Error & { code?: AccountDeletionErrorCode };
       if (typeof body.errorCode === 'string') apiError.code = body.errorCode as AccountDeletionErrorCode;
       throw apiError;
     }
@@ -120,8 +117,8 @@ export default function Dashboard({ email }: { email: string }) {
         setHasMore(Boolean(body.hasMore));
         setQuota(body.quota as ProductQuota);
       }
-    }).catch(e => {
-      if (!controller.signal.aborted) setError(e instanceof Error ? e.message : d('historyError'));
+    }).catch(() => {
+      if (!controller.signal.aborted) setError(d('historyError'));
     }).finally(() => {
       if (!controller.signal.aborted) setLoading(false);
     });
@@ -220,8 +217,8 @@ export default function Dashboard({ email }: { email: string }) {
       setCurrent(typedAnalysis);
       setSelectedMarket(analysisMarket(typedAnalysis));
       setTab('products');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : d('openError'));
+    } catch {
+      setError(d('openError'));
     } finally {
       setBusy(false);
     }
@@ -282,10 +279,12 @@ export default function Dashboard({ email }: { email: string }) {
     setNotice('');
     try {
       const { url } = await api('/api/billing/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ purchaseId: 'starter' }) });
+      const trustedUrl = trustedStripeNavigationUrl(url, 'checkout');
+      if (!trustedUrl) throw new Error(d('paymentError'));
       clearPlanIntent();
-      window.location.assign(url as string);
-    } catch (checkoutError) {
-      setError(checkoutError instanceof Error ? checkoutError.message : d('paymentError'));
+      window.location.assign(trustedUrl);
+    } catch {
+      setError(d('paymentError'));
       setBusy(false);
     }
   }
@@ -295,9 +294,11 @@ export default function Dashboard({ email }: { email: string }) {
     setError('');
     try {
       const { url } = await api('/api/billing/portal', { method: 'POST' });
-      window.location.assign(url as string);
-    } catch (portalError) {
-      setError(portalError instanceof Error ? portalError.message : d('portalError'));
+      const trustedUrl = trustedStripeNavigationUrl(url, 'portal');
+      if (!trustedUrl) throw new Error(d('portalError'));
+      window.location.assign(trustedUrl);
+    } catch {
+      setError(d('portalError'));
       setBusy(false);
     }
   }
