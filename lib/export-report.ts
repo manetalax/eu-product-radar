@@ -2,6 +2,7 @@ import ExcelJS from 'exceljs';
 import { documentationFor, GUIDE_SCOPE, GUIDE_VERSION } from './documentation';
 import { Analysis, analysisMarket, analyze, supportsRuleVersion, validateProducts } from './analysis';
 import { BRAND_DOCUMENT_FOOTER, BRAND_DOCUMENT_TITLE, BRAND_NAME, BRAND_TAGLINE } from './brand';
+import { fetchEvidenceForAnalysis } from './evidence';
 import { MARKETS } from './markets';
 import { addRegulatoryWorksheet } from './export-regulatory';
 
@@ -55,6 +56,7 @@ export async function buildReport(analysis: Analysis): Promise<ExcelJS.Workbook>
   const marketCode = analysisMarket(analysis);
   const market = MARKETS[marketCode];
   const results = analyze(products, marketCode);
+  const persistedEvidence = await fetchEvidenceForAnalysis(analysis.id);
   const wb = new ExcelJS.Workbook();
   wb.creator = BRAND_NAME; wb.title = `${BRAND_NAME} · Informe de preparación · ${market.name}`; wb.subject = BRAND_TAGLINE;
   wb.created = new Date(analysis.created_at); wb.modified = new Date();
@@ -80,7 +82,7 @@ export async function buildReport(analysis: Analysis): Promise<ExcelJS.Workbook>
   }
   body(summary, 13, ['Indicador medio / 100', { formula: `ROUND(AVERAGE('Productos'!B5:B${end}),0)`, result: Math.round(results.reduce((n, r) => n + r.score, 0) / results.length) }]);
   band(summary, 15, scope, 4); summary.getRow(15).height = 58;
-  band(summary, 17, marketCode === 'EU' ? 'Productos: prioridades y campos. Evaluación regulatoria: categoría candidata, normativa, evidencias, incertidumbres y fuentes. Datos técnicos y guía documental completan la trazabilidad.' : 'Productos: prioridades y campos por revisar. Datos técnicos: reglas, trazabilidad y valores originales. Este archivo es una instantánea del análisis guardado.', 4); summary.getRow(17).height = 66;
+  band(summary, 17, marketCode === 'EU' ? 'Productos: prioridades y campos. Evaluación regulatoria: categoría candidata, normativa, evidencias, incertidumbres y fuentes. Datos técnicos, evidencia guardada y guía documental completan la trazabilidad.' : 'Productos: prioridades y campos por revisar. Datos técnicos: reglas, trazabilidad y valores originales. Este archivo es una instantánea del análisis guardado.', 4); summary.getRow(17).height = 66;
   band(details, 1, 'PRODUCTOS · Revisión del catálogo', 4, true);
   band(details, 2, 'Indicador de campos incompletos / 100. La prioridad no equivale a riesgo legal. Se conserva el orden del archivo original.', 4);
   header(details, 4, ['Producto', 'Indicador / 100', 'Prioridad', 'Campos por revisar']);
@@ -106,7 +108,7 @@ export async function buildReport(analysis: Analysis): Promise<ExcelJS.Workbook>
   header(technical, 12, ['Producto', 'Fabricante', market.operatorFieldLabel, 'Advertencias de seguridad']);
   products.forEach((p, i) => body(technical, i + 13, [p.name, p.manufacturer, p.responsible, p.warning]));
   technical.autoFilter = `A12:D${products.length + 12}`;
-  for (const ws of wb.worksheets) ws.pageSetup.printArea = `A1:D${ws.rowCount}`;
+
   const guide = sheet(wb, 'Guía documental', [44, 32, 34, 55, 65, 65, 60], 4);
   band(guide, 1, 'GUÍA DOCUMENTAL · Qué pedir y dónde conseguirlo', 7, true);
   band(guide, 2, GUIDE_SCOPE + ' Versión: ' + GUIDE_VERSION, 7);
@@ -121,10 +123,34 @@ export async function buildReport(analysis: Analysis): Promise<ExcelJS.Workbook>
   guide.autoFilter = `A4:G${guideRow - 1}`;
   guide.pageSetup.printArea = `A1:G${guideRow - 1}`;
   guide.pageSetup.printTitlesRow = '1:4';
+
+  const evidenceSheet = sheet(wb, 'Evidencia', [34, 58, 18, 38, 20, 52, 58], 4);
+  band(evidenceSheet, 1, 'EVIDENCIA · Trazabilidad aportada por el usuario', 7, true);
+  band(evidenceSheet, 2, 'Relaciona cada requisito con su estado, documento, página/sección, nota y URL de referencia. “Disponible” indica evidencia aportada, no validación o certificación por ImportVerifier.', 7);
+  header(evidenceSheet, 4, ['Producto', 'Requisito / evidencia', 'Estado', 'Documento', 'Página / sección', 'Nota', 'URL de referencia']);
+  let evidenceRow = 5;
+  persistedEvidence.forEach(item => {
+    const productName = products[item.product_index]?.name ?? `Producto ${item.product_index + 1}`;
+    const status = item.status === 'available' ? 'Disponible' : item.status === 'not_applicable' ? 'No aplica' : 'Pendiente';
+    body(evidenceSheet, evidenceRow, [productName, item.evidence_key, status, item.source_document, item.source_page, item.note, item.source_url]);
+    if (item.source_url) evidenceSheet.getCell(evidenceRow, 7).value = { text: item.source_url, hyperlink: item.source_url };
+    evidenceRow++;
+  });
+  if (evidenceRow === 5) {
+    body(evidenceSheet, 5, ['Sin evidencia guardada', 'Añade evidencia desde el panel para incluir trazabilidad en futuros informes.', '', '', '', '', '']);
+    evidenceRow = 6;
+  }
+  evidenceSheet.autoFilter = `A4:G${evidenceRow - 1}`;
+  evidenceSheet.pageSetup.printArea = `A1:G${evidenceRow - 1}`;
+  evidenceSheet.pageSetup.printTitlesRow = '1:4';
+
   addRegulatoryWorksheet(wb, results);
-  summary.getCell('A17').value = marketCode === 'EU' ? 'Incluye una hoja de evaluación regulatoria con categoría candidata, normativa, obligaciones, evidencias, confirmaciones y fuentes oficiales. Es asistencia automatizada, no certificación.' : 'Productos: prioridades y campos. Datos técnicos: reglas y originales. Guía documental: qué solicitar, a quién y fuentes. Instantánea guardada; guía orientativa actual, no validación documental.';
+  summary.getCell('A17').value = marketCode === 'EU' ? 'Incluye evaluación regulatoria y una hoja de evidencia persistida con documento, página/sección, notas y URLs. Es asistencia automatizada y trazabilidad aportada por el usuario, no certificación.' : 'Productos: prioridades y campos. Datos técnicos: reglas y originales. Guía documental y evidencia guardada completan la trazabilidad.';
   summary.getRow(17).height = 66;
   summary.pageSetup.fitToHeight = 1;
+  summary.pageSetup.printArea = `A1:D${summary.rowCount}`;
+  details.pageSetup.printArea = `A1:D${details.rowCount}`;
+  technical.pageSetup.printArea = `A1:D${technical.rowCount}`;
   return wb;
 }
 
