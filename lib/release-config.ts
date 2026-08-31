@@ -1,3 +1,5 @@
+import { LEGAL_ENV_KEYS, legalConfig } from './legal-config';
+
 export const IMPORTVERIFIER_PRODUCTION_URL = 'https://importverifier.netlify.app';
 
 export type ReleaseConfigCheck = { ok: boolean; errors: string[]; warnings: string[] };
@@ -20,6 +22,9 @@ export function checkReleaseConfig(env: NodeJS.ProcessEnv = process.env): Releas
   }
   for (const key of requiredPublic) if (!env[key]) errors.push(`Falta ${key}.`);
   for (const key of requiredSecrets) if (!env[key]) errors.push(`Falta ${key}.`);
+  if (production && !legalConfig(env)) {
+    errors.push(`Falta completar la información legal obligatoria para aceptar pagos: ${LEGAL_ENV_KEYS.join(', ')}.`);
+  }
 
   const costPolicy = env.AI_COST_POLICY === 'free_only' || env.AI_COST_POLICY === 'premium_allowed' ? env.AI_COST_POLICY : 'free_first';
   if (production && costPolicy !== 'free_only') errors.push('Producción debe usar AI_COST_POLICY=free_only para impedir consumo de IA de pago.');
