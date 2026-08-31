@@ -12,7 +12,7 @@ test('el manifest conserva identidad e instalación standalone en todos los idio
     const manifest = manifestFor(language);
     assert.equal(manifest.name, 'Import Rules Verifier');
     assert.equal(manifest.short_name, 'ImportVerifier');
-    assert.equal(manifest.start_url, `/?lang=${language}`);
+    assert.equal(manifest.start_url, `/${language}`);
     assert.equal(manifest.scope, '/');
     assert.equal(manifest.display, 'standalone');
     assert.equal(manifest.lang, language);
