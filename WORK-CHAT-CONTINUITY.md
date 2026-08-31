@@ -50,10 +50,10 @@
 - US/CN/GB/JP remain structurally isolated and `ACTIVE_MARKET_CODES` remains EU-only.
 
 ## CI / HEAD last verified 2026-08-31
-- Functional/security HEAD before this handoff commit: `ed89eb8716586e46dcdff47dd7348c18e513e46c`.
-- Exact-head `ImportVerifier release check` run **#983 SUCCESS**: install, tests, typecheck and build all passed.
+- Latest functional/security HEAD before this handoff commit: `280cf5b6cbac991bcb95a31959869e2cbd3524d0`.
+- Exact-head `ImportVerifier release check` run **#991 SUCCESS**: install, tests, typecheck and build all passed.
 - PR #4 remained **open**, **mergeable=true**, **not merged**.
-- Netlify Deploy Preview for `ed89eb8716586e46dcdff47dd7348c18e513e46c` was still PENDING when this handoff update was written; recheck exact new handoff HEAD CI + Netlify before calling current HEAD green.
+- Netlify Deploy Preview for `280cf5b6cbac991bcb95a31959869e2cbd3524d0` was still PENDING when this handoff update was written; recheck exact new handoff HEAD CI + Netlify before calling current HEAD green.
 
 ## Production facts last checked 2026-08-31
 - Supabase project: `hfuwwjdcyudflamwwnon`.
