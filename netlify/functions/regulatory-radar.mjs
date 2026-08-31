@@ -1,4 +1,4 @@
-const siteUrl = () => (process.env.NEXT_PUBLIC_SITE_URL || 'https://importverifier.netlify.app').replace(/\/$/, '');
+const CANONICAL_REFRESH_URL = 'https://importverifier.netlify.app/api/internal/regulatory-refresh';
 
 export default async () => {
   const secret = process.env.REGULATORY_INGEST_SECRET?.trim() || '';
@@ -7,7 +7,7 @@ export default async () => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25_000);
   try {
-    const response = await fetch(`${siteUrl()}/api/internal/regulatory-refresh`, {
+    const response = await fetch(CANONICAL_REFRESH_URL, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${secret}`,
