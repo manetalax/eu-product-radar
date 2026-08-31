@@ -51,6 +51,7 @@
 - PWA private-cache hardening, localized manifest, own-brand icons, safe areas, 44px touch targets, iOS form sizing and review-modal keyboard/scroll behavior are covered.
 - PWA cache is restricted to public static style/script/image/font requests and refuses private/no-store/no-cache responses.
 - **PWA public-shell cache boundary hardened 2026-08-31:** service-worker precache fetches public shell resources with `credentials: 'omit'`; responses varying on `Cookie` or `Authorization` are not cached; query-bearing navigations cannot overwrite canonical pathname cache entries; activation deletes only obsolete `importverifier-shell-*` caches instead of unrelated origin caches. Regression coverage locks these invariants.
+- **PWA service-worker update lifecycle hardened 2026-08-31:** visibility/online refresh now routes through a guarded async updater; Safari/iPadOS/offline `registration.update()` failures are contained instead of becoming unhandled promise rejections, and cleanup prevents post-unmount update work. Regression coverage locks the safe refresh path.
 - Upload UI supports spreadsheet/document/photo inputs and declares `.heic`, `.heif` and `image/*`.
 - **Mobile photo MIME robustness hardened 2026-08-31:** Product Extraction now validates PNG/JPEG/WebP/HEIC/HEIF from binary signatures plus filename extension and any MIME metadata that exists. Legitimate Safari/iOS/iPadOS images with blank/`application/octet-stream` MIME are accepted only when their magic bytes agree; extension spoofing and MIME/signature disagreement remain fail-closed. The image `data:` payload is normalized to the detected MIME before calling vision.
 - **Multi-file drag/drop ambiguity removed 2026-08-31:** Dashboard now rejects drops containing more than one file without processing any of them, shows localized ES/EN/FR/DE/IT/PT guidance, and ignores drag/drop imports while busy/loading or when the free quota is exhausted. The touch/file picker remains intentionally single-file. Regression coverage prevents silently returning to `files[0]` behavior.
@@ -65,9 +66,9 @@
 - `ACTIVE_MARKET_CODES` remains EU-only; US/CN/GB/JP are structurally isolated and inactive.
 
 ## CI / HEAD last verified 2026-08-31
-- Functional head `e4d15f73445eb5b7a09464a7b5ba48f85fd43663` contains the dedicated camera capture, localized camera copy, runtime validation for trial/Unlimited quota clients and regression coverage.
-- GitHub `ImportVerifier release check` **#1149 SUCCESS** on that exact functional head completed `npm ci`, tests, `npm run typecheck` and `npm run build` successfully.
-- Previous head `ffa9b82fcd9a0cd8cdf92965f6ed9a140e522ca9` had `ImportVerifier release check` **#1139 SUCCESS**.
+- Functional head `44719b899ce3cd3cce81f417619821137565405f` contains dedicated camera capture, trial/Unlimited response validation and PWA service-worker update failure containment plus regression coverage.
+- GitHub `ImportVerifier release check` **#1155 SUCCESS** on that exact functional head completed `npm ci`, tests, `npm run typecheck` and `npm run build` successfully.
+- Earlier integrated head `e4d15f73445eb5b7a09464a7b5ba48f85fd43663` passed `ImportVerifier release check` **#1149 SUCCESS**.
 - This continuity update creates a newer documentation-only HEAD; reconfirm exact newest HEAD CI and Netlify Deploy Preview at the start of the next execution.
 - PR #4 remains **open** and **not merged**.
 
@@ -83,7 +84,7 @@
 
 ## IN PROGRESS / NEXT — execute without asking
 1. Reconfirm exact newest HEAD GitHub CI and Netlify Deploy Preview after this continuity commit; repair any regression immediately.
-2. Begin the queued premium PDF redesign in `REPORT-PREMIUM-TODO.md`: stronger ImportVerifier cover/header identity, premium editorial hierarchy, repeated localized footer/context treatment and regression coverage while preserving issuer identity, evidence traceability and export correctness.
+2. Implement the queued premium PDF redesign in `REPORT-PREMIUM-TODO.md`: reproduce the existing ImportVerifier geometric brand mark in PDF-native vector form, strengthen cover/header hierarchy, add repeated localized footer/context treatment and regression coverage while preserving evidence traceability and export correctness.
 3. Continue static mobile/iPhone/iPad/PWA QA around camera return/cancel edge states, drag/drop edge states and save-to-Files; real-device validation remains external.
 4. Continue the remaining customer-facing client API response-shape sweep, prioritizing any authenticated surface discovered later that still places arbitrary 2xx JSON directly into state; Dashboard/Intelligence/Evidence/latest-assessment/review-gate/trial/Unlimited are already hardened and should not be duplicated.
 5. Continue security sweep of remaining customer-facing external links without duplicating already-protected market/evidence/Radar/Stripe/Supabase-OAuth URL work.
