@@ -11,7 +11,8 @@ function languageFromAcceptLanguage(value: string | null): Language | null {
   return null;
 }
 
-export async function serverLanguage(): Promise<Language> {
+export async function serverLanguage(explicit?: unknown): Promise<Language> {
+  if (isLanguage(explicit)) return explicit;
   const cookieStore = await cookies();
   const cookieLanguage = cookieStore.get(LANGUAGE_COOKIE)?.value;
   if (isLanguage(cookieLanguage)) return cookieLanguage;
