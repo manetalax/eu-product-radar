@@ -30,6 +30,7 @@
 - Evidence persists canonical requirement/status/document/page/note/HTTPS URL; unsafe persisted URLs are stripped before rendering/export.
 - Official Radar links are allowlisted HTTPS EU regulatory sources and are revalidated at ingestion/API/render boundaries.
 - Production AI policy is fail-closed `free_only`; CSV/XLS/XLSX stay local, supported text/doc/image inputs use free-compatible extraction when configured, unsupported scanned/legacy formats fail honestly rather than leaking premium spend.
+- Product-extraction request-body overflow handling is now typed (`RequestBodyTooLargeError`) instead of depending on matching Spanish exception text; oversized uploads deterministically map to HTTP 413 and regression tests protect declared and streamed overflow cases.
 - EU regulatory engine, Product Regulatory Twin, persisted evidence readiness and Regulatory Impact Radar architecture are implemented.
 - Official EUR-Lex RSS ingestion adapter, normalization, deduplication and protected internal refresh/ingest endpoints exist. Production Radar event count last checked: 0, therefore live-monitoring claims remain disabled.
 - Shopify/Amazon/Etsy connector architecture exists; capability slugs are localized for customers and OAuth/API remains unavailable until official credentials exist.
@@ -37,20 +38,20 @@
 - Google auth button includes a visible Google mark; production code pins Google/signup/recovery return flow to `https://importverifier.netlify.app`.
 - PWA private-cache hardening, dynamic localized manifest, real own-brand icons, safe areas, 44px touch targets, iOS form sizing and review-modal keyboard/scroll behavior are covered.
 - Mobile upload control accepts spreadsheets, documents and photo/camera input; server supports HEIC/HEIF with extension/MIME agreement.
-- PDF/XLSX/template downloads use explicit filenames, browser Blob URLs, DOM click and delayed `URL.revokeObjectURL`; regression tests now protect this lifecycle for mobile/PWA static QA.
+- PDF/XLSX/template downloads use explicit filenames, browser Blob URLs, DOM click and delayed `URL.revokeObjectURL`; regression tests protect this lifecycle for mobile/PWA static QA.
 - PDF/Excel reports include premium visual hierarchy, localized regulatory narrative, evidence and source traceability.
-- `README.md`, `SETUP.md` and `IMPORT_RULES_VERIFIER.md` were corrected so they no longer instruct developers to use the legacy EU Product Radar production domain, monthly free resets or obsolete Starter/Growth/Pro/Business public plans.
+- `README.md`, `SETUP.md` and `IMPORT_RULES_VERIFIER.md` no longer instruct developers to use the legacy EU Product Radar production domain, monthly free resets or obsolete Starter/Growth/Pro/Business public plans.
 - US/CN/GB/JP remain structurally isolated and `ACTIVE_MARKET_CODES` remains EU-only.
 
 ## CI / HEAD last verified 2026-08-31
-- Functional/security/documentation HEAD before this handoff commit: `c86733d994587d5fe6fd5975b844090e1d663777`.
-- Exact-head `ImportVerifier release check` run **#899 SUCCESS**: install, **213 tests**, typecheck and build all passed.
+- Functional/security HEAD before this handoff commit: `b894c87040c3354067a4ccff70bfce0ef5305ad1`.
+- Exact-head `ImportVerifier release check` run **#911 SUCCESS**: install, tests, typecheck and build all passed.
 - PR #4 remained **open**, **mergeable=true**, **not merged**.
-- Netlify Deploy Preview status for `c86733d...` was still **pending** when last polled; recheck after this handoff commit and do not call the current HEAD ready until exact-head CI/deploy are known.
+- Recheck exact current HEAD CI after this documentation commit before calling the branch green.
 
 ## Production facts last checked 2026-08-31
 - Supabase project: `hfuwwjdcyudflamwwnon`.
-- Auth logs previously reproduced the production Google return bug: Supabase fell back to `https://euproductradar.netlify.app/`; code is now hardened but the Supabase dashboard Site URL/allowlist still needs external correction and real retest.
+- Auth logs checked again after the code hardening still show recent requests/referers from `https://euproductradar.netlify.app/`. Code pins canonical callbacks, but Supabase Site URL/redirect allowlist and/or Netlify production wiring still require external correction and real retest.
 - Supabase security advisor substantive WARN: leaked-password protection disabled. RLS-with-no-policy INFO rows are intentional server-only deny-all tables.
 - Active Stripe subscriptions at last check: 0.
 - Stripe live webhook exists on the canonical production endpoint; matching `STRIPE_WEBHOOK_SECRET` in Netlify is external configuration.
@@ -61,8 +62,9 @@
 2. Continue security sweep for remaining customer-visible API/provider error leakage and unsafe external URL rendering.
 3. Add explicit `.heif` to the Dashboard file picker when safely editing that component; `image/*` already permits it and server support is correct.
 4. Continue static mobile/iPhone/iPad/PWA QA around actual upload/export/save-to-Files flows; real-device/browser execution is BLOCKED EXTERNAL.
-5. Keep EU as the only active market; US/CN/GB/JP must not activate before legally substantiated market documentation and localization are complete.
-6. Do not remove historical plan IDs/monthly schema merely for naming cleanliness.
+5. Recheck production auth logs after the Supabase/Netlify domain wiring is corrected; canonical Google login must never return to the old domain.
+6. Keep EU as the only active market; US/CN/GB/JP must not activate before legally substantiated market documentation and localization are complete.
+7. Do not remove historical plan IDs/monthly schema merely for naming cleanliness.
 
 ## BLOCKED EXTERNAL / browser or service-console work
 - Supabase Auth: set Site URL to `https://importverifier.netlify.app` and allow canonical callbacks; then retest Google login and confirm Auth logs never return to the old domain.
