@@ -8,7 +8,7 @@ const baseEnv = {
   NEXT_PUBLIC_SITE_URL: IMPORTVERIFIER_PRODUCTION_URL,
   NEXT_PUBLIC_SUPABASE_URL: IMPORTVERIFIER_SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_example',
-  SUPABASE_SECRET_KEY: 'secret-key',
+  SUPABASE_SECRET_KEY: 'sb_secret_example',
   STRIPE_SECRET_KEY: 'sk_live_example',
   STRIPE_WEBHOOK_SECRET: 'whsec_example',
   STRIPE_PRICE_STARTER: IMPORTVERIFIER_UNLIMITED_PRICE_ID,
@@ -78,7 +78,7 @@ test('producción rechaza un Stripe price distinto del Unlimited live canónico'
   assert.ok(result.errors.some(error => error.includes(IMPORTVERIFIER_UNLIMITED_PRICE_ID)));
 });
 
-test('producción rechaza claves Stripe de test, webhook malformado y proyecto Supabase equivocado', () => {
+test('producción rechaza credenciales de servicio incorrectas y proyecto Supabase equivocado', () => {
   const stripeTest = checkReleaseConfig({ ...baseEnv, STRIPE_SECRET_KEY: 'sk_test_example', AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key' });
   assert.equal(stripeTest.ok, false);
   assert.ok(stripeTest.errors.some(error => /clave live de Stripe/));
@@ -94,6 +94,10 @@ test('producción rechaza claves Stripe de test, webhook malformado y proyecto S
   const leakedSecret = checkReleaseConfig({ ...baseEnv, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'service-role-looking-value', AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key' });
   assert.equal(leakedSecret.ok, false);
   assert.ok(leakedSecret.errors.some(error => /publishable key/));
+
+  const malformedAdminSecret = checkReleaseConfig({ ...baseEnv, SUPABASE_SECRET_KEY: 'legacy-or-wrong-secret', AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key' });
+  assert.equal(malformedAdminSecret.ok, false);
+  assert.ok(malformedAdminSecret.errors.some(error => /sb_secret_/));
 });
 
 test('Radar live exige un secreto de ingesta fuerte y compartible', () => {
