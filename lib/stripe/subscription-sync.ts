@@ -10,22 +10,27 @@ export function stripeObjectId(value: string | { id: string } | null): string | 
 export async function syncStripeSubscription(subscription: Stripe.Subscription) {
   const admin = createAdminClient();
   const customerId = stripeObjectId(subscription.customer);
+  if (!customerId) throw new Error('unrecognized_subscription_identity');
   if (subscription.items.data.length !== 1) throw new Error('unexpected_subscription_items');
   const priceId = subscription.items.data[0]?.price.id ?? null;
-  let userId = subscription.metadata.user_id;
+  const metadataUserId = subscription.metadata.user_id || null;
 
-  if (!userId && customerId) {
-    const { data, error } = await admin.from('subscriptions').select('user_id').eq('stripe_customer_id', customerId).maybeSingle();
-    if (error && error.code !== 'PGRST116') throw error;
-    userId = data?.user_id;
-  }
+  const { data: existingCustomer, error: customerError } = await admin
+    .from('subscriptions')
+    .select('user_id')
+    .eq('stripe_customer_id', customerId)
+    .maybeSingle();
+  if (customerError && customerError.code !== 'PGRST116') throw customerError;
+  const existingUserId = existingCustomer?.user_id ?? null;
+  if (existingUserId && metadataUserId && existingUserId !== metadataUserId) throw new Error('subscription_customer_user_mismatch');
+  const userId = existingUserId ?? metadataUserId;
 
   const pricePlanId = planIdForStripePrice(priceId);
   const metadataPlanId = isPlanId(subscription.metadata.plan_id) ? subscription.metadata.plan_id : null;
   if (!pricePlanId) throw new Error('unrecognized_subscription_price');
   if (metadataPlanId && pricePlanId !== metadataPlanId) throw new Error('subscription_plan_price_mismatch');
   const planId = pricePlanId;
-  if (!userId || !customerId) throw new Error('unrecognized_subscription_identity');
+  if (!userId) throw new Error('unrecognized_subscription_identity');
 
   const periodEnd = Number.isFinite(subscription.items.data[0].current_period_end)
     ? new Date(subscription.items.data[0].current_period_end * 1000).toISOString()
