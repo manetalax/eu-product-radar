@@ -39,6 +39,7 @@
 - Production AI policy is fail-closed `free_only`; CSV/XLS/XLSX stay local, supported text/doc/image inputs use free-compatible extraction when configured, unsupported scanned/legacy formats fail honestly rather than leaking premium spend.
 - External AI calls are bounded by 30-second abort timeouts, including the direct premium document fallback path that is unreachable under production `free_only`; production release validation rejects malformed, non-HTTPS or credential-bearing `SILICONFLOW_BASE_URL` values, and runtime validates the provider base URL before use.
 - Product-extraction request-body overflow handling uses typed `RequestBodyTooLargeError`; oversized uploads deterministically map to HTTP 413 and regression tests protect declared and streamed overflow cases. The 8 MB API body ceiling safely accommodates base64 expansion of the advertised 5 MB file limit.
+- Request-size semantics are now consistent across Product Extraction, Evidence, ImportVerifier AI and internal Radar ingestion: oversized JSON bodies preserve HTTP 413 instead of collapsing into generic 400 responses. Internal Radar ingestion also rejects non-`application/json` content with HTTP 415. Regression coverage protects these boundaries.
 - Canonical site-origin validation is fail-closed: runtime accepts only a root HTTPS origin (or localhost HTTP for local development), rejects credentials/path/query/hash, and same-origin APIs require an exact canonical Origin header.
 - Supabase session refresh middleware covers all authenticated client APIs used by analyses, Evidence, Product Extraction, Regulatory Agent, Regulatory Changes, account and billing while intentionally excluding Stripe webhook/internal endpoints.
 - EU regulatory engine, Product Regulatory Twin, persisted evidence readiness and Regulatory Impact Radar architecture are implemented.
@@ -55,9 +56,10 @@
 - US/CN/GB/JP remain structurally isolated and `ACTIVE_MARKET_CODES` remains EU-only.
 
 ## CI / HEAD last verified 2026-08-31
-- Latest functional/security HEAD before this handoff commit: `837cb2b0c23b15c8a23cee2cd8847593e10be15d`.
-- Exact-head `ImportVerifier release check` runs **#1002 SUCCESS** (push) and **#1003 SUCCESS** (PR): install, tests, typecheck and build passed.
-- PR #4 remained **open**, **mergeable=true**, **not merged**.
+- Last fully green handoff HEAD before this execution: `ff9ec8604d85f5179fd09f76f928c3466feaafb1`; exact-head `ImportVerifier release check` **#1005 SUCCESS**.
+- Latest functional/security HEAD before this handoff commit: `c42496a26dc68ea22eccdc521c38a95c5fa30bf9`.
+- Exact-head `ImportVerifier release check` **#1015** was **IN PROGRESS** when this handoff was written; do not treat the new request-boundary changes as CI-confirmed until that run (or the later exact handoff-head run) finishes green.
+- PR #4 remained **open** and **not merged**.
 - Netlify Deploy Preview for the new HEAD still requires recheck; do not call the exact handoff HEAD production-verified until Netlify confirms it.
 
 ## Production facts last checked 2026-08-31
@@ -72,7 +74,7 @@
 
 ## NEXT — execute without asking
 1. Reconfirm exact new handoff HEAD CI and Netlify Deploy Preview; repair any regression immediately.
-2. Continue security sweep for remaining customer-visible API/provider error leakage and unsafe external URL/render/fetch boundaries.
+2. Continue security sweep for remaining customer-visible API/provider error leakage and unsafe external URL/render/fetch boundaries; specifically review defensive JSON parsing in shared client-side Dashboard API handling so malformed upstream responses cannot surface browser/parser details.
 3. Continue static mobile/iPhone/iPad/PWA QA around actual upload/export/save-to-Files flows; real-device/browser execution is BLOCKED EXTERNAL. Align the CSV template Blob URL revocation window with the 60-second PDF/XLSX window when a safe minimal Dashboard patch path is available; explicit `.heif` remains optional because `image/*` already accepts it and server support is complete.
 4. Recheck production auth logs after Supabase/Netlify domain wiring is corrected; canonical Google login must never return to the old domain.
 5. Use `/importverifier-sample-5-products.csv` for final new-account acceptance once canonical auth works; then prove history/PDF/XLSX end-to-end from that account.
