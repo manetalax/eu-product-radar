@@ -1,8 +1,10 @@
 import Link from 'next/link';
+import { legalConfig } from '@/lib/legal-config';
 
 const SUPPORT_EMAIL = 'importverifier@gmail.com';
 
 export default function PrivacyPage() {
+  const legal = legalConfig();
   return <main className="shell legal-page">
     <h1>Política de privacidad</h1>
     <p><strong>Última actualización:</strong> 31 de agosto de 2026.</p>
@@ -14,7 +16,8 @@ export default function PrivacyPage() {
     <h2>Otros proveedores</h2><p>El servicio utiliza proveedores de infraestructura, autenticación y pagos como Supabase, Netlify y Stripe, además de proveedores de IA cuando la función solicitada lo requiera. La lista puede evolucionar si se sustituye un proveedor por otro equivalente o mejor; los cambios materiales de tratamiento se reflejarán en esta política.</p>
     <h2>Conservación y eliminación</h2><p>Los análisis permanecen en tu cuenta hasta que cierres la cuenta, salvo información que deba conservarse durante más tiempo por obligaciones legales, contables, antifraude o de seguridad. Al cerrar la cuenta se revoca la sesión y se eliminan los datos del usuario sujetos a borrado.</p>
     <h2>Tus derechos y contacto</h2><p>Cuando resulte aplicable, puedes solicitar acceso, rectificación, supresión, limitación, portabilidad u oposición escribiendo a <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</p>
-    <p><strong>Información legal pendiente:</strong> antes de aceptar clientes de pago debe añadirse aquí la identidad legal y dirección del responsable del tratamiento.</p>
+    <h2>Responsable del tratamiento</h2>
+    {legal ? <p><strong>{legal.providerName}</strong><br />{legal.providerAddress}<br />Identificación fiscal: {legal.taxId}<br />Jurisdicción indicada para el servicio: {legal.jurisdiction}<br />Contacto: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a></p> : <p><strong>Servicio en fase previa a contratación:</strong> la identidad legal completa del responsable todavía no está configurada y el checkout de pago permanece bloqueado hasta completarla.</p>}
     <p><Link href="/terms">Términos de uso</Link> · <Link href="/">Volver a Import Rules Verifier</Link></p>
   </main>;
 }
