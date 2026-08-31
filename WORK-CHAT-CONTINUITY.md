@@ -38,7 +38,8 @@
 - Relevant SECURITY DEFINER functions are not executable by default PUBLIC.
 - Evidence traceability is persisted as requirement → status → document → page/section → note → HTTPS URL.
 - Evidence keys remain canonical/stable across UI language changes so saved evidence is not orphaned by localization.
-- Evidence source URLs now require a well-formed HTTPS URL with a real hostname, no whitespace and no embedded username/password; malformed schemes/credential-bearing links are rejected server-side with regression tests.
+- Evidence source URLs require a well-formed HTTPS URL with a real hostname, no whitespace and no embedded username/password; malformed schemes/credential-bearing links are rejected server-side with regression tests.
+- Failed evidence saves now roll back optimistic state, surface a localized alert in all six languages and restore unsaved text-field values instead of leaving the form visually inconsistent.
 
 ## DONE — zero-cost AI / upload controls
 - Production policy is fail-closed `AI_COST_POLICY=free_only`; production config rejects policies permitting premium AI spend.
@@ -63,12 +64,12 @@
 - Own-brand icon assets make no institutional/EU-certification claim.
 - HSTS, frame denial, no-sniff, strict referrer, restrictive permissions, conservative CSP and fail-closed canonical-origin checks are in place.
 - Global mobile CSS covers 44px touch targets, focus visibility, safe areas, wrapping and 16px iOS form controls.
-- Product-review modal now also has explicit iOS/iPadOS safe-area padding, `100dvh`, contained momentum scrolling, 44px remove/actions, visible keyboard focus and 16px form controls.
+- Product-review modal has explicit iOS/iPadOS safe-area padding, `100dvh`, contained momentum scrolling, 44px remove/actions, visible keyboard focus and 16px form controls.
 
 ## DONE — localization / reports / critical import UX
 - Main dashboard navigation, notices/errors, quota, import, onboarding, KPIs, results, history, reports, settings, privacy and dates follow ES/EN/FR/DE/IT/PT.
 - Dashboard exports receive the selected language explicitly and Unlimited pricing uses exact two-decimal EUR formatting.
-- Unlimited-active banner and exhausted-free-trial upgrade prompt now use the selected language and canonical `UNLIMITED_PLAN.monthlyPriceEur` with locale-aware two-decimal formatting instead of hardcoded/rounded price copy.
+- Unlimited-active banner and exhausted-free-trial upgrade prompt use the selected language and canonical `UNLIMITED_PLAN.monthlyPriceEur` with locale-aware two-decimal formatting instead of hardcoded/rounded price copy.
 - Landing Intelligence/pricing and reset-password language flow are localized.
 - Report/guide/documentation layers provide six-language visible structure and documentary guidance.
 - PDF localizes market/operator/missing-field/documentary surfaces; Excel passes language explicitly into nested documentary and regulatory worksheets.
@@ -95,9 +96,9 @@
 - `pg_cron` and `pg_net` are not enabled; do not add hidden dependencies on them.
 
 ## LATEST VERIFIED BUILD
-- Functional HEAD `fa09354e7f57063e9b1054ec7f65838c8fd86532` completed `ImportVerifier release check` run #550 successfully: tests + typecheck + build green.
+- Functional HEAD `b6f8705d880e7133dfd9a96040cc9176093af701` completed `ImportVerifier release check` run #558 successfully: tests + typecheck + build green.
 - This continuity-only commit must be checked at its exact SHA before claiming exact-current-HEAD green.
-- PR #4 remains open and unmerged; recheck GitHub mergeability at final exact HEAD because it was transiently reported false during active branch updates.
+- PR #4 is open, unmerged and mergeable.
 
 ## IN PROGRESS / NEXT — execute without asking
 1. Keep exact latest HEAD CI green; fix any failure immediately.
