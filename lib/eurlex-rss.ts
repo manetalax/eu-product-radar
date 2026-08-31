@@ -6,6 +6,8 @@ export const EURLEX_RSS_SOURCES = [
   { id: 'official-journal-l', name: 'EUR-Lex · Official Journal L', url: 'https://eur-lex.europa.eu/EN/display-feed.rss?rssId=222' },
 ] as const;
 
+const MAX_RSS_BYTES = 4 * 1024 * 1024;
+
 const KEYWORD_RULES: Array<[RegExp, string]> = [
   [/general product safety|product safety|gpsr/i, 'product safety'],
   [/toy|toys/i, 'toy'],
@@ -71,6 +73,34 @@ function keywords(text: string): string[] {
   return Array.from(new Set(KEYWORD_RULES.filter(([pattern]) => pattern.test(text)).map(([, keyword]) => keyword)));
 }
 
+async function boundedResponseText(response: Response, maxBytes = MAX_RSS_BYTES): Promise<string> {
+  const declared = Number(response.headers.get('content-length') ?? 0);
+  if (Number.isFinite(declared) && declared > maxBytes) throw new Error('EUR-Lex RSS supera el tamaño permitido.');
+  if (!response.body) return '';
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > maxBytes) {
+      await reader.cancel();
+      throw new Error('EUR-Lex RSS supera el tamaño permitido.');
+    }
+    chunks.push(value);
+  }
+
+  const joined = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    joined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder('utf-8', { fatal: true }).decode(joined);
+}
+
 export function parseEurLexRss(xml: string, sourceName: string): RawRegulatoryEvent[] {
   const items = [...xml.matchAll(/<item(?:\s[^>]*)?>([\s\S]*?)<\/item>/gi)].slice(0, 200);
   const events: RawRegulatoryEvent[] = [];
@@ -110,8 +140,7 @@ export async function fetchEurLexEvents(fetchImpl: typeof fetch = fetch): Promis
       cache: 'no-store',
     });
     if (!response.ok) throw new Error(`EUR-Lex RSS ${source.id} respondió ${response.status}.`);
-    const text = await response.text();
-    if (text.length > 4 * 1024 * 1024) throw new Error(`EUR-Lex RSS ${source.id} supera el tamaño permitido.`);
+    const text = await boundedResponseText(response);
     return parseEurLexRss(text, source.name);
   }));
   return results.flat();
