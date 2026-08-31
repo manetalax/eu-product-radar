@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { AccountDeletionError, AccountDeletionErrorCode, accountDeletionRequest } from '@/lib/account';
 import { PRIVATE_HEADERS, readJsonBody, sameOrigin } from '@/lib/http';
+import { stripeClient } from '@/lib/stripe/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -21,6 +23,24 @@ export async function DELETE(request: Request) {
     confirmation = accountDeletionRequest(await readJsonBody(request), user.email);
   } catch (error) {
     return failure(error instanceof AccountDeletionError ? error.code : 'invalid_confirmation', 400);
+  }
+
+  // A deleted account must never leave a recurring Stripe subscription charging in the background.
+  try {
+    const admin = createAdminClient();
+    const { data: subscription, error: subscriptionError } = await admin
+      .from('subscriptions')
+      .select('stripe_subscription_id,status')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (subscriptionError && subscriptionError.code !== 'PGRST116') return failure('delete_failed', 503);
+
+    const subscriptionId = typeof subscription?.stripe_subscription_id === 'string' ? subscription.stripe_subscription_id : '';
+    if (subscriptionId && subscription.status !== 'canceled') {
+      await stripeClient().subscriptions.cancel(subscriptionId);
+    }
+  } catch {
+    return failure('delete_failed', 503);
   }
 
   // getSession is safe here because getUser has just verified the same cookie-backed identity.
