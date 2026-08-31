@@ -61,6 +61,7 @@ export default function Dashboard({ email }: { email: string }) {
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [quota, setQuota] = useState<ProductQuota | null>(null);
   const input = useRef<HTMLInputElement>(null);
+  const cameraInput = useRef<HTMLInputElement>(null);
   const pendingImport = useRef<{ fingerprint: string; id: string } | null>(null);
 
   const currentMarketCode = current ? analysisMarket(current) : selectedMarket;
@@ -212,6 +213,7 @@ export default function Dashboard({ email }: { email: string }) {
       setBusy(false);
       setDragging(false);
       if (input.current) input.current.value = '';
+      if (cameraInput.current) cameraInput.current.value = '';
     }
   }
 
@@ -395,11 +397,12 @@ export default function Dashboard({ email }: { email: string }) {
         {error && <p role="alert" className="message error">{error}</p>}
         {notice && <p role="status" className="message success">{notice}</p>}
         <input ref={input} className="file-input" aria-label={d('importAria')} type="file" accept=".csv,.xls,.xlsx,.pdf,.doc,.docx,.rtf,.odt,.txt,.md,.json,.png,.jpg,.jpeg,.webp,.heic,.heif,image/*" disabled={busy || loading || quotaBlocked} onChange={event => { const file = event.target.files?.[0]; if (file) void load(file); }} />
+        <input ref={cameraInput} className="file-input" aria-label={uploadT.cameraAria} type="file" accept="image/*" capture="environment" disabled={busy || loading || quotaBlocked} onChange={event => { const file = event.target.files?.[0]; if (file) void load(file); }} />
 
         {(tab === 'dashboard' || tab === 'products') && <div className="card import-card premium-import" onDragEnter={event => { event.preventDefault(); if (!busy && !loading && !quotaBlocked) setDragging(true); }} onDragOver={event => event.preventDefault()} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false); }} onDrop={event => { event.preventDefault(); setDragging(false); if (busy || loading || quotaBlocked) return; const files = event.dataTransfer.files; if (files.length > 1) { setNotice(''); setError(uploadT.singleFileOnly); return; } const file = files.item(0); if (file) void load(file); }} data-dragging={dragging} aria-disabled={busy || loading || quotaBlocked}>
           <div className="import-icon" aria-hidden="true">↑</div>
           <div className="import-copy"><div className="import-title-row"><h2>{quotaBlocked ? d('quotaTitle') : d('analyzeFor', { market: marketName(selectedMarket) })}</h2><span className="market-live">{d('active')}</span></div><p>{d('importBody')}</p><div className="format-chips"><span>{d('photo')}</span><span>PDF/WORD</span><span>{d('text')}</span><span>CSV/EXCEL</span><span>{d('max5mb')}</span></div></div>
-          <div className="import-actions"><button className="btn primary import-cta" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{busy ? d('analyzing') : quotaBlocked ? d('upgrade') : d('chooseFile')}</button><button className="text-button template-link" onClick={downloadTemplate}>{d('downloadTemplate')}</button></div>
+          <div className="import-actions"><button className="btn primary import-cta" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{busy ? d('analyzing') : quotaBlocked ? d('upgrade') : d('chooseFile')}</button><button className="btn ghost camera-cta" disabled={busy || loading || quotaBlocked} onClick={() => cameraInput.current?.click()}>{uploadT.takePhoto}</button><button className="text-button template-link" onClick={downloadTemplate}>{d('downloadTemplate')}</button></div>
           <div className="quota-inline"><span>{unlimited ? d('unlimitedUsage') : quota ? d('freeAvailable', { remaining: quota.remaining, limit: quota.limit }) : d('calculatingTrial')}</span>{!unlimited && <div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div>}</div>
         </div>}
         {(tab === 'dashboard' || tab === 'products') && <BrandLogos group="commerce" label={d('commerceLabel')} note={d('commerceNote')} compact />}
