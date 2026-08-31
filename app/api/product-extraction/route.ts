@@ -117,6 +117,7 @@ async function extractDocumentWithOpenAi(filename: string, mimeType: string, dat
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(30_000),
     body: JSON.stringify({
       model,
       store: false,
