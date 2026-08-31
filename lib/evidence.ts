@@ -13,6 +13,20 @@ export type PersistedEvidence = {
   updated_at?: string;
 };
 
+export function isValidEvidenceUrl(value: string): boolean {
+  if (!value || value.length > 1000) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:'
+      && Boolean(url.hostname)
+      && !url.username
+      && !url.password
+      && !/\s/.test(value);
+  } catch {
+    return false;
+  }
+}
+
 export async function fetchEvidenceForAnalysis(analysisId: string): Promise<PersistedEvidence[]> {
   if (typeof window === 'undefined' || !analysisId) return [];
   try {
