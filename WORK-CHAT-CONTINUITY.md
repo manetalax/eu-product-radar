@@ -34,7 +34,8 @@
 - RLS/account isolation, evidence ownership FK, privileged-table deny-all posture and server-only privilege hardening are implemented.
 - Evidence persists canonical requirement/status/document/page/note/HTTPS URL; unsafe persisted URLs are stripped before rendering/export.
 - Evidence URL hardening now also happens at the server API boundary and before evidence enters ImportVerifier AI context, so legacy unsafe persisted URLs cannot be returned or propagated to new consumers.
-- Official Radar links are allowlisted HTTPS EU regulatory sources and are revalidated at ingestion/API/render boundaries.
+- Official Radar links are allowlisted HTTPS EU regulatory sources and are revalidated at ingestion/API/render boundaries. Explicit non-default HTTPS ports are rejected, reducing the official-source fetch surface without affecting canonical EU endpoints.
+- Radar source URLs are revalidated again immediately before persisted Radar events enter ImportVerifier AI context, so legacy or altered rows cannot propagate an unsafe source URL into model context.
 - Production AI policy is fail-closed `free_only`; CSV/XLS/XLSX stay local, supported text/doc/image inputs use free-compatible extraction when configured, unsupported scanned/legacy formats fail honestly rather than leaking premium spend.
 - External AI calls are bounded by 30-second abort timeouts, including the direct premium document fallback path that is unreachable under production `free_only`; production release validation rejects malformed, non-HTTPS or credential-bearing `SILICONFLOW_BASE_URL` values, and runtime validates the provider base URL before use.
 - Product-extraction request-body overflow handling uses typed `RequestBodyTooLargeError`; oversized uploads deterministically map to HTTP 413 and regression tests protect declared and streamed overflow cases. The 8 MB API body ceiling safely accommodates base64 expansion of the advertised 5 MB file limit.
@@ -54,10 +55,10 @@
 - US/CN/GB/JP remain structurally isolated and `ACTIVE_MARKET_CODES` remains EU-only.
 
 ## CI / HEAD last verified 2026-08-31
-- Latest functional/security HEAD before this handoff commit: `84ae5861e787265d7ba62ba2a58781da43fc96e7`.
-- Exact-head `ImportVerifier release check` run **#997 SUCCESS**: install, tests, typecheck and build all passed.
+- Latest functional/security HEAD before this handoff commit: `837cb2b0c23b15c8a23cee2cd8847593e10be15d`.
+- Exact-head `ImportVerifier release check` runs **#1002 SUCCESS** (push) and **#1003 SUCCESS** (PR): install, tests, typecheck and build passed.
 - PR #4 remained **open**, **mergeable=true**, **not merged**.
-- Netlify Deploy Preview for `84ae5861e787265d7ba62ba2a58781da43fc96e7` was still PENDING when this handoff update was written; recheck exact new handoff HEAD CI + Netlify before calling current HEAD green.
+- Netlify Deploy Preview for the new HEAD still requires recheck; do not call the exact handoff HEAD production-verified until Netlify confirms it.
 
 ## Production facts last checked 2026-08-31
 - Supabase project: `hfuwwjdcyudflamwwnon`.
@@ -72,7 +73,7 @@
 ## NEXT — execute without asking
 1. Reconfirm exact new handoff HEAD CI and Netlify Deploy Preview; repair any regression immediately.
 2. Continue security sweep for remaining customer-visible API/provider error leakage and unsafe external URL/render/fetch boundaries.
-3. Continue static mobile/iPhone/iPad/PWA QA around actual upload/export/save-to-Files flows; real-device/browser execution is BLOCKED EXTERNAL. Explicit `.heif` in the picker is optional because `image/*` already accepts it and server support is complete; do not replace the large Dashboard file solely for that cosmetic token unless a safe minimal patch path is available.
+3. Continue static mobile/iPhone/iPad/PWA QA around actual upload/export/save-to-Files flows; real-device/browser execution is BLOCKED EXTERNAL. Align the CSV template Blob URL revocation window with the 60-second PDF/XLSX window when a safe minimal Dashboard patch path is available; explicit `.heif` remains optional because `image/*` already accepts it and server support is complete.
 4. Recheck production auth logs after Supabase/Netlify domain wiring is corrected; canonical Google login must never return to the old domain.
 5. Use `/importverifier-sample-5-products.csv` for final new-account acceptance once canonical auth works; then prove history/PDF/XLSX end-to-end from that account.
 6. Keep EU as the only active market; US/CN/GB/JP must not activate before legally substantiated market documentation and localization are complete.
