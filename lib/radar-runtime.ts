@@ -1,4 +1,7 @@
+export function radarRuntimeConfigured(liveFlag: string | undefined, ingestSecret: string | undefined) {
+  return liveFlag === 'true' && (ingestSecret?.trim().length ?? 0) >= 32;
+}
+
 export function radarRuntimeEnabled(liveFlag: string | undefined, ingestSecret: string | undefined, eventCount: number) {
-  const ingestSecretReady = (ingestSecret?.trim().length ?? 0) >= 32;
-  return liveFlag === 'true' && ingestSecretReady && eventCount > 0;
+  return radarRuntimeConfigured(liveFlag, ingestSecret) && eventCount > 0;
 }
