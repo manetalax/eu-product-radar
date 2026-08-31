@@ -1,153 +1,174 @@
-# Activar cuentas y análisis privados
+# ImportVerifier — configuración y prueba de producción
 
-Esta rama prepara el primer bloque real. No se debe fusionar a `main` hasta completar los pasos 1 y 2. No se han aplicado cambios administrativos a Supabase desde el código.
+Este documento describe la activación actual de **ImportVerifier**. Para el estado operativo más reciente lee primero `WORK-CHAT-CONTINUITY.md`; si algún documento histórico lo contradice, prevalece ese handoff.
 
-## 1. Crear la tabla privada
+## Proyecto canónico
 
-En Supabase, abre **SQL Editor → New query**, copia el contenido completo de `supabase/migrations/202608270001_private_analyses.sql` y pulsa **Run**.
+- Producción: `https://importverifier.netlify.app`
+- Repositorio: `manetalax/eu-product-radar`
+- Rama de trabajo: `feat/import-rules-verifier-branding`
+- PR: `#4`
+- Supabase: proyecto `hfuwwjdcyudflamwwnon`
+- No hacer merge del PR #4 sin instrucción explícita del propietario.
 
-- La migración no borra datos y se ejecuta en una transacción.
-- Ejecútala una sola vez. Si indica que la función o tabla ya existe, no la borres: comprueba primero si ya se aplicó esta migración.
-- Activa RLS y permite solo leer e insertar análisis de la cuenta autenticada.
-- No permite lectura anónima, cambios en análisis previos ni escritura para otro usuario.
-- El indicador se recalcula con la versión de reglas guardada. Los análisis históricos conservan `missing-fields-v1` y los nuevos utilizan `market-readiness-v2`.
+## Oferta que debe conservarse
 
-Si la tabla `analyses` ya existe, ejecuta después **una sola vez** `supabase/migrations/202608290001_free_monthly_quota.sql`. Esta segunda migración conserva el consumo ya realizado y activa de forma atómica el límite gratuito de cinco productos por cuenta y mes UTC.
+- **5 productos gratuitos totales por cuenta**, sin tarjeta y sin reinicio mensual.
+- Después de consumirlos, único plan público: **ImportVerifier Unlimited · 9,95 €/mes**.
+- `starter` existe solo como identificador interno compatible con Stripe/BD.
+- El price live canónico es `price_1UAJy5HJnO8odw1Mn4jMVjFt`.
 
-Ejecuta por último `supabase/migrations/20260829075235_global_market_architecture.sql`. Añade el mercado `EU` a los análisis existentes, conserva su versión histórica y deja códigos de dos letras para futuros módulos internacionales.
+La migración lifetime ya está aplicada en producción. La tabla histórica `monthly_product_usage` puede seguir existiendo por compatibilidad, pero no debe volver a utilizarse para reiniciar la prueba gratuita.
 
-## 2. Configurar las direcciones de autenticación
+## 1. Variables de producción en Netlify
 
-En **Authentication → URL Configuration**:
+Configura los secretos únicamente en Netlify/servicios externos; no los publiques en GitHub ni en archivos de cliente.
+
+Variables principales:
+
+```text
+NEXT_PUBLIC_SITE_URL=https://importverifier.netlify.app
+NEXT_PUBLIC_SUPABASE_URL=https://hfuwwjdcyudflamwwnon.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
+SUPABASE_SECRET_KEY=...
+STRIPE_SECRET_KEY=...
+STRIPE_WEBHOOK_SECRET=...
+STRIPE_PRICE_STARTER=price_1UAJy5HJnO8odw1Mn4jMVjFt
+AI_COST_POLICY=free_only
+SILICONFLOW_API_KEY=...
+REGULATORY_INGEST_SECRET=...
+REGULATORY_RADAR_LIVE=false
+LEGAL_PROVIDER_NAME=...
+LEGAL_PROVIDER_ADDRESS=...
+LEGAL_TAX_ID=...
+LEGAL_JURISDICTION=...
+LEGAL_REFUND_POLICY=...
+```
+
+`REGULATORY_RADAR_LIVE` debe permanecer `false` hasta que la ingesta oficial esté configurada y existan eventos regulatorios persistidos reales. El checkout de pago permanece deliberadamente fail-closed mientras falten datos legales veraces del proveedor.
+
+## 2. Supabase Auth: dominio y redirects
+
+En **Authentication → URL Configuration** usa:
 
 **Site URL**
 
 ```text
-https://euproductradar.netlify.app
+https://importverifier.netlify.app
 ```
 
-Añade estas dos direcciones exactas en **Redirect URLs**:
+**Redirect URLs**
 
 ```text
-https://euproductradar.netlify.app/auth/callback
-https://euproductradar.netlify.app/auth/callback?next=/reset-password
+https://importverifier.netlify.app/auth/callback
+https://importverifier.netlify.app/auth/confirm
+https://importverifier.netlify.app/reset-password
 ```
 
-Mantén habilitados el acceso con email y la confirmación de correo. No actives acceso anónimo ni desactives la confirmación para sortear problemas de entrega.
+Puedes mantener redirects de Deploy Preview solo cuando sean necesarios para QA, pero el flujo de producción no debe caer en `euproductradar.netlify.app`.
 
-### Recomendado: enlaces compatibles con otro navegador o dispositivo
+El código de ImportVerifier ya fija el origen canónico en producción. Si Supabase redirige al dominio antiguo aun recibiendo `redirect_to=https://importverifier.netlify.app/auth/callback`, significa que el redirect canónico no está admitido o el Site URL administrativo sigue obsoleto.
 
-En **Authentication → Email Templates**, modifica solo el enlace del botón de estas plantillas:
+Mantén habilitada la confirmación de correo. Configura **Custom SMTP** con un remitente verificado antes de abrir registros reales y activa en **Authentication → Attack Protection** la protección frente a contraseñas filtradas y controles de abuso/CAPTCHA apropiados.
 
-**Confirm signup**:
+## 3. Google OAuth
 
-```html
-<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email">Confirmar mi correo</a>
-```
+El botón visible «Continuar con Google» usa Supabase OAuth/PKCE y conserva el idioma seleccionado.
 
-**Reset password**:
+1. Configura el proveedor Google en Supabase con el cliente OAuth web correspondiente.
+2. En Google, autoriza el callback de Supabase indicado por el propio proveedor.
+3. En Supabase, asegúrate de que el retorno de la aplicación canónica está permitido como se describe arriba.
+4. Desde `https://importverifier.netlify.app/login`, inicia con una cuenta nueva y comprueba que termina en `/dashboard` del mismo dominio.
+5. Revisa los Auth logs: no debe aparecer ningún retorno a `euproductradar.netlify.app`.
 
-```html
-<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery">Cambiar mi contraseña</a>
-```
+## 4. Stripe
 
-La aplicación también admite el callback PKCE predeterminado; en ese caso solicita y abre el enlace desde el mismo navegador. Los enlaces caducados muestran un mensaje sin dar acceso a la cuenta.
-
-## 3. Correo de pruebas y correo para clientes
-
-El SMTP integrado de Supabase solo entrega a direcciones autorizadas del equipo del proyecto y tiene un límite de envío muy bajo. Para la primera prueba de registro usa el email de tu cuenta de Supabase. No presupongas que otro correo cualquiera recibirá el mensaje.
-
-Antes de abrir el registro a clientes, configura **Custom SMTP**, un remitente verificado y revisa los límites de Auth. No publiques las credenciales SMTP ni las pegues en el repositorio.
-
-En **Authentication → Attack Protection**, activa la protección frente a contraseñas filtradas. El asesor de seguridad de Supabase la marca como pendiente; requiere configuración administrativa y no puede activarse mediante una migración SQL.
-
-### Borrado de cuenta y datos
-
-La cuenta puede eliminarse desde **Mi cuenta → Eliminar cuenta y datos**. La aplicación exige el correo exacto y la palabra `BORRAR`, rechaza solicitudes de otro origen y llama a `supabase/functions/delete-account` con el JWT de la sesión verificada.
-
-La Edge Function debe mantenerse con **Verify JWT activado**. Revoca primero todas las sesiones y después elimina de forma definitiva el usuario; las claves foráneas `ON DELETE CASCADE` eliminan sus análisis y su consumo mensual. La `service_role` existe únicamente dentro del entorno de Supabase y nunca se envía a Netlify, al navegador ni al repositorio.
-
-Para volver a desplegarla desde un entorno autorizado:
-
-```bash
-supabase functions deploy delete-account
-```
-
-No añadas `--no-verify-jwt`. Una llamada sin JWT debe responder `401` antes de ejecutar el código.
-
-Para probar el aislamiento con dos usuarios sin enviar invitaciones, el propietario puede crear dos cuentas de prueba en **Authentication → Users → Add user → Create new user**, eligiendo él mismo las contraseñas. Esto no prueba la entrega de correos: registro y recuperación deben probarse por separado.
-
-## 4. Publicar desde GitHub
-
-Con los pasos anteriores terminados, fusiona la rama de esta entrega en `main`. Netlify debe construir ese commit.
-
-`netlify.toml` contiene la URL de la web, la URL del proyecto y su clave **publishable**, todas públicas. No contiene contraseña de base de datos, `service_role`, clave secreta ni credenciales administrativas. Si hay variables con los mismos nombres en la interfaz de Netlify, comprueba que coincidan.
-
-Variables utilizadas:
+Producción usa un único producto público:
 
 ```text
-NEXT_PUBLIC_SITE_URL
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+ImportVerifier Unlimited
+EUR 9,95 / month
+price_1UAJy5HJnO8odw1Mn4jMVjFt
 ```
 
-## 5. Prueba de aceptación en la web publicada
+El webhook live debe apuntar a:
 
-1. Sin sesión, abrir `/dashboard`: debe redirigir a `/login`.
-2. Crear una cuenta con un correo autorizado, confirmar y entrar con contraseña válida.
-3. Importar `tests/fixtures/catalogue.csv`: aparecen cinco productos y puntuaciones **92, 64, 36, 36 y 8**. Debe mostrarse “Análisis guardado en tu cuenta”.
-4. Cerrar sesión, cerrar la página y entrar de nuevo: abrir el análisis desde **Historial** y descargar el informe Excel.
-5. Abrir otra cuenta en un navegador distinto: el análisis anterior no aparece. Pedir `/api/analyses?id=ID_DE_LA_OTRA_CUENTA` devuelve 404.
-6. Con contraseña incorrecta se deniega el acceso. Sin sesión, `/api/analyses` devuelve 401. Cerrar sesión en una pestaña cierra también el panel de las otras.
-7. Probar un CSV vacío, sin encabezados o con más de 1.000 productos: se muestra un error y no se guarda una importación parcial.
-8. Solicitar recuperación de contraseña, seguir el enlace, cambiarla y entrar con la nueva.
-9. Con una cuenta nueva, guardar un archivo de cinco productos. Un sexto producto, incluso en otro archivo o mediante dos solicitudes simultáneas, debe rechazarse sin guardado parcial. La otra cuenta conserva sus propios cinco productos disponibles.
-10. Con una cuenta desechable, descargar primero cualquier informe necesario, abrir **Mi cuenta**, escribir el correo exacto y `BORRAR`, y confirmar. Debe volver al acceso, la cuenta no debe poder iniciar sesión y sus filas de `analyses` y `monthly_product_usage` deben haber desaparecido. No utilizar para esta prueba una cuenta que se quiera conservar.
+```text
+https://importverifier.netlify.app/api/stripe/webhook
+```
 
-No declarar este bloque activado hasta completar estas pruebas en el proyecto real. Las pruebas automatizadas locales no sustituyen la configuración ni los correos reales.
+Eventos necesarios: checkout completado, altas/cambios/bajas de suscripción y facturas pagadas/fallidas. El signing secret del endpoint debe coincidir con `STRIPE_WEBHOOK_SECRET` en Netlify.
 
-## Desarrollo y pruebas automatizadas
+El backend vuelve a comprobar price, moneda, importe, periodicidad y estado antes de abrir Checkout. La suscripción solo concede entitlement cuando su estado real es válido; cancelación y borrado de cuenta están integrados.
+
+## 5. IA y entradas de producto
+
+- CSV/XLS/XLSX: parsing local; no usa IA.
+- TXT/MD/JSON/RTF y PDF/DOCX/ODT con texto: extracción local y flujo gratuito compatible.
+- Imágenes JPG/JPEG/PNG/WEBP/GIF/BMP/HEIC/HEIF: visión/OCR gratuito cuando SiliconFlow está configurado.
+- PDF escaneado sin texto y `.doc` legado: en producción `free_only` deben fallar de forma honesta con una alternativa, nunca caer silenciosamente a un proveedor de pago.
+
+El cliente solo ve **ImportVerifier AI**; no se muestran proveedor ni modelo.
+
+## 6. Prueba de aceptación de la cuenta gratuita
+
+La prueba que habilita el lanzamiento debe hacerse en el dominio canónico con una cuenta nueva:
+
+1. Abrir `https://importverifier.netlify.app` y entrar en registro/login.
+2. Crear una cuenta nueva por Google o email y completar confirmación si aplica.
+3. Confirmar que el dashboard muestra **5 productos disponibles**.
+4. Importar `tests/fixtures/catalogue.csv`, que contiene cinco productos de prueba conocidos.
+5. Revisar los cinco resultados y abrir el análisis guardado desde Historial.
+6. Descargar PDF y Excel y comprobar que ambos se guardan/abren correctamente.
+7. Intentar un sexto producto en otra importación: debe rechazarse sin guardado parcial y sin alterar los cinco ya consumidos.
+8. Cerrar sesión, volver a entrar y confirmar que el historial permanece.
+9. Con una segunda cuenta, confirmar que no puede leer el historial ni un `analysisId` de la primera.
+10. Probar recuperación de contraseña y, con una cuenta desechable, borrado completo de cuenta.
+
+Las pruebas automatizadas cubren la cuota lifetime, concurrencia y aislamiento, pero no sustituyen esta aceptación real de navegador.
+
+## 7. Radar regulatorio
+
+La arquitectura de Radar usa fuentes oficiales EUR-Lex, normalización allowlisted, deduplicación y endpoint interno protegido. Para activarlo:
+
+1. Crear un `REGULATORY_INGEST_SECRET` fuerte.
+2. Configurar el mismo secreto en Netlify y GitHub Actions.
+3. Ejecutar la ingesta oficial y confirmar que persiste eventos reales.
+4. Solo entonces cambiar `REGULATORY_RADAR_LIVE=true`.
+
+Mientras no existan eventos reales, la interfaz debe hablar de capacidad/preparación y no de monitorización oficial activa.
+
+## 8. Mercados y conectores
+
+Europa (`EU`) es el único mercado activo. US/CN/GB/JP están aislados como arquitectura futura y no deben activarse hasta completar documentación y validación regulatoria específicas.
+
+Shopify/Amazon/Etsy tienen arquitectura de conectores preparada, pero OAuth/API oficiales requieren credenciales externas. Hasta entonces se muestran como próximos/no activos y no deben publicitarse como integración operativa.
+
+## 9. QA móvil/PWA
+
+Revisar en iPhone/iPad/PWA instalada:
+
+- selector de archivos desde Files/Fotos/cámara;
+- HEIC/HEIF;
+- modal de revisión y teclado;
+- safe areas y controles táctiles;
+- descarga/guardado de PDF y XLSX;
+- descarga de plantilla CSV;
+- historial privado sin contenido cacheado tras cerrar sesión.
+
+El código y tests protegen estas rutas, pero la validación final de “Guardar en Archivos” requiere dispositivo/navegador real.
+
+## 10. Comandos de validación
 
 ```bash
 npm ci
-cp .env.example .env.local
-# Rellenar las variables públicas; para desarrollo usar NEXT_PUBLIC_SITE_URL=http://localhost:3000.
 npm test
+npm run typecheck
 npm run build
-npm run dev
 ```
 
-Las pruebas incluyen CSV/XLS/XLSX, validación de límites, redirecciones restringidas, control de origen y la migración SQL sobre PostgreSQL embebido (PGlite), con dos identidades y un rol anónimo.
+El workflow `ImportVerifier release check` ejecuta estas comprobaciones. No declarar listo un HEAD cuyo workflow exacto no esté verde.
 
-## Alcance y límites
+## Bloqueos externos antes del lanzamiento
 
-- El historial contiene datos reales de cada cuenta. La portada muestra únicamente un ejemplo ilustrativo y no procesa ni guarda datos.
-- El módulo europeo comprueba la presencia de fabricante, operador responsable en la UE y advertencias. No se evalúa si son correctos, suficientes o exigibles para una categoría.
-- 5 MB de archivo, 1.000 productos por importación, 1.000 caracteres por campo y 2 MB de solicitud JSON. Se analiza únicamente la primera hoja de Excel.
-- El plan gratuito limita a cinco productos por cuenta y mes UTC. Los pagos y las mejoras a planes comerciales todavía no están implementados.
-- No hay aún verificación normativa, alertas regulatorias ni conectores directos a tiendas. La autenticación y el borrado de cuenta sí están traducidos a seis idiomas; el resto del panel operativo y los informes continúan en español en esta fase.
-- Mantener acceso de pruebas hasta configurar correo, protección frente a contraseñas filtradas/CAPTCHA, política de conservación y verificar el flujo destructivo con una cuenta desechable.
-
-Referencias: [Supabase SSR](https://supabase.com/docs/guides/auth/server-side/creating-a-client), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [correo](https://supabase.com/docs/guides/auth/auth-smtp), [plantillas](https://supabase.com/docs/guides/auth/auth-email-templates), [SheetJS](https://docs.sheetjs.com/docs/getting-started/installation/nodejs/).
-
-## Acceso con Google
-
-El formulario de acceso y registro incluye «Continuar con Google» mediante Supabase OAuth con PKCE. No solicita acceso a Drive, Gmail ni tokens de uso sin conexión. Apple todavía no está habilitado en la interfaz.
-
-1. Configurar el cliente OAuth web en Google y el proveedor Google en Supabase. Los secretos van únicamente en Supabase, nunca en el repositorio.
-2. En Supabase → Authentication → URL Configuration, añadir la URL exacta de retorno de la preview:
-   `https://deploy-preview-1--euproductradar.netlify.app/auth/callback`.
-   Mantener también el callback de producción documentado arriba.
-3. Netlify construye cada Deploy Preview con NEXT_PUBLIC_SITE_URL igual a DEPLOY_PRIME_URL; esto conserva el callback y las solicitudes privadas en el mismo entorno.
-4. Probar desde `/login`: pulsar «Continuar con Google», autorizar con una cuenta permitida por la configuración de pruebas de Google y comprobar que se vuelve a `/dashboard` en la misma preview.
-5. Probar cancelar el consentimiento: debe regresar al acceso sin crear una sesión. Comprobar también registro con Google, cierre de sesión e historial privado.
-
-La compilación y las pruebas locales no verifican las credenciales ni sustituyen esta prueba real. Las tablas products y price_history no sustituyen la tabla analyses que requiere esta rama.
-
-## Informe Excel con formato
-
-La descarga de análisis privados genera Resumen, Productos y Datos técnicos. Incluye totales con fórmulas y valores calculados, columnas con ancho definido, texto ajustado, prioridades con colores y encabezados fijos. Conserva los valores originales y la fecha en UTC. El libro es una instantánea: editarlo no cambia el análisis guardado.
-
-ExcelJS se carga únicamente al descargar. El secreto de Google y las credenciales de sesión nunca se exportan. La dependencia uuid de ExcelJS se fija a 11.1.1 para evitar la versión vulnerable heredada; solo se utiliza la exportación XLSX.
-
-Verificación: pruebas de ida y vuelta XLSX (datos, fórmulas, colores, fechas y texto con apariencia de fórmula), suite existente y compilación Next.js. Revisión visual con LibreOffice. La comprobación final en Apple Numbers requiere abrir una nueva descarga en el dispositivo; no se afirma compatibilidad visual idéntica entre aplicaciones.
+Los puntos administrativos que no pueden resolverse mediante código se mantienen en `WORK-CHAT-CONTINUITY.md`. Entre ellos: configuración real de Supabase Auth, secretos/env de Netlify, SMTP, leaked-password protection/CAPTCHA, datos legales de cobro, SiliconFlow, secreto de Radar, credenciales marketplace y QA en dispositivo real.
