@@ -6,6 +6,7 @@ import { languageFromAcceptLanguage } from '../lib/server-language';
 const layout = readFileSync(new URL('../app/layout.tsx', import.meta.url), 'utf8');
 const localizedLayout = readFileSync(new URL('../app/[lang]/layout.tsx', import.meta.url), 'utf8');
 const languageHook = readFileSync(new URL('../lib/use-language.ts', import.meta.url), 'utf8');
+const picker = readFileSync(new URL('../components/LandingLanguagePicker.tsx', import.meta.url), 'utf8');
 
 test('root layout stays static and initializes one shared client provider', () => {
   assert.doesNotMatch(layout, /serverLanguage/);
@@ -15,11 +16,18 @@ test('root layout stays static and initializes one shared client provider', () =
   assert.match(layout, /<LanguageProvider initialLanguage="en">/);
 });
 
-test('language provider preserves explicit URL and saved preferences over browser fallback', () => {
-  assert.match(languageHook, /\[urlLanguage, storedLanguage, initialLanguage, browserLanguage\]\.find\(isSupportedLanguage\)/);
+test('language provider prioritizes static locale path before query and saved preferences', () => {
+  assert.match(languageHook, /languageFromPathname\(window\.location\.pathname\)/);
+  assert.match(languageHook, /\[pathLanguage, urlLanguage, storedLanguage, initialLanguage, browserLanguage\]\.find\(isSupportedLanguage\)/);
   assert.match(languageHook, /document\.documentElement\.lang = language/);
   assert.match(languageHook, /LANGUAGE_COOKIE/);
   assert.match(languageHook, /LanguageContext\.Provider/);
+});
+
+test('landing picker navigates between static locale paths instead of stale query-only content', () => {
+  assert.match(picker, /url\.pathname = `\/\$\{next\}`/);
+  assert.match(picker, /url\.searchParams\.delete\('lang'\)/);
+  assert.match(picker, /window\.location\.assign/);
 });
 
 test('client language provider stays decoupled from the large landing copy bundle', () => {
