@@ -1,10 +1,15 @@
 'use client';
 
 import { createContext, createElement, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { isLanguage, type Language } from './landing-i18n';
-import { LANGUAGE_COOKIE } from './request-language';
 
 export const LANGUAGE_STORAGE_KEY = 'import-rules-verifier-language';
+const LANGUAGE_COOKIE = 'iv_lang';
+const SUPPORTED_LANGUAGES = ['es','en','fr','de','it','pt'] as const;
+type Language = typeof SUPPORTED_LANGUAGES[number];
+
+function isSupportedLanguage(value: unknown): value is Language {
+  return typeof value === 'string' && (SUPPORTED_LANGUAGES as readonly string[]).includes(value);
+}
 
 type LanguageContextValue = {
   language: Language;
@@ -20,7 +25,7 @@ export function LanguageProvider({ initialLanguage, children }: { initialLanguag
     const urlLanguage = new URLSearchParams(window.location.search).get('lang');
     const storedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
     const browserLanguage = navigator.language.slice(0, 2);
-    const preferred = [urlLanguage, storedLanguage, initialLanguage, browserLanguage].find(isLanguage);
+    const preferred = [urlLanguage, storedLanguage, initialLanguage, browserLanguage].find(isSupportedLanguage);
     if (preferred) setLanguageState(current => current === preferred ? current : preferred);
   }, [initialLanguage]);
 
