@@ -30,11 +30,18 @@ test('checkout confirmation validates origin, authentication and session ownersh
 test('subscription browser confirmation is positive only after Stripe grants recurring Unlimited', () => {
   const syncIndex = confirm.indexOf('await syncStripeSubscription(subscription)');
   const statusIndex = confirm.indexOf('CONFIRMED_SUBSCRIPTION_STATUSES.has(subscription.status)');
-  const confirmedIndex = confirm.indexOf('return json({ confirmed: true, billingOption: session.metadata?.billing_option');
-  assert.ok(syncIndex >= 0 && statusIndex > syncIndex && confirmedIndex > statusIndex);
+  const priceIndex = confirm.indexOf('billingOptionForStripePrice(priceId)');
+  const confirmedIndex = confirm.indexOf('return json({ confirmed: true, billingOption });');
+  assert.ok(syncIndex >= 0 && statusIndex > syncIndex && priceIndex > statusIndex && confirmedIndex > priceIndex);
   assert.match(confirm, /new Set\(\['active', 'trialing'\]\)/);
   assert.match(confirm, /if \(!CONFIRMED_SUBSCRIPTION_STATUSES\.has\(subscription\.status\)\)/);
   assert.match(confirm, /paymentOpen'\) \}, 409/);
+});
+
+test('confirmed recurring cadence comes from the authoritative Stripe price, not Checkout metadata', () => {
+  assert.match(confirm, /billingOptionForStripePrice\(priceId\)/);
+  assert.match(confirm, /billingOption !== 'monthly' && billingOption !== 'annual'/);
+  assert.doesNotMatch(confirm, /billingOption: session\.metadata\?\.billing_option/);
 });
 
 test('webhook and synchronous checkout confirmation share entitlement synchronizers', () => {
