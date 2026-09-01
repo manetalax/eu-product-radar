@@ -5,6 +5,8 @@ import { IMPORTVERIFIER_SUPABASE_URL, trustedSupabaseProjectUrl } from './supaba
 export { IMPORTVERIFIER_SUPABASE_URL } from './supabase/config';
 export const IMPORTVERIFIER_PRODUCTION_URL = 'https://importverifier.netlify.app';
 export const IMPORTVERIFIER_UNLIMITED_PRICE_ID = 'price_1UAJy5HJnO8odw1Mn4jMVjFt';
+export const IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID = 'price_1UAjP0HJnO8odw1M7RBK8jsR';
+export const IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID = 'price_1UAjP8HJnO8odw1MmSXdkNIh';
 
 export type ReleaseConfigCheck = { ok: boolean; errors: string[]; warnings: string[] };
 
@@ -13,6 +15,8 @@ const requiredSecrets = [
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
   'STRIPE_PRICE_STARTER',
+  'STRIPE_PRICE_ANNUAL',
+  'STRIPE_PRICE_LIFETIME',
 ] as const;
 
 const requiredPublic = ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'] as const;
@@ -43,7 +47,13 @@ export function checkReleaseConfig(env: NodeJS.ProcessEnv = process.env): Releas
     errors.push('STRIPE_WEBHOOK_SECRET debe ser el signing secret del webhook de Stripe.');
   }
   if (production && env.STRIPE_PRICE_STARTER && env.STRIPE_PRICE_STARTER !== IMPORTVERIFIER_UNLIMITED_PRICE_ID) {
-    errors.push(`STRIPE_PRICE_STARTER debe ser el price live canónico de ImportVerifier Unlimited: ${IMPORTVERIFIER_UNLIMITED_PRICE_ID}.`);
+    errors.push(`STRIPE_PRICE_STARTER debe ser el price live canónico mensual de ImportVerifier Unlimited: ${IMPORTVERIFIER_UNLIMITED_PRICE_ID}.`);
+  }
+  if (production && env.STRIPE_PRICE_ANNUAL && env.STRIPE_PRICE_ANNUAL !== IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID) {
+    errors.push(`STRIPE_PRICE_ANNUAL debe ser el price live canónico anual de ImportVerifier Unlimited: ${IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID}.`);
+  }
+  if (production && env.STRIPE_PRICE_LIFETIME && env.STRIPE_PRICE_LIFETIME !== IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID) {
+    errors.push(`STRIPE_PRICE_LIFETIME debe ser el price live canónico Lifetime de ImportVerifier Unlimited: ${IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID}.`);
   }
   if (production && !legalConfig(env)) {
     errors.push(`Falta completar la información legal obligatoria para aceptar pagos: ${LEGAL_ENV_KEYS.join(', ')}.`);
