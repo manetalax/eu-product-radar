@@ -6,7 +6,7 @@ export type UnlimitedBillingOption = typeof UNLIMITED_BILLING_OPTIONS[number];
 
 export const IMPORTVERIFIER_UNLIMITED_PRICE_ID = 'price_1UAJy5HJnO8odw1Mn4jMVjFt';
 export const IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID = 'price_1UAjP0HJnO8odw1M7RBK8jsR';
-export const IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID = 'price_1UAjP8HJnO8odw1MmSXdkNIh';
+export const IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID = 'price_1UAv1HHJnO8odw1Mp1XupPaO';
 
 export const UNLIMITED_PRICE_CONFIG: Record<UnlimitedBillingOption, {
   priceId: string;
