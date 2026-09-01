@@ -96,7 +96,9 @@ export async function POST(request: Request) {
         customer: customerId,
         client_reference_id: user.id,
         line_items: [{ price: priceId, quantity: 1 }],
-        allow_promotion_codes: true,
+        // Lifetime creates permanent value. Keep promotions on recurring plans only so a
+        // 100% promotion can never turn the one-time Checkout into a free Lifetime grant.
+        allow_promotion_codes: false,
         success_url: successUrl,
         cancel_url: cancelUrl,
         metadata,
