@@ -16,7 +16,7 @@ test('Stripe success return includes the canonical Checkout Session placeholder'
 test('checkout confirmation validates origin, authentication and session ownership before syncing', () => {
   const originIndex = confirm.indexOf('if (!sameOrigin(request))');
   const authIndex = confirm.indexOf('await supabase.auth.getUser()');
-  const bodyIndex = confirm.indexOf('await readJsonBody(request)');
+  const bodyIndex = confirm.indexOf('await readJsonBody(request, BILLING_JSON_MAX_BYTES)');
   const ownerIndex = confirm.indexOf('ownerId !== user.id');
   const subscriptionSyncIndex = confirm.indexOf('syncStripeSubscription(subscription)', ownerIndex);
   const lifetimeSyncIndex = confirm.indexOf('syncLifetimeCheckoutSession(session)', ownerIndex);
