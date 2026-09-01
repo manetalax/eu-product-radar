@@ -11,7 +11,7 @@ export type ProductQuota = {
   billing: BillingStatus;
 };
 
-export function productQuota(used: number, _now = new Date(), billing: BillingStatus = { planId: 'free', planName: 'Gratis', status: null, productLimit: FREE_ACCOUNT_PRODUCT_LIMIT, currentPeriodEnd: null, cancelAtPeriodEnd: false }): ProductQuota {
+export function productQuota(used: number, _now = new Date(), billing: BillingStatus = { planId: 'free', planName: 'Gratis', status: null, productLimit: FREE_ACCOUNT_PRODUCT_LIMIT, currentPeriodEnd: null, cancelAtPeriodEnd: false, billingOption: null }): ProductQuota {
   const safeUsed = Number.isFinite(used) && used > 0 ? Math.floor(used) : 0;
   const paid = billing.planId !== 'free';
   return {
