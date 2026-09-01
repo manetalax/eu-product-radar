@@ -30,6 +30,11 @@ test('a revoked Lifetime payment cannot be resurrected by Checkout replay or con
   assert.match(confirm, /if \(!granted\) return json\(\{ error: b\('paymentOpen'\) \}, 409\)/);
 });
 
+test('a stale different Lifetime payment cannot replace an already active purchase identity', () => {
+  assert.match(lifetime, /existingEntitlement\?\.status === 'active' && !samePayment\) return false/);
+  assert.match(lifetime, /older\/delayed Checkout must never overwrite its payment identity/);
+});
+
 test('Lifetime browser confirmation requires paid status while subscriptions may have no-payment-required states', () => {
   assert.match(confirm, /session\.mode === 'payment'[\s\S]*session\.payment_status !== 'paid'[\s\S]*409/);
   assert.match(confirm, /session\.mode === 'subscription'[\s\S]*session\.payment_status !== 'paid' && session\.payment_status !== 'no_payment_required'/);
