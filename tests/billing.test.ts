@@ -1,10 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { billingStatus, IMPORTVERIFIER_UNLIMITED_PRICE_ID, planIdForStripePrice, stripePriceId } from '../lib/billing';
+import { UNLIMITED_FAIR_USE_CEILING } from '../lib/plans';
 
-test('solo una suscripción activa y vigente concede la cuota pagada', () => {
+test('solo una suscripción activa y vigente concede entitlement Unlimited', () => {
   const now = new Date('2026-08-30T12:00:00Z');
-  assert.equal(billingStatus({ plan_id: 'pro', status: 'active', current_period_end: '2026-09-30T12:00:00Z' }, now).productLimit, 500);
+  const legacyActive = billingStatus({ plan_id: 'pro', status: 'active', current_period_end: '2026-09-30T12:00:00Z' }, now);
+  assert.equal(legacyActive.planId, 'starter');
+  assert.equal(legacyActive.planName, 'Unlimited');
+  assert.equal(legacyActive.productLimit, UNLIMITED_FAIR_USE_CEILING);
   assert.equal(billingStatus({ plan_id: 'pro', status: 'canceled', current_period_end: '2026-09-30T12:00:00Z' }, now).productLimit, 5);
   assert.equal(billingStatus({ plan_id: 'pro', status: 'active', current_period_end: '2026-08-01T00:00:00Z' }, now).planId, 'free');
 });
