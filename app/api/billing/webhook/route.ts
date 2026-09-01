@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { readTextBody } from '@/lib/http';
-import { revokeLifetimeEntitlementForFullyRefundedCharge, syncLifetimeCheckoutSession } from '@/lib/stripe/lifetime-entitlement';
+import {
+  restoreLifetimeEntitlementForWonDispute,
+  revokeLifetimeEntitlementForFullyRefundedCharge,
+  suspendLifetimeEntitlementForDisputedCharge,
+  syncLifetimeCheckoutSession,
+} from '@/lib/stripe/lifetime-entitlement';
 import { stripeClient } from '@/lib/stripe/server';
 import { stripeObjectId, syncStripeSubscription } from '@/lib/stripe/subscription-sync';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -15,6 +20,12 @@ async function retrieveLatestSubscription(subscriptionId: string) {
 
 async function retrieveCheckoutSession(sessionId: string) {
   return stripeClient().checkout.sessions.retrieve(sessionId, { expand: ['line_items.data.price'] });
+}
+
+async function retrieveLatestCharge(charge: string | Stripe.Charge | null) {
+  const chargeId = stripeObjectId(charge);
+  if (!chargeId) throw new Error('unrecognized_dispute_charge');
+  return stripeClient().charges.retrieve(chargeId);
 }
 
 export async function POST(request: Request) {
@@ -71,6 +82,17 @@ export async function POST(request: Request) {
       await syncStripeSubscription(await retrieveLatestSubscription(snapshot.id));
     } else if (event.type === 'charge.refunded') {
       await revokeLifetimeEntitlementForFullyRefundedCharge(event.data.object as Stripe.Charge);
+    } else if (event.type === 'charge.dispute.created') {
+      const dispute = event.data.object as Stripe.Dispute;
+      await suspendLifetimeEntitlementForDisputedCharge(await retrieveLatestCharge(dispute.charge));
+    } else if (event.type === 'charge.dispute.closed') {
+      const dispute = event.data.object as Stripe.Dispute;
+      const charge = await retrieveLatestCharge(dispute.charge);
+      if (dispute.status === 'won') {
+        await restoreLifetimeEntitlementForWonDispute(charge);
+      } else {
+        await suspendLifetimeEntitlementForDisputedCharge(charge);
+      }
     }
 
     const completedAt = new Date().toISOString();
