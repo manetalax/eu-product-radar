@@ -160,10 +160,12 @@ export default function Dashboard({ email }: { email: string }) {
   }, [language]);
 
   useEffect(() => {
-    const checkout = new URLSearchParams(window.location.search).get('checkout');
-    if (checkout === 'success') setNotice(d('checkoutSuccess'));
+    const params = new URLSearchParams(window.location.search);
+    const checkout = params.get('checkout');
+    const synced = params.get('synced') === '1';
+    if (checkout === 'success' && synced) setNotice(d('checkoutSuccess'));
     if (checkout === 'cancelled') setNotice(d('checkoutCancelled'));
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     if (!quota || planIntentHandled.current) return;
