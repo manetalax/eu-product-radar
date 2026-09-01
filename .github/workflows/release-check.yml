@@ -4,9 +4,10 @@ on:
   pull_request:
   push:
     branches:
-      # Keep direct push validation only for the legacy release-prep branch.
-      # The active ImportVerifier branch is already validated by pull_request,
-      # avoiding two identical full npm/test/typecheck/build runs per commit.
+      # PR #4 is now merged/closed, so this working branch no longer receives
+      # pull_request-triggered validation. Keep direct push validation enabled
+      # while post-merge hardening continues on the branch.
+      - feat/import-rules-verifier-branding
       - feat/importverifier-release-prep-final3
 
 concurrency:
