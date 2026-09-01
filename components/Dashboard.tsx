@@ -72,6 +72,8 @@ export default function Dashboard({ email }: { email: string }) {
   const [quota, setQuota] = useState<ProductQuota | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
+  const workspaceHeading = useRef<HTMLHeadingElement>(null);
+  const pendingWorkspaceFocus = useRef<Tab | null>(null);
   const deleteAccountOpener = useRef<HTMLButtonElement>(null);
   const deleteEmailInput = useRef<HTMLInputElement>(null);
   const pendingImport = useRef<{ fingerprint: string; id: string } | null>(null);
@@ -104,6 +106,11 @@ export default function Dashboard({ email }: { email: string }) {
       : value === currentMarket.operatorFieldLabel ? operatorDisplay : value;
   const billingChoiceLabel = (option: UnlimitedBillingOption) => billingChoiceT[option];
   const billingCadenceLabel = (option: UnlimitedBillingOption) => option === 'monthly' ? billingChoiceT.month : option === 'annual' ? billingChoiceT.year : billingChoiceT.oneTime;
+
+  function moveToTabWithFocus(nextTab: Tab) {
+    pendingWorkspaceFocus.current = nextTab;
+    setTab(nextTab);
+  }
 
   async function api(url: string, options?: RequestInit) {
     const response = await fetch(url, { ...options, cache: 'no-store' });
@@ -182,6 +189,13 @@ export default function Dashboard({ email }: { email: string }) {
   }, [quota?.billing.planId]);
 
   useEffect(() => {
+    if (pendingWorkspaceFocus.current !== tab) return;
+    pendingWorkspaceFocus.current = null;
+    const frame = window.requestAnimationFrame(() => workspaceHeading.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [tab]);
+
+  useEffect(() => {
     if (!deleteAccountOpen) return;
     const frame = window.requestAnimationFrame(() => deleteEmailInput.current?.focus());
     return () => window.cancelAnimationFrame(frame);
@@ -231,7 +245,7 @@ export default function Dashboard({ email }: { email: string }) {
       if (!typedAnalysis || !typedQuota) throw new Error(d('importError'));
       setQuota(typedQuota);
       setCurrent(typedAnalysis);
-      setTab('products');
+      moveToTabWithFocus('products');
       setNotice(d('analysisSaved', { market: marketName(selectedMarket) }));
       pendingImport.current = null;
       setHistory(items => [{
@@ -264,7 +278,7 @@ export default function Dashboard({ email }: { email: string }) {
       if (!supportsRuleVersion(typedAnalysis.rule_version)) throw new Error(d('unsupportedVersion'));
       setCurrent(typedAnalysis);
       setSelectedMarket(analysisMarket(typedAnalysis));
-      setTab('products');
+      moveToTabWithFocus('products');
     } catch {
       setError(d('openError'));
     } finally {
@@ -417,7 +431,7 @@ export default function Dashboard({ email }: { email: string }) {
 
       <section className="workspace" aria-busy={busy}>
         <div className="workspace-heading">
-          <div><span className="eyebrow">{tabs.find(([id]) => id === tab)?.[1]}</span><h1>{tab === 'dashboard' ? d('hello', { name: firstName || d('welcome') }) : tabs.find(([id]) => id === tab)?.[1]}</h1></div>
+          <div><span className="eyebrow">{tabs.find(([id]) => id === tab)?.[1]}</span><h1 ref={workspaceHeading} tabIndex={-1}>{tab === 'dashboard' ? d('hello', { name: firstName || d('welcome') }) : tabs.find(([id]) => id === tab)?.[1]}</h1></div>
           {tab !== 'settings' && <button className="btn primary compact-cta" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{quotaBlocked ? d('freeUsed') : d('newAnalysis')}</button>}
         </div>
         <p className="workspace-subtitle">{tab === 'dashboard' ? d('dashboardSubtitle') : tabs.find(([id]) => id === tab)?.[2]}</p>
@@ -447,14 +461,14 @@ export default function Dashboard({ email }: { email: string }) {
 
         {tab === 'dashboard' && <>
           <div className="onboarding-card card"><div><span className="eyebrow">{d('onboarding')}</span><h2>{d('firstReview')}</h2></div><ol><li className="done"><span>1</span><div><strong>{d('market')}</strong><small>{d('europeSelected')}</small></div></li><li className={templateReady ? 'done' : ''}><span>2</span><div><strong>{d('template')}</strong><small>{templateReady ? d('downloaded') : d('readyDownload')}</small></div></li><li className={current ? 'done' : ''}><span>3</span><div><strong>{d('analysis')}</strong><small>{current ? d('catalogueSaved') : d('uploadCatalogue')}</small></div></li><li className={reportReady ? 'done' : ''}><span>4</span><div><strong>{d('report')}</strong><small>{reportReady ? d('exported') : 'Excel / PDF'}</small></div></li></ol></div>
-          <div className="section-heading"><div><span className="eyebrow">{d('overview')}</span><h2>{current ? d('selectedAnalysis') : d('panelReady')}</h2></div>{current && <button className="text-button" onClick={() => setTab('products')}>{d('viewProducts')}</button>}</div>
+          <div className="section-heading"><div><span className="eyebrow">{d('overview')}</span><h2>{current ? d('selectedAnalysis') : d('panelReady')}</h2></div>{current && <button className="text-button" onClick={() => moveToTabWithFocus('products')}>{d('viewProducts')}</button>}</div>
           <div className="kpis premium-kpis">
             <div className="kpi"><span>{d('products')}</span><strong>{results.length || '—'}</strong><small>{current ? d('inOpenAnalysis') : d('noAnalysisSelected')}</small></div>
             <div className="kpi"><span>{d('averageIndicator')}</span><strong>{current ? avg : '—'}</strong><small>{current ? d('incomplete100') : d('afterAnalysis')}</small></div>
             <div className="kpi"><span>{d('highPriority')}</span><strong>{current ? highCount : '—'}</strong><small>{current ? d('reviewFirst') : d('noData')}</small></div>
             <div className="kpi"><span>{d('market')}</span><strong className="market-kpi">{current ? currentMarket.flag : '🇪🇺'}</strong><small>{current ? marketName(currentMarketCode) : d('europeAvailable')}</small></div>
           </div>
-          {!current ? <div className="card empty-state"><div className="empty-mark">◎</div><h3>{d('smallCatalogueTitle')}</h3><p>{d('smallCatalogueBody')}</p><button className="btn primary" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{d('firstCatalogue')}</button><button className="text-button" onClick={downloadTemplate}>{d('preferTemplate')}</button></div> : <div className="card selected-analysis"><div><span className="eyebrow">{d('selected')} · {currentMarketCode}</span><h3>{current.filename}</h3><p className="muted">{when(current.created_at)} · {results.length} {d('productWord')}</p></div><div className="selected-actions"><button className="btn ghost" onClick={() => setTab('products')}>{d('viewResults')}</button><button className="btn ghost" disabled={busy} onClick={() => exportReport('pdf')}>PDF</button></div></div>}
+          {!current ? <div className="card empty-state"><div className="empty-mark">◎</div><h3>{d('smallCatalogueTitle')}</h3><p>{d('smallCatalogueBody')}</p><button className="btn primary" disabled={busy || loading || quotaBlocked} onClick={() => input.current?.click()}>{d('firstCatalogue')}</button><button className="text-button" onClick={downloadTemplate}>{d('preferTemplate')}</button></div> : <div className="card selected-analysis"><div><span className="eyebrow">{d('selected')} · {currentMarketCode}</span><h3>{current.filename}</h3><p className="muted">{when(current.created_at)} · {results.length} {d('productWord')}</p></div><div className="selected-actions"><button className="btn ghost" onClick={() => moveToTabWithFocus('products')}>{d('viewResults')}</button><button className="btn ghost" disabled={busy} onClick={() => exportReport('pdf')}>PDF</button></div></div>}
         </>}
 
         {tab === 'products' && <div className="card content-card">
