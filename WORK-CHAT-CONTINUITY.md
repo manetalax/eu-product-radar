@@ -3,14 +3,14 @@
 ## Canonical project
 - Production: `https://importverifier.netlify.app/`
 - Repository: `manetalax/eu-product-radar`
-- PR: `#4`
-- Branch: `feat/import-rules-verifier-branding`
-- Never create a replacement project. Never merge PR #4 without explicit owner instruction.
+- Historical PR: `#4` — merged externally into `main` on 2026-09-01 at 11:11:57Z; do not attempt another merge.
+- Continued hardening branch: `feat/import-rules-verifier-branding`.
+- Never create a replacement project. Do not merge or retarget work without explicit owner instruction.
 
 ## Read order
 1. This file.
 2. `WORK-HANDOFF-IMPORTVERIFIER.md`.
-3. Exact PR #4 HEAD + exact-HEAD GitHub CI + `netlify/importverifier/deploy-preview`.
+3. Exact branch HEAD + exact-HEAD GitHub CI + relevant deployment status.
 4. `AGENTS.md`.
 
 ## Operating rule
@@ -54,25 +54,27 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Account deletion current-state Stripe cancellation and duplicate-subscription preflight.
 - Production server-only Supabase RPC/table privilege repair; browser roles remain closed.
 - Supabase advisors rechecked: only known leaked-password warning; internal RLS/no-policy INFO is intentional and unused-index INFO is not grounds for speculative deletion.
+- Dashboard billing intent correctly carries monthly/annual/Lifetime through Checkout.
+- Dashboard distinguishes Lifetime from recurring Unlimited and exposes all three canonical purchase choices responsively.
+- Five-free → Unlimited upgrade surface synchronizes live when quota reaches zero and uses trusted Stripe navigation.
 
-## DONE — 2026-09-01 current pass
-- Reconfirmed PR #4 open, mergeable, unmerged.
-- Repaired obsolete Dashboard billing-intent regression; persisted purchase intent passes `intent.billingOption`, `startCheckout` accepts `UnlimitedBillingOption`, and the request sends `billingOption: option`.
-- Dashboard settings distinguish Lifetime from recurring Unlimited: Lifetime has no misleading subscription-management action; monthly/annual retain Portal management.
-- Free Dashboard users see all three canonical acquisition choices and explicit billing cadence; selected choice is sent to Checkout.
-- Responsive Dashboard billing presentation: 3 choices desktop, 2+1 tablet, 1 mobile; annual visually emphasized without changing entitlement semantics.
-- Added multidisciplinary operating standard and minimize-owner-intervention rule to `AGENTS.md`.
-- CI efficiency review found the active PR branch was triggering two identical full release checks for every commit (`push` + `pull_request`). Removed the active branch from the push trigger while retaining PR validation, concurrency cancellation, immutable action pins and npm dependency caching. This cuts redundant CI work without weakening PR release validation.
-- Fixed a conversion-state defect in the five-free → Unlimited transition: `FreeTrialUpgradePrompt` previously read quota only at mount, so consuming the fifth free product in-session could leave the purchase prompt hidden until reload. It now synchronizes with the live Dashboard quota reaching 100% and announces secure-checkout progress with an ARIA live status.
-- Added `tests/free-trial-upgrade-live-quota.test.ts` to lock the mounted upgrade surface, live exhausted-quota synchronization, trusted Stripe navigation and accessible progress status.
+## DONE — 2026-09-01 post-merge hardening pass
+- Detected that PR #4 had been merged externally despite the previous handoff saying open/unmerged. GitHub records merge commit `3cc3e1f43458d35ddcf1962eab29141c529e27f6` at 2026-09-01T11:11:57Z.
+- Reconfirmed the continued hardening branch existed at prior HEAD `33c4e4bd55e278019a27e89f0bf9fc4525b79ad0`; release check #1836 for that HEAD was SUCCESS.
+- Audited free-quota → three-option Checkout announcement/focus behavior.
+- Fixed a demonstrated accessibility gap: when the fifth free product exhausts quota and the upgrade surface mounts dynamically, its explanatory copy now uses a polite atomic status announcement without programmatically stealing keyboard focus.
+- Added regression coverage asserting the dynamic exhausted-quota announcement and absence of forced `.focus()` behavior.
+- Detected CI regression caused by the external PR merge: with PR #4 closed and the branch previously removed from `push`, new hardening commits had no release check at all.
+- Restored direct `push` validation for `feat/import-rules-verifier-branding` while preserving the existing pull-request validation, concurrency cancellation, immutable action pins and npm cache.
 
 ## Latest exact verification — 2026-09-01
-- Latest fully green functional/test HEAD before this handoff update: **`b562892f9edc997cec0bbd621dc6a5960fa99f0c`** (`test: lock live free-quota upgrade prompt`).
-- Exact PR-triggered release check #1835: **SUCCESS** (`npm ci`, `npm test`, `npm run typecheck`, `npm run build` all green).
-- Exact `netlify/importverifier/deploy-preview`: **SUCCESS**, target `https://deploy-preview-4--importverifier.netlify.app`.
-- CI-efficiency functional commit remains **`27f5bd88d9c7c769d9c068265da8f2b5c3e447e3`** (`ci: avoid duplicate release checks on PR branch`).
-- This handoff update creates a newer docs-only HEAD; reconfirm exact PR HEAD/CI/Netlify before further writes or release decisions.
-- PR #4 remains open/unmerged. Never merge without explicit owner instruction.
+- Last known green pre-change branch HEAD: **`33c4e4bd55e278019a27e89f0bf9fc4525b79ad0`**.
+- Exact release check for that HEAD: **#1836 SUCCESS**.
+- Accessibility fix commit: **`1a44c3616dad3103fe9d4eb970e37b91adc990e3`**.
+- Accessibility regression-test commit: **`e9e22f02af4cd36b38672890750e172a6cd5db8f`**.
+- CI trigger repair commit: **`5787626d58df0b9dbaaba2e379f5182e68dbde4b`**.
+- At the first immediate query after `5787626d...`, no workflow run was yet returned. Reconfirm exact final HEAD and release-check result before any release decision.
+- PR #4 is **merged/closed**, not open. Do not attempt another merge.
 
 ## Production facts
 - Supabase project `hfuwwjdcyudflamwwnon` is production.
@@ -84,15 +86,16 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Production env template intentionally keeps privileged secrets and sensitive legal identifiers blank; never commit them.
 
 ## NEXT — execute without asking
-1. Reconfirm exact final HEAD after this handoff commit, exact PR-triggered GitHub release check and correct `netlify/importverifier/deploy-preview`; repair any regression immediately.
-2. Continue genuinely new multidisciplinary review findings, prioritizing demonstrated security/revenue/correctness/user-friction issues over speculative architecture.
-3. Audit keyboard/focus behavior and announcement semantics across the full free-quota → three-option Checkout path; change only demonstrated issues.
-4. Production acceptance when browser/payment conditions permit: monthly → webhook → Unlimited → Portal/cancel; annual equivalent; Lifetime paid → persistent Unlimited → controlled refund/dispute lifecycle.
-5. Fresh-account acceptance: signup/login → five-product sample accepted → sixth rejected → isolated history → premium PDF/XLSX.
-6. Obtain TTFB/LCP/TBT/CLS/resource evidence before performance changes.
-7. Inspect PDF typography/overflow only against a real multi-product output.
-8. Keep Radar disabled until same strong ingest secret exists runtime/scheduler and real official EUR-Lex ingestion persists events.
-9. Keep EU the only active market and direct marketplace connectors inactive until legitimate credentials exist.
+1. Reconfirm exact final branch HEAD and exact GitHub release check after restoring branch push validation; repair any failing test/typecheck/build regression immediately.
+2. Reconcile the long handoff header/release section with the externally merged PR #4 state when a safe complete-file update path is available; do not rewrite or truncate the detailed architecture content.
+3. Continue genuinely new multidisciplinary review findings, prioritizing demonstrated security/revenue/correctness/user-friction issues over speculative architecture.
+4. Continue keyboard/focus audit through Dashboard settings purchase controls and Checkout-return states; change only demonstrated issues.
+5. Production acceptance when browser/payment conditions permit: monthly → webhook → Unlimited → Portal/cancel; annual equivalent; Lifetime paid → persistent Unlimited → controlled refund/dispute lifecycle.
+6. Fresh-account acceptance: signup/login → five-product sample accepted → sixth rejected → isolated history → premium PDF/XLSX.
+7. Obtain TTFB/LCP/TBT/CLS/resource evidence before performance changes.
+8. Inspect PDF typography/overflow only against a real multi-product output.
+9. Keep Radar disabled until same strong ingest secret exists runtime/scheduler and real official EUR-Lex ingestion persists events.
+10. Keep EU the only active market and direct marketplace connectors inactive until legitimate credentials exist.
 
 ## BLOCKED EXTERNAL
 - Final Netlify production env/promotion with privileged Supabase/Stripe secrets, truthful sensitive legal fields and free-only AI secret. Connected tools should be used to obtain/configure anything they legitimately expose before asking the owner.
