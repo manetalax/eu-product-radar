@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { formatProductCount, landingCopy, LANGUAGES } from '../lib/landing-i18n';
-import { FREE_TRIAL_PRODUCT_LIMIT, PLANS, UNLIMITED_FAIR_USE_CEILING } from '../lib/plans';
+import { FREE_TRIAL_PRODUCT_LIMIT, PLANS, UNLIMITED_FAIR_USE_CEILING, UNLIMITED_PUBLIC_OFFERS } from '../lib/plans';
 
 const planInterest = readFileSync(new URL('../lib/services/plan-interest.ts', import.meta.url), 'utf8');
 const loginPage = readFileSync(new URL('../app/login/page.tsx', import.meta.url), 'utf8');
@@ -11,18 +11,24 @@ test('cada cuenta conserva exactamente 5 productos de prueba gratuita', () => {
   assert.equal(FREE_TRIAL_PRODUCT_LIMIT, 5);
 });
 
-test('la oferta comercial pública es un único plan Unlimited a 9,95 €/mes', () => {
+test('la capacidad pública sigue siendo un único Unlimited con tres modalidades de pago', () => {
   assert.deepEqual(PLANS.map(plan => [plan.id, plan.name, plan.monthlyPriceEur, plan.unlimited]), [
     ['starter', 'Unlimited', 9.95, true],
   ]);
   assert.equal(PLANS[0].monthlyProductLimit, UNLIMITED_FAIR_USE_CEILING);
   assert.deepEqual(PLANS.filter(plan => plan.featured).map(plan => plan.id), ['starter']);
+  assert.deepEqual(UNLIMITED_PUBLIC_OFFERS.map(offer => [offer.id, offer.priceEur, offer.cadence]), [
+    ['monthly', 9.95, 'month'],
+    ['annual', 89.95, 'year'],
+    ['lifetime', 149, 'lifetime'],
+  ]);
 });
 
-test('la intención pública de compra es one-shot y solo permite Unlimited', () => {
+test('la intención pública de compra es one-shot, valida la modalidad y mantiene compatibilidad mensual', () => {
   assert.match(planInterest, /const PUBLIC_PURCHASE_INTENT = 'starter'/);
   assert.match(planInterest, /window\.localStorage\.removeItem\(PLAN_INTENT_STORAGE_KEY\)/);
-  assert.match(planInterest, /return stored === PUBLIC_PURCHASE_INTENT \? stored : undefined/);
+  assert.match(planInterest, /if \(stored === PUBLIC_PURCHASE_INTENT\) return \{ planId: PUBLIC_PURCHASE_INTENT, billingOption: 'monthly' \}/);
+  assert.match(planInterest, /isUnlimitedBillingOption\(parsed\.billingOption\)/);
   assert.match(loginPage, /const requestedPlan = plan === 'starter' \? 'starter' as const : undefined/);
   assert.doesNotMatch(loginPage, /isPurchaseId/);
 });
