@@ -5,7 +5,7 @@ import { analysisApiText } from '@/lib/analysis-api-i18n';
 import { PRIVATE_HEADERS, readJsonBody, sameOrigin } from '@/lib/http';
 import { productQuota, quotaExceededMessage } from '@/lib/quota';
 import { isActiveMarketCode, MarketCode } from '@/lib/markets';
-import { billingStatus } from '@/lib/billing';
+import { billingStatus, unlimitedBillingStatus } from '@/lib/billing';
 import type { Language } from '@/lib/landing-i18n';
 import { requestLanguage } from '@/lib/request-language';
 
@@ -15,13 +15,16 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 async function readQuota(supabase: SupabaseClient, userId: string, language: Language) {
   const a = (key: Parameters<typeof analysisApiText>[1]) => analysisApiText(language, key);
-  const [subscription, freeUsage] = await Promise.all([
+  const [subscription, lifetime, freeUsage] = await Promise.all([
     supabase.from('subscriptions').select('plan_id,status,current_period_end,cancel_at_period_end').eq('user_id', userId).maybeSingle(),
+    supabase.from('unlimited_lifetime_entitlements').select('status').eq('user_id', userId).maybeSingle(),
     supabase.from('free_account_usage').select('product_count').eq('user_id', userId).maybeSingle(),
   ]);
   if (subscription.error?.code && subscription.error.code !== 'PGRST116') throw new Error(a('subscriptionUnavailable'));
+  if (lifetime.error?.code && lifetime.error.code !== 'PGRST116') throw new Error(a('subscriptionUnavailable'));
   if (freeUsage.error?.code && freeUsage.error.code !== 'PGRST116') throw new Error(a('freeUnavailable'));
 
+  if (lifetime.data?.status === 'active') return productQuota(0, new Date(), unlimitedBillingStatus('lifetime'));
   const subscriptionBilling = billingStatus(subscription.data);
   if (subscriptionBilling.planId !== 'free') return productQuota(0, new Date(), subscriptionBilling);
   return productQuota(Number(freeUsage.data?.product_count ?? 0), new Date(), subscriptionBilling);
