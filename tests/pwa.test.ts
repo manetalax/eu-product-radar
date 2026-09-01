@@ -20,12 +20,12 @@ test('el manifest conserva identidad e instalación standalone en todos los idio
   }
 });
 
-test('el manifest localiza descripción y accesos directos sin cambiar rutas', () => {
+test('el manifest localiza descripción y accesos directos conservando el idioma', () => {
   const descriptions = LANGUAGES.map(language => manifestFor(language).description);
   assert.equal(new Set(descriptions).size, LANGUAGES.length);
   for (const language of LANGUAGES) {
     const shortcuts = manifestFor(language).shortcuts ?? [];
-    assert.deepEqual(shortcuts.map(item => item.url), ['/dashboard', '/privacy']);
+    assert.deepEqual(shortcuts.map(item => item.url), [`/dashboard?lang=${language}`, `/privacy?lang=${language}`]);
     assert.ok(shortcuts.every(item => Boolean(item.name)));
   }
 });
