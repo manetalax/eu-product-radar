@@ -27,6 +27,16 @@ test('checkout confirmation validates origin, authentication and session ownersh
   assert.match(confirm, /session\.payment_status !== 'paid'/);
 });
 
+test('subscription browser confirmation is positive only after Stripe grants recurring Unlimited', () => {
+  const syncIndex = confirm.indexOf('await syncStripeSubscription(subscription)');
+  const statusIndex = confirm.indexOf('CONFIRMED_SUBSCRIPTION_STATUSES.has(subscription.status)');
+  const confirmedIndex = confirm.indexOf('return json({ confirmed: true, billingOption: session.metadata?.billing_option');
+  assert.ok(syncIndex >= 0 && statusIndex > syncIndex && confirmedIndex > statusIndex);
+  assert.match(confirm, /new Set\(\['active', 'trialing'\]\)/);
+  assert.match(confirm, /if \(!CONFIRMED_SUBSCRIPTION_STATUSES\.has\(subscription\.status\)\)/);
+  assert.match(confirm, /paymentOpen'\) \}, 409/);
+});
+
 test('webhook and synchronous checkout confirmation share entitlement synchronizers', () => {
   assert.match(webhook, /syncStripeSubscription/);
   assert.match(confirm, /syncStripeSubscription/);
