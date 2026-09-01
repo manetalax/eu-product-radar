@@ -23,6 +23,7 @@ const freeQuota = {
     productLimit: 5,
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
+    billingOption: null,
   },
 };
 
@@ -50,6 +51,7 @@ test('Dashboard success parsers reject malformed 2xx payloads instead of trustin
   assert.equal(productQuotaFromUnknown({ ...freeQuota, remaining: 999 }), null);
   assert.equal(productQuotaFromUnknown({ ...freeQuota, billing: { ...freeQuota.billing, productLimit: 50 } }), null);
   assert.equal(productQuotaFromUnknown({ ...freeQuota, periodStart: 'monthly' }), null);
+  assert.equal(productQuotaFromUnknown({ ...freeQuota, billing: { ...freeQuota.billing, billingOption: 'annual' } }), null);
   assert.equal(productQuotaFromUnknown({
     limit: 30,
     used: 0,
@@ -59,7 +61,7 @@ test('Dashboard success parsers reject malformed 2xx payloads instead of trustin
   }), null);
 });
 
-test('Dashboard quota parser accepts Unlimited compatibility ID without exposing arbitrary plans', () => {
+test('Dashboard quota parser accepts Unlimited compatibility ID with a validated billing modality', () => {
   const unlimited = {
     limit: 1_000_000,
     used: 123,
@@ -72,8 +74,10 @@ test('Dashboard quota parser accepts Unlimited compatibility ID without exposing
       productLimit: 1_000_000,
       currentPeriodEnd: '2026-10-01T00:00:00.000Z',
       cancelAtPeriodEnd: false,
+      billingOption: 'annual',
     },
   };
   assert.deepEqual(productQuotaFromUnknown(unlimited), unlimited);
   assert.equal(productQuotaFromUnknown({ ...unlimited, billing: { ...unlimited.billing, planId: 'attacker-plan' } }), null);
+  assert.equal(productQuotaFromUnknown({ ...unlimited, billing: { ...unlimited.billing, billingOption: 'attacker-option' } }), null);
 });
