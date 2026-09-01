@@ -9,8 +9,12 @@ function lifetimeLineItemPriceId(session: Stripe.Checkout.Session): string | nul
   return items[0]?.price?.id ?? null;
 }
 
+function lifetimeCheckoutSettled(session: Stripe.Checkout.Session) {
+  return session.payment_status === 'paid' || session.payment_status === 'no_payment_required';
+}
+
 export async function syncLifetimeCheckoutSession(session: Stripe.Checkout.Session) {
-  if (session.mode !== 'payment' || session.payment_status !== 'paid') throw new Error('invalid_lifetime_checkout_state');
+  if (session.mode !== 'payment' || !lifetimeCheckoutSettled(session)) throw new Error('invalid_lifetime_checkout_state');
   const customerId = stripeObjectId(session.customer);
   const metadataUserId = session.metadata?.user_id || session.client_reference_id || null;
   const priceId = lifetimeLineItemPriceId(session);
