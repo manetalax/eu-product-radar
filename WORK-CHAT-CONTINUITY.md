@@ -36,11 +36,10 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Monthly/annual/Lifetime Checkout architecture and three live Stripe prices.
 - Lifetime production migration with forced RLS/own-row read policy.
 - Live-mode webhook gate, webhook idempotency/current-state subscription sync, refund/dispute lifecycle.
-- Lifetime zero-charge protection: paid Checkout + PaymentIntent required; no promotion codes.
-- Revoked same Lifetime payment cannot be resurrected by delayed Checkout/browser replay.
+- Lifetime zero-charge protection and revoked-payment/event-ordering replay hardening.
 - Landing/FAQ/Schema.org monthly/annual/Lifetime in ES/EN/FR/DE/IT/PT and auth billing-option continuity.
-- Retired audit runtime entitlement removal and legacy recurring-plan normalization.
-- Universal CSV/XLS/XLSX/document/text/photo ingestion, HEIC/HEIF, prompt-injection and upload boundaries.
+- Retired audit entitlement removal and legacy recurring-plan normalization.
+- Universal CSV/XLS/XLSX/document/text/photo ingestion, HEIC/HEIF, prompt-injection/upload boundaries.
 - EU deterministic regulatory engine, Evidence, Regulatory Twin and fail-closed Regulatory Impact Radar architecture.
 - Official regulatory/evidence URL allowlists and persistence/render/export/AI-context sanitization.
 - PWA private-cache hardening, localized start/offline/shortcuts and iOS/mobile upload/export safeguards.
@@ -49,29 +48,31 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Shopify/Amazon/Etsy architecture exists but direct integrations remain inactive pending official credentials.
 
 ## DONE — 2026-09-01 current execution
-- Reconfirmed previous exact HEAD `53cbd208068d6c850a1972bec16c53aaf75d2dcc`: GitHub release check #1659 SUCCESS and correct `netlify/importverifier/deploy-preview` SUCCESS at `https://deploy-preview-4--importverifier.netlify.app`.
-- Found and fixed a new Lifetime event-ordering flaw: because each user has one canonical entitlement row, a delayed *different* paid Checkout could overwrite the payment identity of a newer active Lifetime purchase. A later refund/dispute on that stale payment could then revoke valid access.
-- `syncLifetimeCheckoutSession` now refuses to replace an already-active entitlement with a different Checkout/PaymentIntent. A revoked entitlement can still be replaced by a genuinely new paid Lifetime purchase, preserving legitimate repurchase after refund/dispute.
-- Added regression coverage in `tests/lifetime-paid-entitlement.test.ts` locking the active-payment-identity ordering rule.
-- Functional commit: `a4df1d32757a4346217215fc7a6163976755d280`.
-- Regression-test commit / latest functional HEAD before this handoff: `14c8130c1c82a3eec14776de9560fd6bb24a7cd1`.
-- GitHub release checks #1662/#1663 were running when this handoff was written. Reconfirm exact final HEAD CI and Netlify status before calling this execution verified.
+- Reconfirmed starting HEAD `084a1106c0d2a00861d63ee14f5316b037e4f22c`: release check **#1665 SUCCESS** and correct `netlify/importverifier/deploy-preview` **SUCCESS** at `https://deploy-preview-4--importverifier.netlify.app`.
+- **Account deletion current-state billing safety:** deletion no longer trusts stale local subscription status. It locates the Stripe customer and paginates all current Stripe subscriptions, immediately canceling every cancellable non-terminal subscription before Supabase account deletion. This also prevents a duplicate/historical subscription from surviving because the local projection only stores one row. Already-missing Stripe customer/subscription (`resource_missing`) is safe to continue; all other Stripe failures remain fail-closed.
+- **Checkout duplicate-subscription preflight:** before creating new paid value, Checkout paginates the customer's current Stripe subscriptions directly. Terminal subscriptions are ignored; abandoned `incomplete` subscriptions are canceled; any other current recurring subscription routes to Billing Portal. This reduces duplicate billing when a webhook/local projection is delayed.
+- **Browser confirmation semantics:** recurring Checkout return now synchronizes the latest Stripe subscription but reports `confirmed: true` only for `active`/`trialing`. Incomplete/past-due/non-entitling state is presented as pending instead of false purchase success.
+- **Truthful Lifetime UX:** Checkout return progress copy now says Unlimited “access” rather than “subscription” in ES/EN/FR/DE/IT/PT, so Lifetime is not mislabeled as recurring.
+- Added regression coverage for complete account-deletion cancellation, live Stripe Checkout preflight and active/trialing-only browser confirmation.
+- Functional/test commits in this execution: `2d89957efc160aeb7a961e36e383da567ffb9db7`, `6862ee5e2587b46339f5d844bf3d6e68adfc3877`, `ac1b5f5a20921864df27fc0fdf6990f6a4a3a2b6`, `2806074c843edea359a11c7f9655feb0cb526919`, `7111cd49b4d542b33f6eb77492c5637ee23b107a`, `9b8f253283a60154716c8298090d7a5256e5f221`, `e5cf09e5f73624c68ffda5c21b437ba2a8f4e841`, `6e2c6b0ca2ca65b7f1df8be8dcbf825c4dfa9cc5`, `036f04310a41d8e9f7878ceb6762bd1af14a127d`.
+- Durable handoff update: `22bb71b82073995e1f87aa93da1845ccff45e7e3`.
+- This short-handoff commit creates the newest docs-only HEAD. Reconfirm its exact release check and correct ImportVerifier Deploy Preview; fix any regression rather than assuming prior green state applies.
 
 ## Production facts
 - Supabase project `hfuwwjdcyudflamwwnon` was last established ACTIVE_HEALTHY.
 - `unlimited_lifetime_entitlement` migration is applied; pre-sale entitlement baseline was 0 rows.
-- Stripe live product has the three canonical prices above and the canonical webhook listens to Checkout/subscriptions/refunds/disputes.
+- Stripe live product has all three canonical prices and canonical webhook listens to Checkout/subscriptions/refunds/disputes.
 - Radar remains non-live; keep `REGULATORY_RADAR_LIVE=false` until official ingestion persists events.
 - Supabase leaked-password protection remains disabled externally.
 
 ## NEXT — execute without asking
-1. Reconfirm exact HEAD after this handoff, release check and correct ImportVerifier Netlify Deploy Preview; fix any regression.
-2. Continue only genuinely new billing/security reliability findings; do not repeat already-locked zero-charge/refund/dispute/replay sweeps.
+1. Reconfirm exact final HEAD after this handoff, release check and correct ImportVerifier Netlify Deploy Preview; repair any regression immediately.
+2. Continue only genuinely new billing/security/reliability findings. In particular inspect cross-modality concurrent open Checkout-session behavior without redoing already-covered subscription/Lifetime replay sweeps.
 3. Production acceptance when browser/payment conditions permit: monthly → webhook → Unlimited → Portal/cancel; annual equivalent; Lifetime paid → persistent Unlimited → controlled refund/dispute lifecycle.
 4. Fresh-account acceptance: signup/login → five-product sample accepted → sixth rejected → isolated history → premium PDF/XLSX.
 5. Obtain TTFB/LCP/TBT/CLS/resource evidence before performance changes.
 6. Inspect PDF typography/overflow only against a real multi-product output.
-7. Keep Radar disabled until the same strong ingest secret exists in runtime/scheduler and real official EUR-Lex ingestion persists events.
+7. Keep Radar disabled until same strong ingest secret exists in runtime/scheduler and real official EUR-Lex ingestion persists events.
 8. Review Supabase leaked-password protection/CAPTCHA when console capability is available.
 9. Keep EU the only active market and direct marketplace connectors inactive until legitimate credentials exist.
 
