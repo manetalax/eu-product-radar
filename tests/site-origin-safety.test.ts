@@ -24,8 +24,10 @@ test('configured site origin accepts only root HTTPS and root HTTP localhost whi
 
 test('Stripe checkout and portal both build redirects from configuredSiteOrigin', () => {
   assert.match(checkout, /const siteOrigin = configuredSiteOrigin\(\)/);
-  assert.match(checkout, /success_url: `\$\{siteOrigin\}\/dashboard\?checkout=success&session_id=\{CHECKOUT_SESSION_ID\}`/);
-  assert.match(checkout, /cancel_url: `\$\{siteOrigin\}\/dashboard\?checkout=cancelled`/);
+  assert.match(checkout, /const successUrl = `\$\{siteOrigin\}\/dashboard\?checkout=success&session_id=\{CHECKOUT_SESSION_ID\}`/);
+  assert.match(checkout, /const cancelUrl = `\$\{siteOrigin\}\/dashboard\?checkout=cancelled`/);
+  assert.equal((checkout.match(/success_url: successUrl/g) ?? []).length, 2, 'subscription and Lifetime Checkout must share the canonical success URL');
+  assert.equal((checkout.match(/cancel_url: cancelUrl/g) ?? []).length, 2, 'subscription and Lifetime Checkout must share the canonical cancel URL');
   assert.match(portal, /const siteOrigin = configuredSiteOrigin\(\)/);
   assert.match(portal, /return_url: `\$\{siteOrigin\}\/dashboard`/);
 });
