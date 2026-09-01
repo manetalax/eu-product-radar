@@ -105,3 +105,13 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 
 ## Definition of finished
 Do not call ImportVerifier fully launched until exact current CI and canonical production are green; release config passes; fresh-account five-free/sixth-rejection/history/PDF/XLSX passes; free-only AI is proven; all three paid lifecycles and reversals pass; legal/provider data is truthful; Radar claims match persisted official ingestion; Auth/SMTP controls pass; and desktop/iPhone/iPad/PWA QA passes.
+
+
+## Sites deployment — 2026-09-01
+- Existing Sites project reused: title `ImportVerifier`, slug `importverifier`.
+- Sites project is owner-only/custom access for `manetala@gmail.com`; switching it to public access is the remaining owner approval required before external customers can visit it.
+- Latest saved Sites version: version 2, source commit `8fe3924704ed3915ebea237b63302213d802e829`.
+- A private production deployment of version 2 was started to validate the existing saved artifact; deployment status was `building` at 2026-09-01T13:23:12Z and no production URL had been returned yet.
+- Sites runtime environment is currently empty. No secrets were added, exposed or committed. Privileged Supabase/Stripe/AI credentials remain intentionally unset pending secure provider configuration.
+- This version must not be described as a verified deploy of current GitHub `main` until its source provenance is reconciled with `main` HEAD `cc91fd3fb5664565aaf3db8dcd1e3fea0f4fbe69`.
+- Next: poll the private deployment; after explicit public-access approval, publish the verified current source, set only safe public variables plus securely supplied runtime secrets, and run the final Sites URL acceptance journey.
