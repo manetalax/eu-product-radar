@@ -150,7 +150,7 @@ export default function AuthForm({
     }
   }
 
-  return <main className="shell"><section className="login card auth-card">
+  return <main className="shell"><section className="login card auth-card" aria-busy={busy}>
     <div className="auth-brand-row">
       <Brand market="EU" href={`/${language}`} />
       <label className="language-picker auth-language-picker">
@@ -163,6 +163,7 @@ export default function AuthForm({
     <h1>{t.titles[mode]}</h1>
     {requestedPlan && (mode === 'login' || mode === 'signup') && <p className="plan-intent-note"><strong>{t.selectedPlan(purchaseName(requestedPlan))}</strong> {t.selectedPlanHelp}</p>}
     <p className="muted">{t.intro}</p>
+    <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{busy ? t.processing : ''}</p>
 
     {(mode === 'login' || mode === 'signup') && <div className="auth-actions oauth-section">
       <button type="button" className="btn oauth-btn full" disabled={busy} onClick={signInWithGoogle}>
