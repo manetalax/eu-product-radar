@@ -30,6 +30,14 @@ test('public shell precache omits credentials and never stores dynamic login/leg
   assert.match(source, /key\.startsWith\('importverifier-shell-'\)/);
 });
 
+test('all cacheable public navigations are fetched without cookies before they can enter the shared shell cache', async () => {
+  const source = await readFile(new URL('../public/sw.js', import.meta.url), 'utf8');
+  assert.match(source, /CACHE = 'importverifier-shell-v7'/);
+  assert.match(source, /fetch\(publicShellRequest\(`\$\{url\.pathname\}\$\{url\.search\}`\)\)/);
+  assert.match(source, /fetch\(publicShellRequest\(url\.pathname\)\)/);
+  assert.doesNotMatch(source, /request\.mode === 'navigate'[\s\S]{0,500}fetch\(request\)/);
+});
+
 test('root offline fallback is keyed by an allowlisted lang query instead of poisoning one shared slash cache', async () => {
   const source = await readFile(new URL('../public/sw.js', import.meta.url), 'utf8');
   assert.match(source, /function requestedLandingLanguage\(url\)/);
