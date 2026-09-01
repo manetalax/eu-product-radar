@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkReleaseConfig, IMPORTVERIFIER_PRODUCTION_URL, IMPORTVERIFIER_SUPABASE_URL, IMPORTVERIFIER_UNLIMITED_PRICE_ID } from '../lib/release-config';
+import {
+  checkReleaseConfig,
+  IMPORTVERIFIER_PRODUCTION_URL,
+  IMPORTVERIFIER_SUPABASE_URL,
+  IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID,
+  IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID,
+  IMPORTVERIFIER_UNLIMITED_PRICE_ID,
+} from '../lib/release-config';
 import { aiCostPolicy, isTrustedSiliconFlowBaseUrl } from '../lib/ai-provider';
 
 const baseEnv = {
@@ -12,6 +19,8 @@ const baseEnv = {
   STRIPE_SECRET_KEY: 'sk_live_example',
   STRIPE_WEBHOOK_SECRET: 'whsec_example',
   STRIPE_PRICE_STARTER: IMPORTVERIFIER_UNLIMITED_PRICE_ID,
+  STRIPE_PRICE_ANNUAL: IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID,
+  STRIPE_PRICE_LIFETIME: IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID,
   LEGAL_PROVIDER_NAME: 'Example Provider SL',
   LEGAL_PROVIDER_ADDRESS: 'Example street 1, Madrid, Spain',
   LEGAL_TAX_ID: 'B00000000',
@@ -72,10 +81,22 @@ test('producción no queda lista para cobrar sin identidad legal completa', () =
   assert.ok(result.errors.some(error => /información legal obligatoria/));
 });
 
-test('producción rechaza un Stripe price distinto del Unlimited live canónico', () => {
-  const result = checkReleaseConfig({ ...baseEnv, STRIPE_PRICE_STARTER: 'price_stale', AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key' });
-  assert.equal(result.ok, false);
-  assert.ok(result.errors.some(error => error.includes(IMPORTVERIFIER_UNLIMITED_PRICE_ID)));
+test('producción exige los tres Stripe prices Unlimited live canónicos', () => {
+  const variants = [
+    ['STRIPE_PRICE_STARTER', IMPORTVERIFIER_UNLIMITED_PRICE_ID],
+    ['STRIPE_PRICE_ANNUAL', IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID],
+    ['STRIPE_PRICE_LIFETIME', IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID],
+  ] as const;
+
+  for (const [key, canonical] of variants) {
+    const missing = checkReleaseConfig({ ...baseEnv, [key]: '', AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key' });
+    assert.equal(missing.ok, false, `${key} missing`);
+    assert.ok(missing.errors.some(error => error.includes(`Falta ${key}`)), key);
+
+    const stale = checkReleaseConfig({ ...baseEnv, [key]: 'price_stale', AI_COST_POLICY: 'free_only', SILICONFLOW_API_KEY: 'sf-key' });
+    assert.equal(stale.ok, false, `${key} stale`);
+    assert.ok(stale.errors.some(error => error.includes(canonical)), key);
+  }
 });
 
 test('producción rechaza credenciales de servicio incorrectas y proyecto Supabase equivocado', () => {
