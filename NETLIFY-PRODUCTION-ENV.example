@@ -14,6 +14,8 @@ SUPABASE_SECRET_KEY=
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 STRIPE_PRICE_STARTER=price_1UAJy5HJnO8odw1Mn4jMVjFt
+STRIPE_PRICE_ANNUAL=price_1UAjP0HJnO8odw1M7RBK8jsR
+STRIPE_PRICE_LIFETIME=price_1UAjP8HJnO8odw1MmSXdkNIh
 
 # Truthful legal provider identity — required before paid Checkout is allowed in production
 LEGAL_PROVIDER_NAME=
