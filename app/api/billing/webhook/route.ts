@@ -66,13 +66,14 @@ export async function POST(request: Request) {
     if (existing.status === 'processed') return NextResponse.json({ received: true, duplicate: true });
 
     // Do not execute the same Stripe event concurrently. A recent `processing` row
-    // belongs to another in-flight delivery and can be acknowledged as a duplicate.
-    // A genuinely stuck row may be reclaimed after the stale window. The conditional
-    // UPDATE is the claim: only one concurrent retry can move updated_at forward.
+    // belongs to another in-flight delivery. Return non-2xx so Stripe keeps retry
+    // pressure in case that first handler crashes. A genuinely stuck row may be
+    // reclaimed after the stale window. The conditional UPDATE is the claim: only
+    // one concurrent retry can move updated_at forward and continue processing.
     const staleBefore = new Date(Date.now() - STRIPE_WEBHOOK_PROCESSING_STALE_MS).toISOString();
     const existingUpdatedAt = Date.parse(existing.updated_at);
     if (!Number.isFinite(existingUpdatedAt) || existingUpdatedAt > Date.now() - STRIPE_WEBHOOK_PROCESSING_STALE_MS) {
-      return NextResponse.json({ received: true, duplicate: true, processing: true });
+      return NextResponse.json({ received: false, duplicate: true, processing: true }, { status: 409 });
     }
     const { data: claimed, error: claimError } = await admin
       .from('stripe_webhook_events')
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
       .select('event_id')
       .maybeSingle();
     if (claimError) return NextResponse.json({ error: 'No se ha podido reclamar el evento.' }, { status: 503 });
-    if (!claimed) return NextResponse.json({ received: true, duplicate: true, processing: true });
+    if (!claimed) return NextResponse.json({ received: false, duplicate: true, processing: true }, { status: 409 });
   } else if (eventError) {
     return NextResponse.json({ error: 'No se ha podido registrar el evento.' }, { status: 503 });
   }
