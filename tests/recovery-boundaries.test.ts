@@ -23,3 +23,11 @@ test('recovery surface is localized, self-contained and does not expose raw exce
   assert.doesNotMatch(recovery, /error\.(message|stack|cause)/);
   assert.doesNotMatch(recovery, /digest\}/);
 });
+
+test('app loading state gives accessible feedback without language-specific copy', () => {
+  const loading = source('app/loading.tsx');
+  assert.match(loading, /role="status"/);
+  assert.match(loading, /aria-label="ImportVerifier"/);
+  assert.match(loading, /aria-hidden="true"/);
+  assert.doesNotMatch(loading, /Loading|Cargando|Chargement|Laden|Caricamento|Carregando/);
+});
