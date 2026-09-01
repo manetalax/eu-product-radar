@@ -14,84 +14,90 @@ Always read `WORK-CHAT-CONTINUITY.md` first. It is the operational source of tru
 
 ## 1. Product and commercial invariants
 
-ImportVerifier is an AI-assisted product-regulatory workflow for EU sellers, importers and ecommerce operators. It accepts catalogues, spreadsheets, documents, text and images; identifies candidate EU regulatory requirements; separates supplied evidence from inference; records missing evidence and supplier actions; and keeps a product-level regulatory state through the Regulatory Twin and Impact Radar architecture.
+ImportVerifier is an AI-assisted product-regulatory workflow for EU sellers, importers and ecommerce operators. It accepts catalogues, spreadsheets, documents, text and images; identifies candidate EU regulatory requirements; separates supplied evidence from inference; records missing evidence and supplier actions; and keeps product-level regulatory state through the Regulatory Twin and Impact Radar architecture.
 
 Commercial rules:
 
-- Exactly **5 products free in total per account**.
-- The five-product allowance is lifetime/cumulative, never monthly, and requires no card.
-- There is one paid product capability: **ImportVerifier Unlimited**.
-- Unlimited has three purchase modalities with the same feature entitlement:
+- Exactly **5 products free in total per account**, lifetime/cumulative, no monthly reset and no card.
+- There is one paid feature entitlement: **ImportVerifier Unlimited**.
+- Unlimited has three billing modalities with identical product capability:
   - **Monthly: EUR 9.95/month**.
   - **Annual: EUR 89.95/year**.
   - **Lifetime: EUR 149 one-time**.
-- `starter` remains the internal compatibility plan ID for the public Unlimited entitlement. It is not a customer-facing tier name.
-- Monthly and annual are recurring Stripe subscription entitlements.
-- Lifetime is a persistent one-time entitlement. It does not depend on an active subscription and must only be granted after a validated paid Stripe Lifetime Checkout; a full refund revokes it.
-- Historical `growth`, `pro`, `business` and historical one-time audit storage remain readable only for compatibility/history. They are not sold to new customers. Historical `one_time_audits` never grant current entitlement.
-- Unlimited remains commercially unlimited while retaining technical fair-use, abuse, rate and file-size safeguards.
+- `starter` remains the internal compatibility plan ID; it is never a public tier name.
+- Monthly and annual are recurring subscription entitlements.
+- Lifetime is a persistent one-time entitlement and must originate only from a canonical paid Stripe Checkout. A full refund or active/lost dispute revokes/suspends access; a won dispute may restore it only while the underlying charge remains collected.
+- Historical `growth`, `pro`, `business` and `one_time_audits` remain compatibility/history only and are not sold. Historical audit records never grant entitlement.
+- Unlimited is commercially unlimited while retaining reasonable anti-abuse, rate and file-size safeguards.
 
-Canonical Stripe live prices on product `ImportVerifier Unlimited`:
+Canonical Stripe live prices on `ImportVerifier Unlimited`:
 
-- Monthly: `price_1UAJy5HJnO8odw1Mn4jMVjFt` — EUR 9.95 recurring monthly.
-- Annual: `price_1UAjP0HJnO8odw1M7RBK8jsR` — EUR 89.95 recurring yearly.
-- Lifetime: `price_1UAjP8HJnO8odw1MmSXdkNIh` — EUR 149 one-time.
+- Monthly: `price_1UAJy5HJnO8odw1Mn4jMVjFt`.
+- Annual: `price_1UAjP0HJnO8odw1M7RBK8jsR`.
+- Lifetime: `price_1UAjP8HJnO8odw1MmSXdkNIh`.
 
 ---
 
 ## 2. Billing and entitlement architecture
 
-`lib/plans.ts` exposes one public Unlimited capability and three public billing offers. `lib/billing.ts` maps billing options to the exact canonical live Stripe prices, amounts, checkout modes and recurrence.
+`lib/plans.ts` exposes one public Unlimited capability and three public billing offers. `lib/billing.ts` maps billing options to exact canonical live Stripe prices, amounts, checkout modes and recurrence.
 
 Checkout requirements:
 
-- Same-origin + authenticated account required.
-- Only internal purchase ID `starter` may create new public paid access.
-- Billing option must be exactly `monthly`, `annual` or `lifetime`; legacy missing option means monthly for compatibility.
-- Production checkout is fail-closed until required legal-provider configuration exists.
-- Price is re-read from Stripe and must match the selected option’s exact active EUR amount and expected recurrence/type before Checkout opens.
-- Monthly/annual use Checkout `subscription` mode and may use Stripe promotion codes.
-- Lifetime uses Checkout `payment` mode and **does not allow promotion codes**. This prevents a 100% discount from creating irreversible permanent value without payment.
-- Checkout navigation is validated against exact trusted Stripe hosts.
-- Return URLs derive only from the validated configured site origin.
-- Existing active Unlimited subscription routes to Stripe Customer Portal rather than opening duplicate recurring purchases.
-- Existing active Lifetime rejects another Unlimited purchase.
+- Same-origin and authenticated account required.
+- Only internal `starter` may create new public paid access.
+- Billing option must be `monthly`, `annual` or `lifetime`; legacy missing option maps to monthly for compatibility.
+- Production Checkout fails closed until required legal-provider configuration exists.
+- Stripe price is re-read and must exactly match the selected active EUR amount/type/recurrence.
+- Monthly/annual use Checkout `subscription` mode and may use promotion codes.
+- Lifetime uses `payment` mode, requires an actually paid Checkout + PaymentIntent and does **not** allow promotion codes, preventing zero-charge permanent value.
+- Checkout/Portal browser destinations are restricted to trusted Stripe HTTPS hosts and return URLs derive from the validated site origin.
+- Existing active recurring Unlimited routes to Customer Portal; existing active Lifetime cannot buy duplicate Unlimited.
 
 Subscription entitlement:
 
-- Signed Stripe webhook events are idempotently persisted.
-- Production rejects non-live Stripe events before event persistence or entitlement synchronization.
-- Subscription webhooks re-read current Stripe subscription state before persistence.
+- Signed webhook events are idempotently persisted.
+- Production rejects non-live Stripe events before persistence/synchronization.
+- Subscription events re-read the current Stripe subscription instead of trusting stale event snapshots.
 - Exactly one subscription item and a recognized configured price are required.
 - Persisted Stripe customer ownership is authoritative over mutable metadata.
-- Current active/trialing monthly or annual subscriptions grant the same Unlimited entitlement.
-- Active historical subscription plan IDs normalize to Unlimited; canceled/expired legacy records fall back to free.
+- Active/trialing monthly or annual subscriptions grant the same Unlimited entitlement.
+- Active historical subscription plan IDs normalize to Unlimited; canceled/expired records fall back to free.
 
 Lifetime entitlement:
 
-- Stored separately in `public.unlimited_lifetime_entitlements` with RLS and account ownership.
-- `syncLifetimeCheckoutSession` requires `mode=payment`, exact `payment_status=paid`, a non-null PaymentIntent, exactly one canonical Lifetime price, `starter` + `lifetime` metadata, a recognized Stripe customer and a user identity matching the persisted customer owner.
-- `no_payment_required` is never an entitlement source and the webhook ignores such one-time Checkout states instead of retrying a grant that must fail.
-- Synchronous Checkout confirmation and webhook processing share the same Lifetime synchronizer.
-- Full Stripe refunds revoke the matching active Lifetime entitlement by payment-intent identity.
-- The database quota trigger treats an active Lifetime record as paid Unlimited without mutating the five-product lifetime free counter.
-- New Lifetime storage is distinct from the retired audit product. Do not reuse `one_time_audits` as an entitlement source.
+- Stored in `public.unlimited_lifetime_entitlements` with forced RLS and account-owned authenticated read access.
+- `syncLifetimeCheckoutSession` requires `mode=payment`, `payment_status=paid`, a PaymentIntent, exactly one canonical Lifetime price, `starter` + `lifetime` metadata and Stripe customer ownership matching the persisted user.
+- `no_payment_required` is never an entitlement source.
+- The same Lifetime payment cannot be resurrected after refund/dispute revocation: if its Checkout session or PaymentIntent already maps to a revoked entitlement, synchronization returns a no-op rather than reactivating it.
+- The browser confirmation endpoint treats that no-op as unconfirmed and fails closed with a conflict response. Webhook processing can still mark a stale/replayed event processed instead of entering an endless 503 retry loop.
+- Full `charge.refunded` revokes the matching Lifetime entitlement by PaymentIntent identity.
+- `charge.dispute.created` immediately suspends Lifetime access by revoking the matching PaymentIntent entitlement.
+- `charge.dispute.closed` restores only when Stripe reports `won` **and** the latest Charge is not fully refunded; all other closed outcomes remain revoked.
+- Dispute handling re-reads the current Charge before changing entitlement state.
+- The production Stripe webhook endpoint is configured for Checkout/subscription events plus `charge.refunded`, `charge.dispute.created` and `charge.dispute.closed`.
+- The quota trigger treats active Lifetime as paid Unlimited without mutating the historical five-product free counter.
+- Never reuse historical `one_time_audits` as an entitlement source.
+
+Production database status established 2026-09-01:
+
+- Migration `unlimited_lifetime_entitlement` is applied to Supabase project `hfuwwjdcyudflamwwnon`.
+- Table exists with RLS enabled + forced and exactly one own-row SELECT policy.
+- Entitlement row count was 0 immediately after migration, which is the expected pre-sale baseline.
 
 Release safety:
 
-- Production configuration must validate all three canonical Stripe prices, not only monthly.
-- Monthly env: `STRIPE_PRICE_STARTER`.
-- Annual env: `STRIPE_PRICE_ANNUAL`.
-- Lifetime env: `STRIPE_PRICE_LIFETIME`.
+- Production configuration validates all three canonical Stripe prices.
+- `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_ANNUAL`, `STRIPE_PRICE_LIFETIME` must match the canonical prices above.
 - Production Stripe secret must be live and webhook secret valid.
-- Payment configuration remains BLOCKED EXTERNAL until truthful legal-provider env values and production secret wiring are complete.
+- Billing still fails closed when truthful legal-provider variables are incomplete.
 
 Authentication purchase continuity:
 
 - `plan=starter` is the only public plan intent.
-- The selected `billing` option survives email login, signup/confirmation and Google OAuth through the one-shot local purchase intent.
-- Invalid billing query values are discarded rather than influencing Checkout.
-- Purchase intent is consumed once and must not repeatedly reopen Checkout after a failure or for an already-Unlimited account.
+- `billing=monthly|annual|lifetime` survives email login/signup/confirmation and Google OAuth using a one-shot local purchase intent.
+- Invalid billing query values are discarded.
+- Purchase intent is consumed once and never repeatedly reopens Checkout for an already-Unlimited account.
 
 ---
 
@@ -99,121 +105,112 @@ Authentication purchase continuity:
 
 - Customers see **ImportVerifier AI**, never provider/model names.
 - Production cost policy is fail-closed `AI_COST_POLICY=free_only`.
-- CSV/XLS/XLSX parsing remains local and AI-free.
+- CSV/XLS/XLSX parsing is local and AI-free.
 - TXT/MD/JSON/RTF and text-layer PDF/DOCX/ODT use bounded local extraction before compatible AI processing.
-- Images/photos include PNG/JPEG/WebP/HEIC/HEIF with signature/MIME/extension agreement checks; missing iOS MIME is accepted only when signature and extension establish the type.
+- PNG/JPEG/WebP/HEIC/HEIF input uses signature/MIME/extension agreement checks; missing iOS MIME is accepted only when signature + extension establish the type.
 - Legacy `.doc` and unsupported scanned PDF paths fail honestly rather than silently using paid AI.
-- Uploaded text/document/image material is untrusted data. Instructions inside customer material cannot override extraction policy; prompts require grounded product facts only.
-- External AI calls use bounded timeouts and validated provider destinations. Server telemetry excludes prompt/document/product content and customer PII.
+- Uploaded material is untrusted data: instructions inside files cannot override extraction policy and prompts require grounded product facts only.
+- External AI calls use timeouts and validated destinations; server telemetry excludes prompts/documents/product content and customer PII.
 
 ---
 
 ## 4. Authentication and account lifecycle
 
 - Supabase Auth supports email signup/login/reset/logout and Google OAuth with visible Google identity.
-- Auth callback and browser navigation are restricted to canonical ImportVerifier and the configured canonical Supabase authorization endpoint.
+- Auth callback/browser navigation is restricted to canonical ImportVerifier and the configured Supabase authorization endpoint.
 - Password minimum is eight characters for new/reset passwords.
-- Account histories are isolated through RLS/ownership checks.
-- Account deletion is billing-aware and removes account-owned records through the intended lifecycle.
-- Production Auth abuse controls, leaked-password protection/CAPTCHA and fresh SMTP acceptance remain external console/browser acceptance tasks.
+- Histories are account-isolated through RLS/ownership checks.
+- Account deletion cancels any remaining recurring Stripe subscription before deletion and invokes the authenticated deletion lifecycle. Lifetime records reference `auth.users(id) on delete cascade`, so account deletion removes the non-recurring entitlement without leaving a background recurring charge.
+- Supabase leaked-password protection/CAPTCHA and fresh SMTP acceptance remain external console/browser acceptance tasks.
 
 ---
 
 ## 5. Analysis, quota, Evidence and Regulatory Twin
 
-- Product analyses are persisted privately and versioned.
-- Creation is idempotent for mobile/network retries and duplicate races.
-- The lifetime free quota is enforced database/server-side, atomically: exactly five products per account, never reset by date.
-- Paid subscription or active Lifetime usage does not mutate the historical five-product free counter.
-- Runtime parsers validate quota, history, details, evidence and extracted-product success payloads before client state mutation.
+- Analyses are private, versioned and request-idempotent for mobile/network retries and duplicate races.
+- Lifetime free quota is enforced atomically database/server-side: exactly five products/account, never reset by date.
+- Paid subscription or active Lifetime access does not mutate the historical free counter.
+- Runtime parsers validate quota/history/details/evidence/extracted-product responses before client state mutation.
 - Evidence is account-owned and records requirement key/status plus document/page/URL/note traceability.
-- Evidence URLs and official regulatory URLs are sanitized at persistence, API, rendering, export and AI-context boundaries.
-- The Regulatory Twin joins product identity, category/market confidence, applicable candidate rules, evidence, uncertainty, actions and Radar impacts. Reports export the same traceability rather than a disconnected narrative.
+- Evidence and official regulatory URLs are sanitized at persistence, API, render, export and AI-context boundaries.
+- Regulatory Twin joins product identity, category/market confidence, candidate rules, evidence, uncertainty, actions and Radar impacts.
 
 ---
 
 ## 6. EU regulatory engine and Radar
 
-EU is the only active market. Other market architecture may exist but must not be advertised as active coverage.
+EU is the only active market. Other market architecture may exist but must not be advertised as active.
 
-- The deterministic/versioned EU engine produces candidate category, uncertainty, potentially applicable acts, obligations, evidence requests, official-source references and human-confirmation flags.
-- It never treats field completeness or model confidence as product certification/compliance.
-- Regulatory Impact Radar has persisted event/matching architecture plus official EUR-Lex RSS ingestion.
-- Official source URLs use explicit HTTPS allowlists.
-- Radar publication is fail-closed: flag + strong shared ingest secret + persisted official events are required before the product may present monitoring as live.
-- Production currently has no established persisted official event baseline in the handoff; keep Radar disabled until real official ingestion succeeds.
+- Versioned deterministic EU engine produces candidate category, uncertainty, potentially applicable acts, obligations, evidence requests, official references and human-confirmation flags.
+- It never equates field completeness/model confidence with certification or compliance.
+- Radar has persisted event/matching architecture plus official EUR-Lex RSS ingestion.
+- Official-source URLs use strict HTTPS allowlists.
+- Radar publication is fail-closed: live flag + strong shared ingest secret + persisted official events are required before monitoring may be presented as live.
+- Keep Radar disabled until real official ingestion succeeds.
 
 ---
 
 ## 7. Reports and exports
 
-- Premium PDF/XLSX reports use canonical ImportVerifier issuer identity and customer language ES/EN/FR/DE/IT/PT.
-- Reports retain evidence and official-source traceability, uncertainty and non-certification framing.
-- PDF has consulting-style cover, executive hierarchy, repeated issuer/regulatory context/footer and pagination.
-- XLSX preserves localized visible surfaces, evidence worksheet, formulas/structure and protects formula-looking customer strings as data.
-- Customer filenames use `importverifier-<market>-<date>-<id>.<format>`.
-- Browser downloads preserve delayed blob URL revocation for mobile/iPad save-to-Files reliability.
-- Final typography/overflow inspection still requires a real multi-product output in browser/device acceptance.
+- Premium PDF/XLSX reports use canonical ImportVerifier issuer identity and ES/EN/FR/DE/IT/PT customer language.
+- Reports retain evidence, official-source traceability, uncertainty and non-certification framing.
+- PDF has consulting-style cover/executive hierarchy/repeated issuer-regulatory footer/pagination.
+- XLSX preserves localized surfaces/evidence worksheet and protects formula-looking customer strings as data.
+- Filenames use `importverifier-<market>-<date>-<id>.<format>`.
+- Downloads use delayed blob URL revocation for mobile/iPad save-to-Files reliability.
+- Final typography/overflow inspection still needs a real multi-product browser/device output.
 
 ---
 
 ## 8. Web, i18n, SEO and PWA
 
-- Next.js application deployed on Netlify.
-- Public landing is server/static-first; `/es`, `/en`, `/fr`, `/de`, `/it`, `/pt` are statically generated.
-- Root layout avoids request-time language APIs that would force dynamic public rendering.
-- Localized SEO metadata is owned by static locale routes.
-- Language selection is a small client island and preserves locale across navigation/auth.
-- Public pricing now presents one Unlimited capability with **three localized payment cards**: monthly, annual and Lifetime. Annual is the visual value recommendation; no feature differences are invented between payment modalities.
-- Each pricing CTA preserves `plan=starter`, the selected `billing=monthly|annual|lifetime`, and language through auth. FAQ and Schema.org offers publish the same three truthful prices.
-- Pricing grid is responsive: three columns desktop, two tablet, one mobile; this avoids the obsolete five-plan layout on iPad/smaller screens.
-- PWA registration is deferred outside the critical rendering window.
-- Service worker only caches public safe shell/assets and refuses private/authenticated/no-store/cookie-varying responses.
-- PWA start/offline/shortcuts are language-keyed.
-- Mobile/iPad protections include camera flow, cancellation/multi-file safeguards, safe areas, touch sizing, iOS input zoom protection and safe export cleanup.
-- Physical iPhone/iPad/Safari/PWA QA remains BLOCKED EXTERNAL.
+- Next.js on Netlify; landing is server/static-first with `/es`, `/en`, `/fr`, `/de`, `/it`, `/pt` statically generated.
+- Root layout avoids request-time language APIs that force dynamic public rendering.
+- Locale routes own localized SEO metadata; language selection is a small client island.
+- Pricing presents one Unlimited capability with three payment cards. Annual is value-emphasized without inventing feature differences.
+- Every CTA preserves `plan=starter`, selected billing option and language through auth; FAQ and Schema.org expose the same truthful offers.
+- Pricing is 3 columns desktop / 2 tablet / 1 mobile.
+- PWA service worker only caches safe public shell/assets and refuses private/auth/no-store/cookie-varying responses.
+- PWA start/offline/shortcuts are locale-keyed; registration is deferred outside the critical rendering window.
+- Mobile/iPad safeguards cover camera input, cancellation/multi-file, safe areas, touch sizing, iOS form zoom and export cleanup.
+- Physical iPhone/iPad/Safari/PWA QA remains external.
 
-Performance baseline:
-
-- Netlify Lighthouse has remained approximately Performance 17 / Accessibility 100 / Best Practices 92 / SEO 100.
-- Static landing/PWA architecture changes did not materially improve aggregate performance.
-- Do not make speculative performance changes without TTFB/LCP/TBT/CLS and resource-waterfall evidence.
+Performance baseline remains approximately Performance 17 / Accessibility 100 / Best Practices 92 / SEO 100. Do not change landing architecture speculatively without TTFB/LCP/TBT/CLS/resource-waterfall evidence.
 
 ---
 
 ## 9. Marketplace connectors
 
-Architecture exists for Shopify, Amazon and Etsy with a common capability model, URL detection and future catalog/listing refresh concepts. Direct OAuth/API integrations remain inactive until legitimate official credentials/scopes exist. Do not scrape around authentication or imply active partnerships.
+Shopify, Amazon and Etsy share a prepared capability/URL/catalog architecture. Direct OAuth/API remains inactive until legitimate official applications, credentials and scopes exist. Never scrape around authentication or imply active partnerships.
 
 ---
 
 ## 10. Release acceptance
 
-Do not call ImportVerifier fully launched until all of the following are true on the exact current production candidate:
+Do not call ImportVerifier fully launched until the exact production candidate satisfies all of the following:
 
-- GitHub release check succeeds: install, full tests, typecheck and production build.
-- Correct `importverifier` Netlify production deploy is green and production release guard passes.
-- A genuinely fresh account proves signup/login, exactly five free products, sixth rejection, isolated history, PDF and XLSX.
-- Monthly EUR 9.95 Checkout → live webhook → Unlimited → Portal/cancel lifecycle passes.
-- Annual EUR 89.95 Checkout → live webhook → Unlimited → Portal/cancel lifecycle passes.
-- Lifetime EUR 149 one-time **paid** Checkout → persistent Unlimited passes and a controlled full-refund test revokes it correctly.
-- Historical audit rows demonstrably grant no quota.
-- Free-only AI works without premium-provider leakage.
-- Legal pages/provider details and billing behavior are truthful.
-- Radar claims match actual official persisted ingestion.
-- Auth abuse controls and fresh SMTP acceptance pass.
-- Desktop, iPhone, iPad and PWA flows pass real-device QA.
+- GitHub release check passes install, full tests, typecheck and production build.
+- Correct `importverifier` Netlify production deploy is green and release guard passes.
+- Fresh account proves signup/login → exactly five free products → sixth rejection → isolated history → PDF/XLSX.
+- Monthly EUR 9.95 Checkout → live webhook → Unlimited → Portal/cancel passes.
+- Annual EUR 89.95 equivalent lifecycle passes.
+- Lifetime EUR 149 **paid** Checkout → persistent Unlimited passes; controlled full refund revokes it; dispute-created suspends it; won dispute restores only non-refunded value; replay cannot resurrect a revoked payment.
+- Historical audits grant no quota.
+- Free-only AI has no premium-provider leakage.
+- Legal/provider data and billing behavior are truthful.
+- Radar claims match actual persisted official ingestion.
+- Auth abuse controls + fresh SMTP acceptance pass.
+- Desktop/iPhone/iPad/PWA real-device flows pass.
 
 ---
 
-## 11. BLOCKED EXTERNAL
+## 11. Current external blockers
 
-- Netlify production env/branch/deploy promotion with real canonical Supabase keys, live Stripe secret/webhook/all three canonical prices, truthful legal-provider variables and SiliconFlow/free-only values.
-- Applying/confirming the new Lifetime entitlement migration in production Supabase if not already applied.
-- Same strong `REGULATORY_INGEST_SECRET` in runtime/scheduler + first real official EUR-Lex ingestion before Radar may be live.
-- Supabase Auth leaked-password protection and appropriate CAPTCHA/signup-abuse controls.
-- Production SMTP signup/reset acceptance with a genuinely fresh non-owner mailbox/browser flow.
-- Physical iPhone/iPad/Safari/PWA photo/upload/export/save-to-Files/rotation validation.
-- Official Shopify/Amazon/Etsy applications, credentials and scopes.
-- Real production billing acceptance across monthly, annual, Lifetime, webhook, Portal/cancel and refund.
+- Final Netlify production environment/promotion with complete truthful legal-provider variables, canonical service secrets and free-only AI values.
+- Real production monthly/annual/Lifetime purchase/cancel/refund/dispute acceptance with controlled test transactions.
+- Same strong `REGULATORY_INGEST_SECRET` in runtime/scheduler + first real official EUR-Lex ingestion.
+- Supabase Auth leaked-password protection + appropriate CAPTCHA/signup-abuse controls.
+- Production SMTP signup/reset with a genuinely fresh non-owner mailbox.
+- Physical iPhone/iPad/Safari/PWA upload/photo/export/save-to-Files/rotation QA.
+- Official Shopify/Amazon/Etsy applications/credentials/scopes.
 - Detailed browser performance evidence and real multi-product PDF visual QA.
