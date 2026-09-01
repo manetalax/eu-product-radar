@@ -30,7 +30,7 @@ function billingStatusFromUnknown(value: unknown): BillingStatus | null {
   const source = record(value);
   if (!source) return null;
   const planId = source.planId;
-  if (planId !== 'free' && planId !== 'audit' && !isPlanId(planId)) return null;
+  if (planId !== 'free' && !isPlanId(planId)) return null;
   if (!boundedString(source.planName, 100)) return null;
   if (source.status !== null && typeof source.status !== 'string') return null;
   if (!nonNegativeInteger(source.productLimit, MAX_PRODUCT_LIMIT)) return null;
