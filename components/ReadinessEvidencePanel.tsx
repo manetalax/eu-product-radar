@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Analysis } from '@/lib/analysis';
 import { analyze } from '@/lib/analysis';
 import { evidenceFromUnknown, fetchEvidenceForAnalysis, type PersistedEvidence } from '@/lib/evidence';
@@ -30,7 +30,8 @@ export default function ReadinessEvidencePanel({ analysis }: { analysis: Analysi
   const results = useMemo(() => analyze(analysis.products, 'EU'), [analysis]);
   const [rows, setRows] = useState<EvidenceRow[]>([]);
   const [filter, setFilter] = useState<'all' | 'blockers' | 'review' | 'ready'>('all');
-  const [savingKey, setSavingKey] = useState('');
+  const [savingKeys, setSavingKeys] = useState<ReadonlySet<string>>(() => new Set());
+  const savingTokens = useRef(new Set<string>());
   const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
@@ -49,9 +50,11 @@ export default function ReadinessEvidencePanel({ analysis }: { analysis: Analysi
     const existing = rowFor(productIndex, evidenceKey);
     const next: EvidenceRow = { ...existing, ...patch, product_index: productIndex, evidence_key: evidenceKey };
     const token = `${productIndex}:${evidenceKey}`;
+    if (savingTokens.current.has(token)) return false;
+    savingTokens.current.add(token);
+    setSavingKeys(current => new Set(current).add(token));
     setRows(current => [...current.filter(row => !(row.product_index === productIndex && row.evidence_key === evidenceKey)), next]);
     setSaveError('');
-    setSavingKey(token);
     try {
       const response = await fetch('/api/evidence', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -68,7 +71,12 @@ export default function ReadinessEvidencePanel({ analysis }: { analysis: Analysi
       setSaveError(t.saveError);
       return false;
     } finally {
-      setSavingKey(current => current === token ? '' : current);
+      savingTokens.current.delete(token);
+      setSavingKeys(current => {
+        const nextKeys = new Set(current);
+        nextKeys.delete(token);
+        return nextKeys;
+      });
     }
   }
 
@@ -92,6 +100,7 @@ export default function ReadinessEvidencePanel({ analysis }: { analysis: Analysi
     <div className="format-chips" role="group" aria-label={t.filter}>
       <button onClick={() => setFilter('all')}>{t.all}</button><button onClick={() => setFilter('blockers')}>{t.blockers}</button><button onClick={() => setFilter('review')}>{t.review}</button><button onClick={() => setFilter('ready')}>{t.ready}</button>
     </div>
+    <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{savingKeys.size > 0 ? t.saving : ''}</p>
     {saveError && <p role="alert" className="message error">{saveError}</p>}
     {visible.map(({ product, rawResult, localizedResult, decision, index }) => <details key={`${product.name}-${index}`} open={index === 0}>
       <summary><strong>{product.name}</strong> · {decision.label}</summary>
@@ -111,14 +120,14 @@ export default function ReadinessEvidencePanel({ analysis }: { analysis: Analysi
             const current = rowFor(index, key);
             const token = `${index}:${key}`;
             return <div key={key} className="card" style={{ padding: 16, marginTop: 12 }}>
-              <div className="toprow"><strong>{evidence}</strong><select aria-label={`${evidence}: status`} value={current.status} onChange={event => void saveEvidence(index, key, { status: event.target.value as EvidenceStatus })}><option value="pending">{t.pending}</option><option value="available">{t.available}</option><option value="not_applicable">{t.na}</option></select></div>
+              <div className="toprow"><strong>{evidence}</strong><select aria-label={`${evidence}: status`} value={current.status} disabled={savingKeys.has(token)} onChange={event => void saveEvidence(index, key, { status: event.target.value as EvidenceStatus })}><option value="pending">{t.pending}</option><option value="available">{t.available}</option><option value="not_applicable">{t.na}</option></select></div>
               <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10, marginTop: 12 }}>
-                <label><span className="muted">{t.document}</span><input defaultValue={current.source_document} maxLength={240} placeholder={t.documentPlaceholder} onBlur={event => void saveTextField(event.currentTarget, index, key, 'source_document', current.source_document)} /></label>
-                <label><span className="muted">{t.page}</span><input defaultValue={current.source_page} maxLength={80} placeholder={t.pagePlaceholder} onBlur={event => void saveTextField(event.currentTarget, index, key, 'source_page', current.source_page)} /></label>
-                <label><span className="muted">{t.url}</span><input type="url" defaultValue={current.source_url} maxLength={1000} placeholder="https://…" onBlur={event => void saveTextField(event.currentTarget, index, key, 'source_url', current.source_url)} /></label>
+                <label><span className="muted">{t.document}</span><input defaultValue={current.source_document} disabled={savingKeys.has(token)} maxLength={240} placeholder={t.documentPlaceholder} onBlur={event => void saveTextField(event.currentTarget, index, key, 'source_document', current.source_document)} /></label>
+                <label><span className="muted">{t.page}</span><input defaultValue={current.source_page} disabled={savingKeys.has(token)} maxLength={80} placeholder={t.pagePlaceholder} onBlur={event => void saveTextField(event.currentTarget, index, key, 'source_page', current.source_page)} /></label>
+                <label><span className="muted">{t.url}</span><input type="url" defaultValue={current.source_url} disabled={savingKeys.has(token)} maxLength={1000} placeholder="https://…" onBlur={event => void saveTextField(event.currentTarget, index, key, 'source_url', current.source_url)} /></label>
               </div>
-              <label style={{ display: 'block', marginTop: 10 }}><span className="muted">{t.note}</span><input defaultValue={current.note} maxLength={2000} placeholder={t.notePlaceholder} onBlur={event => void saveTextField(event.currentTarget, index, key, 'note', current.note)} /></label>
-              {savingKey === token && <small className="muted">{t.saving}</small>}
+              <label style={{ display: 'block', marginTop: 10 }}><span className="muted">{t.note}</span><input defaultValue={current.note} disabled={savingKeys.has(token)} maxLength={2000} placeholder={t.notePlaceholder} onBlur={event => void saveTextField(event.currentTarget, index, key, 'note', current.note)} /></label>
+              {savingKeys.has(token) && <small className="muted">{t.saving}</small>}
             </div>;
           })}
         </section>}
