@@ -26,7 +26,10 @@ test('Checkout cancels abandoned incomplete subscriptions but preserves other cu
 test('stale local subscription status cannot block re-subscription when Stripe has no current subscription', () => {
   assert.doesNotMatch(checkout, /billingStatus\(record\)/);
   assert.doesNotMatch(checkout, /billingStatus,/);
-  assert.match(checkout, /Stripe is authoritative/);
+  const livePreflight = checkout.indexOf('const stripeHasCurrentSubscription = await hasCurrentStripeSubscription');
+  const portalBranch = checkout.indexOf('if (stripeHasCurrentSubscription)', livePreflight);
+  const priceRead = checkout.indexOf('const expected = UNLIMITED_PRICE_CONFIG[billingOption]', portalBranch);
+  assert.ok(livePreflight >= 0 && portalBranch > livePreflight && priceRead > portalBranch);
 });
 
 test('Checkout reuses same-option open sessions and expires sibling billing modalities', () => {
