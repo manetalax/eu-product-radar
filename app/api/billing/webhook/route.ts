@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       if (session.mode === 'subscription') {
         const subscriptionId = stripeObjectId(session.subscription);
         if (subscriptionId) await syncStripeSubscription(await retrieveLatestSubscription(subscriptionId));
-      } else if (session.mode === 'payment' && session.payment_status === 'paid') {
+      } else if (session.mode === 'payment' && (session.payment_status === 'paid' || session.payment_status === 'no_payment_required')) {
         await syncLifetimeCheckoutSession(session);
       }
     } else if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
