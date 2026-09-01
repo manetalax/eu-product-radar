@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-const dashboard = await readFile(new URL('../components/Dashboard.tsx', import.meta.url), 'utf8');
+const dashboard = readFileSync(new URL('../components/Dashboard.tsx', import.meta.url), 'utf8');
 
 test('account deletion moves focus into confirmation instead of dropping keyboard position', () => {
   assert.match(dashboard, /const deleteEmailInput = useRef<HTMLInputElement>\(null\)/);
