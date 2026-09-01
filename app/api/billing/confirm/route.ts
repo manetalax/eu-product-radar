@@ -34,11 +34,11 @@ export async function POST(request: Request) {
     const session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ['line_items.data.price'] });
     const ownerId = session.metadata?.user_id || session.client_reference_id;
     if (ownerId !== user.id) return json({ error: b('invalidRequest') }, 403);
-    if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') {
-      return json({ error: b('paymentOpen') }, 409);
-    }
 
     if (session.mode === 'subscription') {
+      if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') {
+        return json({ error: b('paymentOpen') }, 409);
+      }
       const subscriptionId = stripeObjectId(session.subscription);
       if (!subscriptionId) return json({ error: b('paymentOpen') }, 409);
       const subscription = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] });
@@ -47,7 +47,9 @@ export async function POST(request: Request) {
     }
 
     if (session.mode === 'payment') {
-      await syncLifetimeCheckoutSession(session);
+      if (session.payment_status !== 'paid') return json({ error: b('paymentOpen') }, 409);
+      const granted = await syncLifetimeCheckoutSession(session);
+      if (!granted) return json({ error: b('paymentOpen') }, 409);
       return json({ confirmed: true, billingOption: 'lifetime' });
     }
 
