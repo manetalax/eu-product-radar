@@ -18,8 +18,8 @@ test('checkout confirmation validates origin, authentication and session ownersh
   const authIndex = confirm.indexOf('await supabase.auth.getUser()');
   const bodyIndex = confirm.indexOf('await readJsonBody(request)');
   const ownerIndex = confirm.indexOf('ownerId !== user.id');
-  const subscriptionSyncIndex = confirm.indexOf('syncStripeSubscription(subscription)');
-  const lifetimeSyncIndex = confirm.indexOf('syncLifetimeCheckoutSession(session)');
+  const subscriptionSyncIndex = confirm.indexOf('syncStripeSubscription(subscription)', ownerIndex);
+  const lifetimeSyncIndex = confirm.indexOf('syncLifetimeCheckoutSession(session)', ownerIndex);
   assert.ok(originIndex >= 0 && authIndex > originIndex && bodyIndex > authIndex && ownerIndex > bodyIndex);
   assert.ok(subscriptionSyncIndex > ownerIndex && lifetimeSyncIndex > ownerIndex);
   assert.match(confirm, /session\.mode === 'subscription'/);
