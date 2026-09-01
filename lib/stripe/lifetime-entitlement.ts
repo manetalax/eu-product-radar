@@ -75,6 +75,11 @@ export async function syncLifetimeCheckoutSession(session: Stripe.Checkout.Sessi
     || existingEntitlement?.stripe_payment_intent_id === paymentIntentId;
   if (samePayment && existingEntitlement?.status === 'revoked') return false;
 
+  // A user has one canonical Lifetime entitlement row. Once a different paid purchase is
+  // active, an older/delayed Checkout must never overwrite its payment identity. Otherwise
+  // a later refund/dispute for the stale payment could revoke the customer's valid purchase.
+  if (existingEntitlement?.status === 'active' && !samePayment) return false;
+
   const now = new Date().toISOString();
   const { error } = await admin.from('unlimited_lifetime_entitlements').upsert({
     user_id: metadataUserId,
