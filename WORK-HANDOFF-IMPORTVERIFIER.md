@@ -67,6 +67,16 @@ Checkout requirements:
 - Historical recurring plan IDs normalize to Unlimited while active; canceled/expired records fall back to free.
 - Browser Checkout confirmation syncs the latest subscription but returns `confirmed: true` only when the Stripe subscription is actually `active` or `trialing`. Other states remain pending rather than generating a false success message.
 
+### Webhook execution serialization
+
+`stripe_webhook_events` is not only a deduplication ledger; its `processing`/`processed` state serializes event execution.
+
+- A successfully completed event is acknowledged as an idempotent duplicate on later delivery.
+- A duplicate delivery that finds a recent `processing` row **must not execute the handler in parallel** and returns non-2xx, preserving Stripe retry pressure in case the first worker crashes.
+- A `processing` row older than five minutes is recoverable. The retry atomically claims it with a conditional `UPDATE ... status=processing AND updated_at < staleBefore`; only the retry that receives the claimed row continues.
+- Handler failures leave the event recoverable rather than deleting the ledger row.
+- This model prevents duplicate billing side effects while avoiding permanent loss of an event when a serverless invocation dies mid-handler.
+
 ### Lifetime entitlement
 
 Stored in `public.unlimited_lifetime_entitlements` with forced RLS and account-owned authenticated read access.
@@ -89,6 +99,23 @@ Production migration `unlimited_lifetime_entitlement` is applied to Supabase pro
 Account deletion is fail-closed around recurring billing. The local subscription row is used only to locate the Stripe customer. Before deleting Supabase identity/data, the server paginates **all** Stripe subscriptions for that customer and immediately cancels every cancellable non-terminal subscription. This prevents duplicate/historical subscriptions from surviving merely because the local one-row billing projection only knew about one subscription. If the Stripe customer/subscription is already absent (`resource_missing`), deletion can continue because no recurring Stripe object remains; other Stripe failures block deletion.
 
 Lifetime is non-recurring and is removed through the account-owned cascade when the Auth user is deleted.
+
+### Server-side Supabase privilege model
+
+`createAdminClient()` uses the server-only Supabase secret and reaches PostgreSQL through PostgREST as the privileged service role. RLS alone does not replace SQL object privileges, so every internal object used by server code must explicitly retain the minimum privilege needed by that role while browser roles remain closed.
+
+Production migrations `20260901090429` and `20260901090719` establish the required boundary:
+
+- `consume_api_rate_limit(uuid,text,integer,integer)` is executable by `service_role` but not by `public`, `anon` or `authenticated`.
+- `subscriptions`: `service_role` SELECT/INSERT/UPDATE.
+- `unlimited_lifetime_entitlements`: `service_role` SELECT/INSERT/UPDATE; authenticated users retain only their RLS-filtered own-row read.
+- `ai_usage_events`: `service_role` SELECT/INSERT only.
+- `regulatory_change_events`: `service_role` SELECT/INSERT/UPDATE only.
+- `stripe_webhook_events`: `service_role` SELECT/INSERT/UPDATE only.
+- No DELETE privilege is granted to service_role for those internal tables by this repair, and internal telemetry/Radar/webhook tables remain unreadable to `anon`/`authenticated`.
+- `api_rate_limits` remains accessed through the server-only SECURITY DEFINER RPC rather than broad direct table grants.
+
+Do not add blanket grants to service_role or client roles. Add a privilege only when an actual server code path requires it and lock that requirement with a regression test.
 
 ---
 
