@@ -18,13 +18,15 @@ test('el borrado de cuenta cancela todas las suscripciones Stripe antes de elimi
 });
 
 test('el borrado conserva fallback por subscription id y tolera recursos Stripe ya ausentes', () => {
-  assert.match(accountRoute, /storedSubscriptionId/);
+  assert.match(accountRoute, /const subscriptionId = typeof subscription\?\.stripe_subscription_id === 'string'/);
+  assert.match(accountRoute, /else if \(subscriptionId\)/);
+  assert.match(accountRoute, /isStripeResourceMissing/);
   assert.match(accountRoute, /resource_missing/);
-  assert.match(accountRoute, /status === 404/);
+  assert.doesNotMatch(accountRoute, /status === 404/);
 });
 
 test('la Edge Function de borrado exige JWT y limita el cuerpo de confirmación', () => {
-  assert.match(edgeDelete, /MAX_CONFIRMATION_BODY_BYTES = 4096/);
+  assert.match(edgeDelete, /MAX_CONFIRMATION_BODY_BYTES = 4 \* 1024/);
   assert.match(edgeDelete, /content-length/);
   assert.match(edgeDelete, /new TextEncoder\(\)\.encode\(raw\)\.byteLength > MAX_CONFIRMATION_BODY_BYTES/);
   assert.match(edgeDelete, /admin\.auth\.getUser\(token\)/);
