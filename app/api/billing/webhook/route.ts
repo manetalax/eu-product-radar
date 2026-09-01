@@ -13,6 +13,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
 const STRIPE_WEBHOOK_MAX_BYTES = 1024 * 1024;
+const STRIPE_WEBHOOK_PROCESSING_STALE_MS = 5 * 60 * 1000;
 
 async function retrieveLatestSubscription(subscriptionId: string) {
   return stripeClient().subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] });
@@ -58,11 +59,31 @@ export async function POST(request: Request) {
   if (eventError?.code === '23505') {
     const { data: existing, error: existingError } = await admin
       .from('stripe_webhook_events')
-      .select('status')
+      .select('status,updated_at')
       .eq('event_id', event.id)
       .maybeSingle();
-    if (existingError) return NextResponse.json({ error: 'No se ha podido comprobar el evento.' }, { status: 503 });
-    if (existing?.status === 'processed') return NextResponse.json({ received: true, duplicate: true });
+    if (existingError || !existing) return NextResponse.json({ error: 'No se ha podido comprobar el evento.' }, { status: 503 });
+    if (existing.status === 'processed') return NextResponse.json({ received: true, duplicate: true });
+
+    // Do not execute the same Stripe event concurrently. A recent `processing` row
+    // belongs to another in-flight delivery and can be acknowledged as a duplicate.
+    // A genuinely stuck row may be reclaimed after the stale window. The conditional
+    // UPDATE is the claim: only one concurrent retry can move updated_at forward.
+    const staleBefore = new Date(Date.now() - STRIPE_WEBHOOK_PROCESSING_STALE_MS).toISOString();
+    const existingUpdatedAt = Date.parse(existing.updated_at);
+    if (!Number.isFinite(existingUpdatedAt) || existingUpdatedAt > Date.now() - STRIPE_WEBHOOK_PROCESSING_STALE_MS) {
+      return NextResponse.json({ received: true, duplicate: true, processing: true });
+    }
+    const { data: claimed, error: claimError } = await admin
+      .from('stripe_webhook_events')
+      .update({ updated_at: startedAt })
+      .eq('event_id', event.id)
+      .eq('status', 'processing')
+      .lt('updated_at', staleBefore)
+      .select('event_id')
+      .maybeSingle();
+    if (claimError) return NextResponse.json({ error: 'No se ha podido reclamar el evento.' }, { status: 503 });
+    if (!claimed) return NextResponse.json({ received: true, duplicate: true, processing: true });
   } else if (eventError) {
     return NextResponse.json({ error: 'No se ha podido registrar el evento.' }, { status: 503 });
   }
