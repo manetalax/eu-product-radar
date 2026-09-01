@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
-import { ONE_TIME_AUDIT } from '@/lib/plans';
 import { readTextBody } from '@/lib/http';
 import { stripeClient } from '@/lib/stripe/server';
 import { stripeObjectId, syncStripeSubscription } from '@/lib/stripe/subscription-sync';
@@ -8,23 +7,6 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
 const STRIPE_WEBHOOK_MAX_BYTES = 1024 * 1024;
-
-async function syncAudit(session: Stripe.Checkout.Session) {
-  const userId = session.metadata?.user_id || session.client_reference_id;
-  if (!userId || session.metadata?.purchase_type !== 'audit') throw new Error('El pago único no contiene una cuenta reconocible.');
-  if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') return;
-  const admin = createAdminClient();
-  const paymentIntentId = stripeObjectId(session.payment_intent);
-  const { error } = await admin.from('one_time_audits').upsert({
-    user_id: userId,
-    stripe_checkout_session_id: session.id,
-    stripe_payment_intent_id: paymentIntentId,
-    status: 'paid',
-    product_limit: ONE_TIME_AUDIT.productLimit,
-    purchased_at: new Date().toISOString(),
-  }, { onConflict: 'stripe_checkout_session_id' });
-  if (error) throw error;
-}
 
 async function retrieveLatestSubscription(subscriptionId: string) {
   return stripeClient().subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] });
@@ -42,9 +24,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Firma de Stripe no válida o contenido excesivo.' }, { status: 400 });
   }
 
-  // Production entitlements must only originate from Stripe live-mode events. This is
-  // intentionally checked before event persistence or any legacy one-time-audit path:
-  // a valid test-mode signing secret must never be able to create production value.
+  // Production entitlements must only originate from Stripe live-mode events. A valid
+  // test-mode signing secret must never be able to create production value.
   if (process.env.NODE_ENV === 'production' && event.livemode !== true) {
     return NextResponse.json({ error: 'Evento de Stripe no válido para producción.' }, { status: 400 });
   }
@@ -73,12 +54,8 @@ export async function POST(request: Request) {
   try {
     if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
       const session = event.data.object as Stripe.Checkout.Session;
-      if (session.metadata?.purchase_type === 'audit') {
-        await syncAudit(session);
-      } else {
-        const subscriptionId = stripeObjectId(session.subscription);
-        if (subscriptionId) await syncStripeSubscription(await retrieveLatestSubscription(subscriptionId));
-      }
+      const subscriptionId = stripeObjectId(session.subscription);
+      if (subscriptionId) await syncStripeSubscription(await retrieveLatestSubscription(subscriptionId));
     } else if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
       const snapshot = event.data.object as Stripe.Subscription;
       await syncStripeSubscription(await retrieveLatestSubscription(snapshot.id));
