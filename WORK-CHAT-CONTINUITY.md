@@ -43,18 +43,18 @@ Continue autonomously through actionable IN PROGRESS/NEXT work. Skip anything al
 - Account-deletion confirmation moves focus into the form and restores focus on cancel; mobile inputs are 16px with touch-sized controls.
 - Dashboard destructive view changes preserve keyboard focus by moving it to the updated workspace heading, while persistent side navigation keeps focus on the selected nav control.
 - Cancelling the pre-analysis product-review dialog restores focus to its still-mounted opener; successful confirmation intentionally does not restore stale opener focus over the results destination.
+- Auth email/Google async work exposes `aria-busy` and a persistent polite atomic status region; existing error alerts and success statuses remain unchanged and no forced focus is introduced.
 
 ## DONE — current hardening execution (2026-09-01)
-- Reconfirmed pre-change branch HEAD `543a11e03872563651e648901d47c68912757534`; exact push release check **#1862 SUCCESS**.
-- Found Dashboard actions such as “view products”, “view results” and opening history switched to Products while unmounting the initiating control. Added `moveToTabWithFocus`, a programmatically focusable workspace `h1`, and post-commit focus handoff. Successful catalogue ingestion/history-open share that path. Persistent side-nav buttons intentionally retain their own focus.
-- Added `tests/dashboard-tab-focus.test.ts`.
-- Functional Dashboard focus commit: `ec6e6bb1e51fb961b270f3f3b5acf3ddaccb2a1f`.
-- Release check **#1866** on documentation HEAD `f7229da1c4caf212875639ac8c5abcf18c8b916b` failed in `npm test`; `npm ci` passed and typecheck/build were skipped after the test failure. Root cause was a new static regression assertion expecting JSX label/onClick tokens in the wrong textual order, not a production-code failure.
-- Corrected that assertion without weakening the behavior being tested. Test-fix commit: `504af4c75e726a3d90349ea2c865fdaa81ace642`.
-- Continued to the next new accessibility surface: pre-analysis `ProductReview` correctly moved focus into its modal but cancel/unmount did not explicitly restore the user’s prior keyboard position.
-- `AnalysisReviewGate` now records the active opener before rendering review; cancel clears state and restores focus on the next animation frame only when that opener remains connected. Confirm/error paths clear the stored opener without restoring it so successful analysis can hand focus to the Products destination instead.
-- Product-review focus commit: `1f88a30ea107a6722b9fd3783160588e870efeb7`.
-- Extended `tests/analysis-review-gate.test.ts` to lock cancel restoration and no stale-focus restoration after confirmation. Test commit / functional HEAD before this handoff update: `123ea6d1b782600227c29f581f3c87a21e76ea35`.
+- Reconfirmed pre-change branch HEAD `c2e20ad02cc24c4f2bc8542a32bcd788330dcdcb`; exact push release check **#1870 SUCCESS**.
+- Continued the new asynchronous accessibility audit rather than repeating previously closed focus work.
+- Found login/signup/password-reset and Google OAuth controls correctly disabled while `busy`, but the start of server/OAuth work was not exposed through a persistent live status region. Button-label changes alone are not a reliable announcement for assistive technology.
+- `AuthForm` now marks the authentication card `aria-busy={busy}` and keeps an always-mounted screen-reader-only `role="status"` / `aria-live="polite"` / `aria-atomic="true"` region whose content changes to the localized processing copy while work is active. Errors remain assertive `role="alert"`; successful notices retain `role="status"`; keyboard focus is not moved.
+- Functional auth accessibility commit: `f305cfbc3f3647e4fdd5e4cd626ff4748b0fd581`.
+- Added `tests/auth-async-announcement.test.ts` to lock the busy semantics, persistent live-region shape and absence of forced `.focus()` in `AuthForm`.
+- Test commit / functional HEAD before this handoff update: `6d2ae8c0bc449b6ac77af097597be37fbbc9db36`.
+- Exact release check **#1872** for `6d2ae8c0bc449b6ac77af097597be37fbbc9db36` was created and was still `pending` at the last pre-handoff observation; do not call it green until GitHub completes it.
+- New evidence-backed NEXT identified in `ReadinessEvidencePanel`: optimistic Evidence saves can overlap for the same row while its controls remain enabled, and saving feedback is visual-only. Harden same-row save serialization/disable semantics and provide a persistent polite live announcement without blocking edits to unrelated evidence rows.
 
 ## Production facts
 - Supabase project `hfuwwjdcyudflamwwnon` is production.
@@ -66,11 +66,12 @@ Continue autonomously through actionable IN PROGRESS/NEXT work. Skip anything al
 
 ## NEXT — execute without asking
 1. Reconfirm the exact current branch HEAD after this documentation commit and its exact GitHub Actions release check. If tests/typecheck/build fail, diagnose and fix before new feature work.
-2. Continue genuinely new asynchronous accessibility review: status/error announcements, disabled controls and focus behavior around server work. Do not repeat the Dashboard, Checkout-return, account-delete or product-review focus work now DONE.
-3. Continue new evidence-backed findings across security, mobile/iPad/PWA, billing, AI, Evidence, reports and Radar; prioritize correctness, revenue protection, privacy and customer friction over cosmetic churn.
-4. Obtain browser performance evidence before any TTFB/LCP/TBT/CLS optimization.
-5. Inspect PDF typography/overflow only against a real multi-product output.
-6. Keep EU as the only active market and direct Shopify/Amazon/Etsy connectors inactive until legitimate credentials exist.
+2. Harden `ReadinessEvidencePanel` same-row async saves: prevent overlapping writes/late rollback for the same Evidence item while keeping unrelated rows usable, and announce save progress accessibly through persistent polite status semantics. Add regression coverage.
+3. Continue genuinely new asynchronous accessibility review after Evidence: disabled controls, status/error announcements and focus behavior around other server work. Do not repeat Dashboard, Checkout-return, account-delete, ProductReview or AuthForm work now DONE.
+4. Continue new evidence-backed findings across security, mobile/iPad/PWA, billing, AI, Evidence, reports and Radar; prioritize correctness, revenue protection, privacy and customer friction over cosmetic churn.
+5. Obtain browser performance evidence before any TTFB/LCP/TBT/CLS optimization.
+6. Inspect PDF typography/overflow only against a real multi-product output.
+7. Keep EU as the only active market and direct Shopify/Amazon/Etsy connectors inactive until legitimate credentials exist.
 
 ## BLOCKED EXTERNAL
 - Final production env/promotion with privileged Supabase/Stripe secrets, truthful sensitive legal fields and free-only AI secret.
