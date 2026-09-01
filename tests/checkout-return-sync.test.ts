@@ -18,15 +18,20 @@ test('checkout confirmation validates origin, authentication and session ownersh
   const authIndex = confirm.indexOf('await supabase.auth.getUser()');
   const bodyIndex = confirm.indexOf('await readJsonBody(request)');
   const ownerIndex = confirm.indexOf('ownerId !== user.id');
-  const syncIndex = confirm.indexOf('syncStripeSubscription(subscription)');
-  assert.ok(originIndex >= 0 && authIndex > originIndex && bodyIndex > authIndex && ownerIndex > bodyIndex && syncIndex > ownerIndex);
-  assert.match(confirm, /session\.mode !== 'subscription'/);
-  assert.match(confirm, /payment_status !== 'paid'/);
+  const subscriptionSyncIndex = confirm.indexOf('syncStripeSubscription(subscription)');
+  const lifetimeSyncIndex = confirm.indexOf('syncLifetimeCheckoutSession(session)');
+  assert.ok(originIndex >= 0 && authIndex > originIndex && bodyIndex > authIndex && ownerIndex > bodyIndex);
+  assert.ok(subscriptionSyncIndex > ownerIndex && lifetimeSyncIndex > ownerIndex);
+  assert.match(confirm, /session\.mode === 'subscription'/);
+  assert.match(confirm, /session\.mode === 'payment'/);
+  assert.match(confirm, /session\.payment_status !== 'paid'/);
 });
 
-test('webhook and synchronous checkout confirmation share one entitlement synchronizer', () => {
+test('webhook and synchronous checkout confirmation share entitlement synchronizers', () => {
   assert.match(webhook, /syncStripeSubscription/);
   assert.match(confirm, /syncStripeSubscription/);
+  assert.match(webhook, /syncLifetimeCheckoutSession/);
+  assert.match(confirm, /syncLifetimeCheckoutSession/);
   assert.doesNotMatch(webhook, /async function syncSubscription/);
 });
 
