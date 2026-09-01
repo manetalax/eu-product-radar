@@ -31,7 +31,7 @@ const BILLING_CHOICE_COPY = {
   en: { monthly: 'Monthly', annual: 'Annual', lifetime: 'Lifetime', month: 'per month', year: 'per year', oneTime: 'one-time payment', recommended: 'Best value', choose: 'Choose', lifetimeActive: 'One-time payment confirmed. There is no renewal or subscription to manage.' },
   fr: { monthly: 'Mensuel', annual: 'Annuel', lifetime: 'Lifetime', month: 'par mois', year: 'par an', oneTime: 'paiement unique', recommended: 'Meilleur choix', choose: 'Choisir', lifetimeActive: 'Paiement unique confirmé. Aucun renouvellement ni abonnement à gérer.' },
   de: { monthly: 'Monatlich', annual: 'Jährlich', lifetime: 'Lifetime', month: 'pro Monat', year: 'pro Jahr', oneTime: 'Einmalzahlung', recommended: 'Bester Wert', choose: 'Wählen', lifetimeActive: 'Einmalzahlung bestätigt. Keine Verlängerung und kein Abonnement zu verwalten.' },
-  it: { monthly: 'Mensile', annual: 'Annuale', lifetime: 'Lifetime', month: 'al mese', year: 'all’anno', oneTime: 'pagamento unico', recommended: 'Miglior valore', choose: 'Scegli', lifetimeActive: 'Pagamento unico confermato. Non ci sono rinnovi o abbonamenti da gestire.' },
+  it: { monthly: 'Mensile', annual: 'Annuale', lifetime: 'Lifetime', month: 'al mese', year: 'all’anno', oneTime: 'pagamento unico', recommended: 'Miglior valore', choose: 'Scegli', lifetimeActive: 'Pagamento unico confermato. Non ci sono rinnovi né abbonamenti da gestire.' },
   pt: { monthly: 'Mensal', annual: 'Anual', lifetime: 'Lifetime', month: 'por mês', year: 'por ano', oneTime: 'pagamento único', recommended: 'Melhor valor', choose: 'Escolher', lifetimeActive: 'Pagamento único confirmado. Não existe renovação nem subscrição para gerir.' },
 } as const;
 
@@ -72,6 +72,8 @@ export default function Dashboard({ email }: { email: string }) {
   const [quota, setQuota] = useState<ProductQuota | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
+  const deleteAccountOpener = useRef<HTMLButtonElement>(null);
+  const deleteEmailInput = useRef<HTMLInputElement>(null);
   const pendingImport = useRef<{ fingerprint: string; id: string } | null>(null);
   const planIntentHandled = useRef(false);
 
@@ -178,6 +180,12 @@ export default function Dashboard({ email }: { email: string }) {
     }
     void startCheckout(intent.billingOption);
   }, [quota?.billing.planId]);
+
+  useEffect(() => {
+    if (!deleteAccountOpen) return;
+    const frame = window.requestAnimationFrame(() => deleteEmailInput.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [deleteAccountOpen]);
 
   async function load(file: File) {
     if (busy) return;
@@ -361,6 +369,7 @@ export default function Dashboard({ email }: { email: string }) {
     setDeleteAccountOpen(false);
     setDeleteEmail('');
     setDeleteConfirmation('');
+    window.requestAnimationFrame(() => deleteAccountOpener.current?.focus());
   }
 
   async function deleteAccount(event: FormEvent<HTMLFormElement>) {
@@ -464,11 +473,11 @@ export default function Dashboard({ email }: { email: string }) {
           <div className="card content-card expansion-card"><span className="eyebrow">{d('expansion')}</span><h2>{d('expansionTitle')}</h2><p>{d('expansionBody')}</p><div className="expansion-flags">{MARKETS_BY_RANK.map(market => <span key={market.code} title={marketName(market.code)}>{market.flag}</span>)}</div></div>
           <div className="card content-card settings-security"><span className="eyebrow">{d('privacy')}</span><h2>{d('privacyTitle')}</h2><p>{d('privacyBody')}</p><p className="muted">{d('privacyCaution')}</p><TrustMark title={trustT.title} detail={trustT.detail} httpsLabel={trustT.https} explanation={trustT.explanation} compact /></div>
           <div className="card content-card account-danger-zone">
-            <div className="danger-zone-heading"><div><span className="eyebrow">{accountT.eyebrow}</span><h2>{accountT.title}</h2></div>{!deleteAccountOpen && <button className="btn danger-outline" disabled={busy} onClick={() => { setDeleteAccountOpen(true); setError(''); setNotice(''); }}>{accountT.open}</button>}</div>
+            <div className="danger-zone-heading"><div><span className="eyebrow">{accountT.eyebrow}</span><h2>{accountT.title}</h2></div>{!deleteAccountOpen && <button ref={deleteAccountOpener} className="btn danger-outline" disabled={busy} onClick={() => { setDeleteAccountOpen(true); setError(''); setNotice(''); }}>{accountT.open}</button>}</div>
             <p className="muted">{accountT.description}</p>
             {deleteAccountOpen && <form className="account-delete-confirmation" onSubmit={deleteAccount}>
               <div className="delete-warning"><strong>{accountT.warningTitle}</strong><span>{accountT.warningBody}</span></div>
-              <label>{accountT.email}<input type="email" required autoComplete="off" disabled={busy} value={deleteEmail} onChange={event => setDeleteEmail(event.target.value)} placeholder={email} /></label>
+              <label>{accountT.email}<input ref={deleteEmailInput} type="email" required autoComplete="off" disabled={busy} value={deleteEmail} onChange={event => setDeleteEmail(event.target.value)} placeholder={email} /></label>
               <label>{accountT.confirmation(DELETE_ACCOUNT_CONFIRMATION)}<input type="text" required autoComplete="off" spellCheck={false} disabled={busy} value={deleteConfirmation} onChange={event => setDeleteConfirmation(event.target.value)} /></label>
               <div className="delete-actions"><button type="button" className="btn ghost" disabled={busy} onClick={closeDeleteAccount}>{accountT.cancel}</button><button type="submit" className="btn danger-solid" disabled={busy || !canDeleteAccount}>{busy ? accountT.deleting : accountT.deleteForever}</button></div>
             </form>}
