@@ -16,7 +16,7 @@ test('login seeds the requested or detected language before AuthForm hydration',
 test('Google, signup and password reset preserve the selected language', () => {
   assert.match(authForm, /new URLSearchParams\(\{ lang: language \}\)/);
   assert.match(authForm, /signInWithOAuth\(callbackUrl\(\)\)/);
-  assert.match(authForm, /signUp\(email\.trim\(\), password, callbackUrl\(\)/);
+  assert.match(authForm, /signUp\(\s*email\.trim\(\),\s*password,\s*callbackUrl\(\),/s);
   assert.match(authForm, /resetPasswordForEmail\(email\.trim\(\), callbackUrl\('\/reset-password'\)\)/);
 });
 
