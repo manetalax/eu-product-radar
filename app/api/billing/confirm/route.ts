@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { billingOptionForStripePrice } from '@/lib/billing';
 import { billingText } from '@/lib/billing-i18n';
-import { PRIVATE_HEADERS, readJsonBody, sameOrigin } from '@/lib/http';
+import { PRIVATE_HEADERS, readJsonBody, RequestBodyTooLargeError, sameOrigin } from '@/lib/http';
 import { requestLanguage } from '@/lib/request-language';
 import { syncLifetimeCheckoutSession } from '@/lib/stripe/lifetime-entitlement';
 import { stripeClient } from '@/lib/stripe/server';
@@ -27,10 +27,10 @@ export async function POST(request: Request) {
   try {
     const body = await readJsonBody(request, BILLING_JSON_MAX_BYTES) as Record<string, unknown> | null;
     sessionId = typeof body?.sessionId === 'string' ? body.sessionId.trim() : '';
-    if (!checkoutSessionId.test(sessionId) || sessionId.length > 255) throw new Error('invalid_checkout_session');
-  } catch {
-    return json({ error: b('invalidRequest') }, 400);
+  } catch (error) {
+    return json({ error: b('invalidRequest') }, error instanceof RequestBodyTooLargeError ? 413 : 400);
   }
+  if (!checkoutSessionId.test(sessionId) || sessionId.length > 255) return json({ error: b('invalidRequest') }, 400);
 
   try {
     const stripe = stripeClient();
