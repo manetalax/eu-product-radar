@@ -12,6 +12,13 @@ const json = (body: unknown, status = 200) => NextResponse.json(body, { status, 
 const failure = (errorCode: AccountDeletionErrorCode, status: number) => json({ errorCode }, status);
 const ACCOUNT_DELETE_BODY_MAX_BYTES = 4 * 1024;
 
+function isStripeResourceMissing(error: unknown) {
+  return typeof error === 'object'
+    && error !== null
+    && 'code' in error
+    && (error as { code?: unknown }).code === 'resource_missing';
+}
+
 export async function DELETE(request: Request) {
   if (!sameOrigin(request)) return failure('origin_not_allowed', 403);
 
@@ -27,19 +34,30 @@ export async function DELETE(request: Request) {
   }
 
   // A deleted account must never leave a recurring Stripe subscription charging in the background.
+  // The database row can lag behind Stripe, so use it only to locate the subscription and re-read
+  // Stripe's current state before deciding whether cancellation is still required.
   try {
     const admin = createAdminClient();
     const { data: subscription, error: subscriptionError } = await admin
       .from('subscriptions')
-      .select('stripe_subscription_id,status')
+      .select('stripe_subscription_id')
       .eq('user_id', user.id)
       .maybeSingle();
     if (subscriptionError && subscriptionError.code !== 'PGRST116') return failure('delete_failed', 503);
 
     const subscriptionId = typeof subscription?.stripe_subscription_id === 'string' ? subscription.stripe_subscription_id : '';
-    const subscriptionStatus = typeof subscription?.status === 'string' ? subscription.status : '';
-    if (subscriptionId && subscriptionStatus !== 'canceled') {
-      await stripeClient().subscriptions.cancel(subscriptionId);
+    if (subscriptionId) {
+      const stripe = stripeClient();
+      try {
+        const latestSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+        if (latestSubscription.status !== 'canceled') {
+          await stripe.subscriptions.cancel(latestSubscription.id);
+        }
+      } catch (error) {
+        // A missing Stripe subscription means there is no recurring object left to cancel.
+        // Other Stripe failures remain fail-closed so account deletion cannot orphan a charge.
+        if (!isStripeResourceMissing(error)) throw error;
+      }
     }
   } catch {
     return failure('delete_failed', 503);
