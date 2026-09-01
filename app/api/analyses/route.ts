@@ -16,7 +16,7 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 async function readQuota(supabase: SupabaseClient, userId: string, language: Language) {
   const a = (key: Parameters<typeof analysisApiText>[1]) => analysisApiText(language, key);
   const [subscription, lifetime, freeUsage] = await Promise.all([
-    supabase.from('subscriptions').select('plan_id,status,current_period_end,cancel_at_period_end').eq('user_id', userId).maybeSingle(),
+    supabase.from('subscriptions').select('plan_id,status,current_period_end,cancel_at_period_end,stripe_price_id').eq('user_id', userId).maybeSingle(),
     supabase.from('unlimited_lifetime_entitlements').select('status').eq('user_id', userId).maybeSingle(),
     supabase.from('free_account_usage').select('product_count').eq('user_id', userId).maybeSingle(),
   ]);
