@@ -60,21 +60,21 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 
 ## DONE — 2026-09-01 post-merge hardening pass
 - Detected that PR #4 had been merged externally despite the previous handoff saying open/unmerged. GitHub records merge commit `3cc3e1f43458d35ddcf1962eab29141c529e27f6` at 2026-09-01T11:11:57Z.
-- Reconfirmed the continued hardening branch existed at prior HEAD `33c4e4bd55e278019a27e89f0bf9fc4525b79ad0`; release check #1836 for that HEAD was SUCCESS.
+- Reconfirmed the continued hardening branch and restored direct `push` validation after the external PR merge had left post-merge hardening commits without a release check.
 - Audited free-quota → three-option Checkout announcement/focus behavior.
-- Fixed a demonstrated accessibility gap: when the fifth free product exhausts quota and the upgrade surface mounts dynamically, its explanatory copy now uses a polite atomic status announcement without programmatically stealing keyboard focus.
-- Added regression coverage asserting the dynamic exhausted-quota announcement and absence of forced `.focus()` behavior.
-- Detected CI regression caused by the external PR merge: with PR #4 closed and the branch previously removed from `push`, new hardening commits had no release check at all.
-- Restored direct `push` validation for `feat/import-rules-verifier-branding` while preserving the existing pull-request validation, concurrency cancellation, immutable action pins and npm cache.
+- Fixed a demonstrated accessibility gap: when the fifth free product exhausts quota and the upgrade surface mounts dynamically, its explanatory copy now uses a polite atomic status announcement without programmatically stealing keyboard focus; regression coverage locks the behavior.
+- Audited Checkout-return truthfulness and found that Dashboard announced `Pago recibido`/equivalent on any `checkout=success` URL before `/api/billing/confirm` had confirmed entitlement/payment state.
+- Fixed the premature success claim: an unsynced Checkout return remains in the neutral `CheckoutReturnSync` live confirmation state; Dashboard only emits the localized success notice after the server-confirmed redirect carries `synced=1`.
+- Added `tests/checkout-return-truthfulness.test.ts` to prevent regression and preserve the neutral polite live state plus failure alert semantics.
+- Intermediate test-only commit `74fbe020ec0108dc212a959123b682144950dcc9` intentionally exposed the defect and release check #1844 failed before the implementation fix; it is not a release candidate.
+- Functional fix commit `b3d7785ddbd38f162e76bfd5eab605a94d495af4` passed release check **#1845 SUCCESS**, including `npm test`, typecheck and production build.
 
 ## Latest exact verification — 2026-09-01
-- Last known green pre-change branch HEAD: **`33c4e4bd55e278019a27e89f0bf9fc4525b79ad0`**.
-- Exact release check for that HEAD: **#1836 SUCCESS**.
-- Accessibility fix commit: **`1a44c3616dad3103fe9d4eb970e37b91adc990e3`**.
-- Accessibility regression-test commit: **`e9e22f02af4cd36b38672890750e172a6cd5db8f`**.
-- CI trigger repair commit: **`5787626d58df0b9dbaaba2e379f5182e68dbde4b`**.
-- At the first immediate query after `5787626d...`, no workflow run was yet returned. Reconfirm exact final HEAD and release-check result before any release decision.
+- Last exact functional HEAD fully verified green: **`b3d7785ddbd38f162e76bfd5eab605a94d495af4`**.
+- Exact release check for that functional HEAD: **#1845 SUCCESS**; install, full tests, typecheck and production build all passed.
+- Prior documentation HEAD `9001d4ccbd590a85d36c8a4bf287223bc2838cb4` also passed release check #1843 SUCCESS before this hardening pass.
 - PR #4 is **merged/closed**, not open. Do not attempt another merge.
+- This file is updated after the green functional commit; after this documentation commit, reconfirm the branch HEAD and exact-HEAD CI before any release decision. A documentation-only HEAD must not be confused with the separately proven functional HEAD above.
 
 ## Production facts
 - Supabase project `hfuwwjdcyudflamwwnon` is production.
@@ -86,16 +86,15 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Production env template intentionally keeps privileged secrets and sensitive legal identifiers blank; never commit them.
 
 ## NEXT — execute without asking
-1. Reconfirm exact final branch HEAD and exact GitHub release check after restoring branch push validation; repair any failing test/typecheck/build regression immediately.
-2. Reconcile the long handoff header/release section with the externally merged PR #4 state when a safe complete-file update path is available; do not rewrite or truncate the detailed architecture content.
+1. Reconfirm exact branch HEAD and exact-HEAD GitHub release check after this handoff update; repair any failing test/typecheck/build regression immediately.
+2. Continue keyboard/focus audit in Dashboard Settings. Highest-priority demonstrated candidate: opening the account-deletion confirmation removes the opener button while the newly mounted form has no explicit focus destination/restore path; verify and fix with regression coverage if confirmed.
 3. Continue genuinely new multidisciplinary review findings, prioritizing demonstrated security/revenue/correctness/user-friction issues over speculative architecture.
-4. Continue keyboard/focus audit through Dashboard settings purchase controls and Checkout-return states; change only demonstrated issues.
-5. Production acceptance when browser/payment conditions permit: monthly → webhook → Unlimited → Portal/cancel; annual equivalent; Lifetime paid → persistent Unlimited → controlled refund/dispute lifecycle.
-6. Fresh-account acceptance: signup/login → five-product sample accepted → sixth rejected → isolated history → premium PDF/XLSX.
-7. Obtain TTFB/LCP/TBT/CLS/resource evidence before performance changes.
-8. Inspect PDF typography/overflow only against a real multi-product output.
-9. Keep Radar disabled until same strong ingest secret exists runtime/scheduler and real official EUR-Lex ingestion persists events.
-10. Keep EU the only active market and direct marketplace connectors inactive until legitimate credentials exist.
+4. Production acceptance when browser/payment conditions permit: monthly → webhook → Unlimited → Portal/cancel; annual equivalent; Lifetime paid → persistent Unlimited → controlled refund/dispute lifecycle.
+5. Fresh-account acceptance: signup/login → five-product sample accepted → sixth rejected → isolated history → premium PDF/XLSX.
+6. Obtain TTFB/LCP/TBT/CLS/resource evidence before performance changes.
+7. Inspect PDF typography/overflow only against a real multi-product output.
+8. Keep Radar disabled until same strong ingest secret exists runtime/scheduler and real official EUR-Lex ingestion persists events.
+9. Keep EU the only active market and direct marketplace connectors inactive until legitimate credentials exist.
 
 ## BLOCKED EXTERNAL
 - Final Netlify production env/promotion with privileged Supabase/Stripe secrets, truthful sensitive legal fields and free-only AI secret. Connected tools should be used to obtain/configure anything they legitimately expose before asking the owner.
