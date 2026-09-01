@@ -42,6 +42,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Firma de Stripe no válida o contenido excesivo.' }, { status: 400 });
   }
 
+  // Production entitlements must only originate from Stripe live-mode events. This is
+  // intentionally checked before event persistence or any legacy one-time-audit path:
+  // a valid test-mode signing secret must never be able to create production value.
+  if (process.env.NODE_ENV === 'production' && event.livemode !== true) {
+    return NextResponse.json({ error: 'Evento de Stripe no válido para producción.' }, { status: 400 });
+  }
+
   const admin = createAdminClient();
   const startedAt = new Date().toISOString();
   const { error: eventError } = await admin.from('stripe_webhook_events').insert({
