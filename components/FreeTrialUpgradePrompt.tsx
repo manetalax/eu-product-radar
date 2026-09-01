@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { UnlimitedBillingOption } from '@/lib/billing';
+import { productQuotaFromUnknown } from '@/lib/dashboard-api-shapes';
 import { localeFor } from '@/lib/landing-i18n';
 import { UNLIMITED_ANNUAL_PRICE_EUR, UNLIMITED_LIFETIME_PRICE_EUR, UNLIMITED_MONTHLY_PRICE_EUR } from '@/lib/plans';
 import { trustedStripeNavigationUrl } from '@/lib/stripe-navigation';
@@ -16,12 +17,50 @@ const copy = {
   pt:{ aria:'Fim do teste gratuito', eyebrow:'TESTE CONCLUÍDO', title:'Utilizou os seus 5 produtos gratuitos.', body:'Continue com o ImportVerifier Unlimited. Escolha a modalidade de pagamento que preferir; as três desbloqueiam a mesma experiência Unlimited.', benefits:['Análises ilimitadas* do catálogo','ImportVerifier AI + Regulatory Twin','PDF e Excel com histórico e rastreabilidade'], monthly:'Mensal', annual:'Anual · melhor valor', lifetime:'Vitalício', monthlySuffix:'/mês', annualSuffix:'/ano', lifetimeSuffix:'pagamento único', annualSave:'Poupe 29,45 € face a 12 mensalidades', busy:'A abrir pagamento seguro…', secure:'Pagamento seguro Stripe', error:'Não foi possível abrir o pagamento.' },
 } as const;
 
-export default function FreeTrialUpgradePrompt({ exhausted }: { exhausted: boolean }) {
+function dashboardShowsExhaustedFreeQuota() {
+  const quotaFill = document.querySelector<HTMLElement>('.quota-inline .quota-track > span');
+  return quotaFill?.style.width === '100%';
+}
+
+export default function FreeTrialUpgradePrompt() {
   const { language } = useLanguage();
   const t = copy[language];
   const currency = (value: number) => new Intl.NumberFormat(localeFor(language), { style:'currency', currency:'EUR', minimumFractionDigits:value % 1 ? 2 : 0, maximumFractionDigits:2 }).format(value);
+  const [exhausted, setExhausted] = useState(false);
   const [busy, setBusy] = useState<UnlimitedBillingOption | null>(null);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/analyses?page=0', { cache: 'no-store' })
+      .then(async response => {
+        if (!response.ok) return null;
+        try {
+          const parsed = await response.json();
+          return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null;
+        } catch {
+          return null;
+        }
+      })
+      .then(body => {
+        if (cancelled) return;
+        const quota = productQuotaFromUnknown(body?.quota);
+        setExhausted(quota?.billing.planId === 'free' && quota.remaining === 0);
+      })
+      .catch(() => { if (!cancelled) setExhausted(false); });
+
+    const syncFromDashboard = () => {
+      if (!cancelled && dashboardShowsExhaustedFreeQuota()) setExhausted(true);
+    };
+    syncFromDashboard();
+    const observer = new MutationObserver(syncFromDashboard);
+    observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style'] });
+
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+    };
+  }, []);
 
   async function upgrade(billingOption: UnlimitedBillingOption) {
     if (busy) return;
