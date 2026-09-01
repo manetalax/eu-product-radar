@@ -19,8 +19,15 @@ test('una suscripción activa y vigente concede entitlement Unlimited', () => {
   assert.equal(legacyActive.planId, 'starter');
   assert.equal(legacyActive.planName, 'Unlimited');
   assert.equal(legacyActive.productLimit, UNLIMITED_FAIR_USE_CEILING);
+  assert.equal(legacyActive.billingOption, null);
   assert.equal(billingStatus({ plan_id: 'pro', status: 'canceled', current_period_end: '2026-09-30T12:00:00Z' }, now).productLimit, 5);
   assert.equal(billingStatus({ plan_id: 'pro', status: 'active', current_period_end: '2026-08-01T00:00:00Z' }, now).planId, 'free');
+});
+
+test('suscripciones canónicas conservan mensual o anual en el estado público', () => {
+  const now = new Date('2026-08-30T12:00:00Z');
+  assert.equal(billingStatus({ plan_id: 'starter', status: 'active', current_period_end: '2026-09-30T12:00:00Z', stripe_price_id: IMPORTVERIFIER_UNLIMITED_PRICE_ID }, now).billingOption, 'monthly');
+  assert.equal(billingStatus({ plan_id: 'starter', status: 'active', current_period_end: '2027-08-30T12:00:00Z', stripe_price_id: IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID }, now).billingOption, 'annual');
 });
 
 test('Lifetime activo concede el mismo entitlement Unlimited sin fecha de caducidad', () => {
@@ -30,6 +37,7 @@ test('Lifetime activo concede el mismo entitlement Unlimited sin fecha de caduci
   assert.equal(lifetime.productLimit, UNLIMITED_FAIR_USE_CEILING);
   assert.equal(lifetime.currentPeriodEnd, null);
   assert.equal(lifetime.cancelAtPeriodEnd, false);
+  assert.equal(lifetime.billingOption, 'lifetime');
 });
 
 test('los precios Stripe se validan y se relacionan con Unlimited fuera de producción', () => {
