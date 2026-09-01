@@ -59,6 +59,10 @@ Continue autonomously through actionable IN PROGRESS/NEXT work. Skip anything al
 - Saving state now supports concurrent different-row writes through a set of active keys. The persistent screen-reader-only `role="status"` / `aria-live="polite"` / `aria-atomic="true"` region announces localized progress; existing visible row feedback and assertive error alert remain.
 - Regression commit: `5adb410c605d5c815178ddf8cff8dc43b27f8ac1`. `tests/evidence-save-ux.test.ts` locks synchronous same-row exclusion, per-row disabled semantics, unrelated-row availability and the persistent polite announcement.
 - Exact release check **#1875 SUCCESS** for `5adb410c605d5c815178ddf8cff8dc43b27f8ac1`: install, full tests, typecheck and production build all passed.
+- Continued the asynchronous audit into `IntelligenceSuite` and confirmed two user-visible defects: initial load failures were stored in the same error state as AI failures and hidden behind the no-analysis branch; AI progress relied on a changing button label, while product/question context could change during an in-flight answer and errors had no alert semantics.
+- Functional Intelligence Suite commit: `d5a8944db26f9f220e700dfd104a95b51d5941a4`. Load and AI errors are separated; load failure is rendered assertively instead of as a false empty state; the suite and AI card expose busy state; persistent polite atomic regions announce loading, AI progress and the returned answer; AI errors are alerts; product/question controls are frozen only during that AI request.
+- Added `tests/intelligence-async-announcement.test.ts` in `324d2e12c69485d6fd44dbb3797ec93a961e9f7a`. Initial CI correctly exposed one stale source assertion in an existing safe-error regression; `656f573983a224b0f88337110afa308339fdd223` aligned that assertion with the split `aiError` state without weakening its privacy guarantee.
+- Exact release check **#1879 SUCCESS** for `656f573983a224b0f88337110afa308339fdd223`: all 402 tests, typecheck and production build passed.
 
 ## Production facts
 - Supabase project `hfuwwjdcyudflamwwnon` is production.
@@ -70,7 +74,7 @@ Continue autonomously through actionable IN PROGRESS/NEXT work. Skip anything al
 
 ## NEXT — execute without asking
 1. Reconfirm the exact current branch HEAD after this documentation commit and its exact GitHub Actions release check. If tests/typecheck/build fail, diagnose and fix before new feature work.
-2. Continue genuinely new asynchronous accessibility review after Evidence: disabled controls, status/error announcements and focus behavior around other server work. Do not repeat Dashboard, Checkout-return, account-delete, ProductReview, AuthForm or Evidence work now DONE.
+2. Continue genuinely new asynchronous accessibility review after Intelligence Suite: disabled controls, status/error announcements and focus behavior around other server work. Do not repeat Dashboard, Checkout-return, account-delete, ProductReview, AuthForm, Evidence or Intelligence Suite work now DONE.
 3. Continue new evidence-backed findings across security, mobile/iPad/PWA, billing, AI, reports and Radar; prioritize correctness, revenue protection, privacy and customer friction over cosmetic churn.
 4. Obtain browser performance evidence before any TTFB/LCP/TBT/CLS optimization.
 5. Inspect PDF typography/overflow only against a real multi-product output.
