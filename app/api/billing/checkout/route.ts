@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     const siteOrigin = configuredSiteOrigin();
     if (!siteOrigin) throw new Error(b('siteUrl'));
 
-    if (billingStatus(record).planId !== 'free' && customerId) {
+    if (billingStatus(record).planId !== 'free') {
       const portal = await stripe.billingPortal.sessions.create({ customer: customerId, return_url: `${siteOrigin}/dashboard` });
       const portalUrl = trustedStripeNavigationUrl(portal.url, 'portal');
       if (!portalUrl) throw new Error(b('stripePage'));
@@ -75,26 +75,32 @@ export async function POST(request: Request) {
       && recurringMatches;
     if (!validUnlimitedPrice) throw new Error(b('stripePrice'));
 
-    const common = {
-      customer: customerId,
-      client_reference_id: user.id,
-      line_items: [{ price: priceId, quantity: 1 }],
-      allow_promotion_codes: true,
-      success_url: `${siteOrigin}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteOrigin}/dashboard?checkout=cancelled`,
-      metadata: { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID, billing_option: billingOption },
-    } as const;
+    const metadata = { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID, billing_option: billingOption };
+    const successUrl = `${siteOrigin}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${siteOrigin}/dashboard?checkout=cancelled`;
 
     const session = expected.checkoutMode === 'subscription'
       ? await stripe.checkout.sessions.create({
-        ...common,
         mode: 'subscription',
-        subscription_data: { metadata: { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID, billing_option: billingOption } },
+        customer: customerId,
+        client_reference_id: user.id,
+        line_items: [{ price: priceId, quantity: 1 }],
+        allow_promotion_codes: true,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        metadata,
+        subscription_data: { metadata },
       }, { idempotencyKey: `checkout-${user.id}-${billingOption}-${new Date().toISOString().slice(0, 13)}` })
       : await stripe.checkout.sessions.create({
-        ...common,
         mode: 'payment',
-        payment_intent_data: { metadata: { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID, billing_option: billingOption } },
+        customer: customerId,
+        client_reference_id: user.id,
+        line_items: [{ price: priceId, quantity: 1 }],
+        allow_promotion_codes: true,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        metadata,
+        payment_intent_data: { metadata },
       }, { idempotencyKey: `checkout-${user.id}-${billingOption}` });
 
     const checkoutUrl = trustedStripeNavigationUrl(session.url, 'checkout');
