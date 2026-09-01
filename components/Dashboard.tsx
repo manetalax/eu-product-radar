@@ -8,13 +8,14 @@ import TrustMark from '@/components/TrustMark';
 import { AccountDeletionErrorCode, DELETE_ACCOUNT_CONFIRMATION } from '@/lib/account';
 import { accountCopy } from '@/lib/account-i18n';
 import { Analysis, AnalysisSummary, analysisMarket, analyze, MAX_FILE_BYTES, supportsRuleVersion } from '@/lib/analysis';
+import type { UnlimitedBillingOption } from '@/lib/billing';
 import { analysisFromUnknown, analysisSummariesFromUnknown, productQuotaFromUnknown, productsFromUnknown } from '@/lib/dashboard-api-shapes';
 import { dashboardText, type DashboardCopyKey } from '@/lib/dashboard-copy-v2';
 import { documentationFor } from '@/lib/documentation';
 import { guideScopeFor } from '@/lib/guide-i18n';
-import { landingCopy, localeFor } from '@/lib/landing-i18n';
+import { formatPrice, landingCopy, localeFor } from '@/lib/landing-i18n';
 import { isActiveMarketCode, MarketCode, MARKETS, MARKETS_BY_RANK } from '@/lib/markets';
-import { UNLIMITED_PLAN } from '@/lib/plans';
+import { UNLIMITED_PUBLIC_OFFERS } from '@/lib/plans';
 import { ProductQuota } from '@/lib/quota';
 import { reportLabels } from '@/lib/report-i18n';
 import { authService } from '@/lib/services/auth-client';
@@ -25,12 +26,22 @@ import { useLanguage } from '@/lib/use-language';
 
 type Tab = 'dashboard' | 'products' | 'history' | 'reports' | 'settings';
 
+const BILLING_CHOICE_COPY = {
+  es: { monthly: 'Mensual', annual: 'Anual', lifetime: 'Lifetime', month: 'al mes', year: 'al año', oneTime: 'pago único', recommended: 'Mejor valor', choose: 'Elegir', lifetimeActive: 'Pago único confirmado. No hay renovación ni suscripción que gestionar.' },
+  en: { monthly: 'Monthly', annual: 'Annual', lifetime: 'Lifetime', month: 'per month', year: 'per year', oneTime: 'one-time payment', recommended: 'Best value', choose: 'Choose', lifetimeActive: 'One-time payment confirmed. There is no renewal or subscription to manage.' },
+  fr: { monthly: 'Mensuel', annual: 'Annuel', lifetime: 'Lifetime', month: 'par mois', year: 'par an', oneTime: 'paiement unique', recommended: 'Meilleur choix', choose: 'Choisir', lifetimeActive: 'Paiement unique confirmé. Aucun renouvellement ni abonnement à gérer.' },
+  de: { monthly: 'Monatlich', annual: 'Jährlich', lifetime: 'Lifetime', month: 'pro Monat', year: 'pro Jahr', oneTime: 'Einmalzahlung', recommended: 'Bester Wert', choose: 'Wählen', lifetimeActive: 'Einmalzahlung bestätigt. Keine Verlängerung und kein Abonnement zu verwalten.' },
+  it: { monthly: 'Mensile', annual: 'Annuale', lifetime: 'Lifetime', month: 'al mese', year: 'all’anno', oneTime: 'pagamento unico', recommended: 'Miglior valore', choose: 'Scegli', lifetimeActive: 'Pagamento unico confermato. Non ci sono rinnovi o abbonamenti da gestire.' },
+  pt: { monthly: 'Mensal', annual: 'Anual', lifetime: 'Lifetime', month: 'por mês', year: 'por ano', oneTime: 'pagamento único', recommended: 'Melhor valor', choose: 'Escolher', lifetimeActive: 'Pagamento único confirmado. Não existe renovação nem subscrição para gerir.' },
+} as const;
+
 export default function Dashboard({ email }: { email: string }) {
   const { language } = useLanguage();
   const accountT = accountCopy[language];
   const reportT = reportLabels[language];
   const trustT = landingCopy[language].trust;
   const uploadT = uploadCopy[language];
+  const billingChoiceT = BILLING_CHOICE_COPY[language];
   const d = (key: DashboardCopyKey, values: Record<string, string | number> = {}) => dashboardText(language, key, values);
   const tabs: [Tab, string, string][] = [
     ['dashboard', d('tabDashboard'), d('tabDashboardDesc')],
@@ -41,7 +52,6 @@ export default function Dashboard({ email }: { email: string }) {
   ];
   const when = (value: string) => new Date(value).toLocaleString(localeFor(language), { dateStyle: 'medium', timeStyle: 'short' });
   const marketName = (code: MarketCode) => landingCopy[language].markets.cards[code].name;
-  const monthlyPrice = new Intl.NumberFormat(localeFor(language), { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(UNLIMITED_PLAN.monthlyPriceEur);
 
   const [tab, setTab] = useState<Tab>('dashboard');
   const [selectedMarket, setSelectedMarket] = useState<MarketCode>('EU');
@@ -71,6 +81,9 @@ export default function Dashboard({ email }: { email: string }) {
   const avg = results.length ? Math.round(results.reduce((sum, result) => sum + result.score, 0) / results.length) : 0;
   const highCount = results.filter(result => result.priority === 'ALTA').length;
   const unlimited = quota?.billing.planId === 'starter';
+  const billingOption = quota?.billing.billingOption;
+  const lifetimeUnlimited = unlimited && billingOption === 'lifetime';
+  const recurringUnlimited = unlimited && (billingOption === 'monthly' || billingOption === 'annual');
   const free = quota?.billing.planId === 'free';
   const quotaBlocked = free && quota?.remaining === 0;
   const quotaPercent = free && quota ? Math.min(100, Math.round((quota.used / quota.limit) * 100)) : 0;
@@ -87,6 +100,8 @@ export default function Dashboard({ email }: { email: string }) {
     : value === 'Seguridad/advertencias'
       ? reportT.warnings
       : value === currentMarket.operatorFieldLabel ? operatorDisplay : value;
+  const billingChoiceLabel = (option: UnlimitedBillingOption) => billingChoiceT[option];
+  const billingCadenceLabel = (option: UnlimitedBillingOption) => option === 'monthly' ? billingChoiceT.month : option === 'annual' ? billingChoiceT.year : billingChoiceT.oneTime;
 
   async function api(url: string, options?: RequestInit) {
     const response = await fetch(url, { ...options, cache: 'no-store' });
@@ -152,14 +167,14 @@ export default function Dashboard({ email }: { email: string }) {
 
   useEffect(() => {
     if (!quota || planIntentHandled.current) return;
-    const planId = readPlanIntent();
+    const intent = readPlanIntent();
     planIntentHandled.current = true;
-    if (!planId) return;
+    if (!intent) return;
     if (quota.billing.planId === 'starter') {
       clearPlanIntent();
       return;
     }
-    void startCheckout();
+    void startCheckout(intent.billingOption);
   }, [quota?.billing.planId]);
 
   async function load(file: File) {
@@ -295,13 +310,13 @@ export default function Dashboard({ email }: { email: string }) {
     setNotice(d('templateDownloaded'));
   }
 
-  async function startCheckout() {
+  async function startCheckout(option: UnlimitedBillingOption = 'monthly') {
     if (unlimited) return;
     setBusy(true);
     setError('');
     setNotice('');
     try {
-      const { url } = await api('/api/billing/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ purchaseId: 'starter' }) });
+      const { url } = await api('/api/billing/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ purchaseId: 'starter', billingOption: option }) });
       const trustedUrl = trustedStripeNavigationUrl(url, 'checkout');
       if (!trustedUrl) throw new Error(d('paymentError'));
       clearPlanIntent();
@@ -313,6 +328,7 @@ export default function Dashboard({ email }: { email: string }) {
   }
 
   async function manageSubscription() {
+    if (!recurringUnlimited) return;
     setBusy(true);
     setError('');
     try {
@@ -441,8 +457,8 @@ export default function Dashboard({ email }: { email: string }) {
 
         {tab === 'settings' && <div className="settings-grid">
           <div className="card content-card"><span className="eyebrow">{d('accountHeading')}</span><h2>{d('profile')}</h2><p className="account-email settings-email">{email}</p><Link className="btn ghost" href={`/reset-password?lang=${language}`}>{d('changePassword')}</Link></div>
-          <div className="card content-card"><span className="eyebrow">{d('currentPlan')}</span><h2>{unlimited ? 'Unlimited' : d('free')}</h2>{unlimited ? <><div className="settings-quota"><strong>∞</strong><span>{d('productWord')}</span></div><p className="muted">{d('unlimitedTechnical')}</p><button className="btn ghost" disabled={busy} onClick={manageSubscription}>{d('manageSubscription')}</button></> : <><div className="settings-quota"><strong>{quota?.remaining ?? '—'}</strong><span>{d('ofFiveFree')}</span></div><div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div><p className="muted">{d('freePlanBody')}</p></>}</div>
-          <div className="card content-card plan-interest"><span className="eyebrow">{d('onlySubscription')}</span><h2>ImportVerifier Unlimited</h2><p>{d('unlimitedBody')}</p><button className="btn primary" disabled={busy || unlimited} onClick={() => void startCheckout()}>{unlimited ? d('unlimitedActive') : d('subscribeFor', { price: monthlyPrice })}</button><p className="muted">{d('stripeBody')}</p></div>
+          <div className="card content-card"><span className="eyebrow">{d('currentPlan')}</span><h2>{lifetimeUnlimited ? 'Unlimited · Lifetime' : unlimited ? 'Unlimited' : d('free')}</h2>{unlimited ? <><div className="settings-quota"><strong>∞</strong><span>{d('productWord')}</span></div><p className="muted">{d('unlimitedTechnical')}</p>{recurringUnlimited && <button className="btn ghost" disabled={busy} onClick={manageSubscription}>{d('manageSubscription')}</button>}{lifetimeUnlimited && <p className="muted">{billingChoiceT.lifetimeActive}</p>}</> : <><div className="settings-quota"><strong>{quota?.remaining ?? '—'}</strong><span>{d('ofFiveFree')}</span></div><div className="quota-track"><span style={{ width: `${quotaPercent}%` }} /></div><p className="muted">{d('freePlanBody')}</p></>}</div>
+          <div className="card content-card plan-interest"><span className="eyebrow">UNLIMITED</span><h2>ImportVerifier Unlimited</h2><p>{d('unlimitedBody')}</p>{unlimited ? <p className="message success" role="status">{d('unlimitedActive')}{billingOption ? ` · ${billingChoiceLabel(billingOption)}` : ''}</p> : <div className="report-grid">{UNLIMITED_PUBLIC_OFFERS.map(offer => <button key={offer.id} className="report-option" disabled={busy} onClick={() => void startCheckout(offer.id)}><strong>{billingChoiceLabel(offer.id)}{offer.id === 'annual' ? ` · ${billingChoiceT.recommended}` : ''}</strong><span>{formatPrice(language, offer.priceEur)} · {billingCadenceLabel(offer.id)}</span><b>{billingChoiceT.choose}</b></button>)}</div>}<p className="muted">{d('stripeBody')}</p></div>
           <div className="card content-card expansion-card"><span className="eyebrow">{d('expansion')}</span><h2>{d('expansionTitle')}</h2><p>{d('expansionBody')}</p><div className="expansion-flags">{MARKETS_BY_RANK.map(market => <span key={market.code} title={marketName(market.code)}>{market.flag}</span>)}</div></div>
           <div className="card content-card settings-security"><span className="eyebrow">{d('privacy')}</span><h2>{d('privacyTitle')}</h2><p>{d('privacyBody')}</p><p className="muted">{d('privacyCaution')}</p><TrustMark title={trustT.title} detail={trustT.detail} httpsLabel={trustT.https} explanation={trustT.explanation} compact /></div>
           <div className="card content-card account-danger-zone">
