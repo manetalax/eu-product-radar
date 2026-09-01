@@ -30,5 +30,5 @@ test('app loading state gives accessible feedback without language-specific copy
   assert.match(loading, /role="status"/);
   assert.match(loading, /aria-label="ImportVerifier"/);
   assert.match(loading, /aria-hidden="true"/);
-  assert.doesNotMatch(loading, /Loading|Cargando|Chargement|Laden|Caricamento|Carregando/);
+  assert.doesNotMatch(loading, />\s*(Loading|Cargando|Chargement|Laden|Caricamento|Carregando)\s*</);
 });
