@@ -12,7 +12,14 @@ test('canonical Unlimited price is EUR 9.95 and keeps cents in every supported l
   }
 });
 
-test('all three public Unlimited prices retain their cents in every locale', () => {\n  const expected = [UNLIMITED_MONTHLY_PRICE_EUR, UNLIMITED_ANNUAL_PRICE_EUR, UNLIMITED_LIFETIME_PRICE_EUR];\n  for (const language of LANGUAGES) {\n    for (const price of expected) assert.match(formatPrice(language, price), /[,.]95/, language);\n  }\n});\n\ntest('integer EUR prices remain clean without forced cents', () => {
+test('all three public Unlimited prices retain their cents in every locale', () => {
+  const expected = [UNLIMITED_MONTHLY_PRICE_EUR, UNLIMITED_ANNUAL_PRICE_EUR, UNLIMITED_LIFETIME_PRICE_EUR];
+  for (const language of LANGUAGES) {
+    for (const price of expected) assert.match(formatPrice(language, price), /[,.]95/, language);
+  }
+});
+
+test('integer EUR prices remain clean without forced cents', () => {
   for (const language of LANGUAGES) {
     const formatted = formatPrice(language, 29);
     assert.doesNotMatch(formatted, /29[,.]00/, language);
