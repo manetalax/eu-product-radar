@@ -3,10 +3,12 @@
 ## Canonical project
 - Production: `https://importverifier.netlify.app/`
 - Repository: `manetalax/eu-product-radar`
-- Canonical branch after merge: `main`
+- Canonical production branch after merge: `main`.
 - PR #4 was merged on 2026-09-01 at 11:11:57Z.
 - Merge commit: `3cc3e1f43458d35ddcf1962eab29141c529e27f6`.
+- Current `main` HEAD observed 2026-09-01: `cc91fd3fb5664565aaf3db8dcd1e3fea0f4fbe69` (`chore: trigger ImportVerifier production deploy`).
 - Historical feature branch `feat/import-rules-verifier-branding` remains at `33c4e4bd55e278019a27e89f0bf9fc4525b79ad0`; do not treat it as the production source of truth.
+- Post-merge hardening branch: `chore/post-merge-launch-hardening`, created from `cc91fd3f...`; do not merge automatically.
 - Never create a replacement project.
 
 ## Read order
@@ -53,17 +55,23 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Production server-only Supabase RPC/table privilege repair; browser roles remain closed.
 - Dashboard exposes monthly/annual/Lifetime correctly, distinguishes Lifetime from recurring Portal semantics, and is responsive desktop/tablet/mobile.
 - Five-free → Unlimited transition updates live at quota exhaustion without reload; regression coverage exists.
-- CI duplicate push/PR release checks on the historical feature branch were removed while preserving PR validation.
+- CI duplicate push/PR release checks on feature branches were removed while preserving PR validation.
 - PR #4 exact pre-merge HEAD `33c4e4bd55e278019a27e89f0bf9fc4525b79ad0` passed release check #1836 and Netlify Deploy Preview.
 - PR #4 merged successfully into `main` as `3cc3e1f43458d35ddcf1962eab29141c529e27f6`.
+- Supabase Security Advisor rechecked 2026-09-01: no new client-table access vulnerability; only four intentional INFO `rls_enabled_no_policy` notices on internal server-only tables plus the existing WARN for leaked-password protection.
+
+## IN PROGRESS — post-merge release hardening
+- Demonstrated release-safety gap found: production-bound direct commits on `main` had no GitHub release check because CI push validation still targeted a legacy release-prep branch. This matters now that Netlify production follows `main`.
+- Fix prepared on `chore/post-merge-launch-hardening`: `.github/workflows/release-check.yml` validates `pull_request` plus `push` to `main`, while still avoiding duplicate push checks on feature branches. Fix commit: `5581a79566a769828015c4b8ae1cc8cdc8fa3ac8`.
+- This branch must be validated by PR CI before any merge; do not merge automatically.
 
 ## Latest exact verification — 2026-09-01
-- `main` HEAD before this documentation correction: `3cc3e1f43458d35ddcf1962eab29141c529e27f6`.
-- Historical feature branch HEAD: `33c4e4bd55e278019a27e89f0bf9fc4525b79ad0`.
-- Historical branch release check #1836: SUCCESS.
-- Historical branch `netlify/importverifier/deploy-preview`: SUCCESS.
-- GitHub currently exposes no commit status on merge commit `3cc3e1f...`; this is not proof of deployment failure because release CI was intentionally PR-only and production Netlify status must be verified separately.
-- Direct production HTTP verification is currently unavailable from the connected runtime, so canonical production deployment remains the immediate acceptance target.
+- `main` HEAD: `cc91fd3fb5664565aaf3db8dcd1e3fea0f4fbe69`.
+- `main` commit message: `chore: trigger ImportVerifier production deploy`.
+- GitHub commit status for `cc91fd3f...`: no statuses attached (`total_count: 0`); this is the release-safety gap being fixed, not evidence of a failed deployment.
+- Public production HTTP verification remains unavailable from the connected runtime; canonical Netlify production deployment is still an acceptance target.
+- Historical feature branch release check #1836: SUCCESS.
+- Historical feature branch Netlify Deploy Preview: SUCCESS.
 
 ## Production facts
 - Supabase project `hfuwwjdcyudflamwwnon` is production.
@@ -75,14 +83,15 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Production env template intentionally keeps privileged secrets and sensitive legal identifiers blank; never commit them.
 
 ## NEXT — execute without asking
-1. Reconfirm the new exact `main` HEAD after this handoff correction and verify production Netlify is actually serving that commit.
-2. If production is green, run fresh-account acceptance: signup/login → five products accepted → sixth rejected → isolated history → premium PDF/XLSX.
-3. Run controlled billing acceptance when live browser/payment conditions permit: monthly → webhook → Unlimited → Portal/cancel; annual equivalent; Lifetime paid → persistent Unlimited → controlled refund/dispute lifecycle.
-4. Continue genuinely new multidisciplinary findings only; prioritize demonstrated security/revenue/correctness/user-friction defects over speculative architecture.
-5. Obtain TTFB/LCP/TBT/CLS/resource evidence before performance changes.
-6. Inspect PDF typography/overflow only against a real multi-product output.
-7. Keep Radar disabled until the same strong ingest secret exists runtime/scheduler and real official EUR-Lex ingestion persists events.
-8. Keep EU the only active market and direct marketplace connectors inactive until legitimate credentials exist.
+1. Open a draft PR from `chore/post-merge-launch-hardening` to `main` so the release check validates the CI-target correction; do not merge automatically.
+2. Inspect the exact PR CI result and correct any regression.
+3. Reconfirm exact `main` HEAD and verify Netlify production is actually serving the intended production commit when authenticated/public evidence becomes available.
+4. If production is green, run fresh-account acceptance: signup/login → five products accepted → sixth rejected → isolated history → premium PDF/XLSX.
+5. Run controlled billing acceptance when live browser/payment conditions permit: monthly → webhook → Unlimited → Portal/cancel; annual equivalent; Lifetime paid → persistent Unlimited → controlled refund/dispute lifecycle.
+6. Obtain TTFB/LCP/TBT/CLS/resource evidence before performance changes.
+7. Inspect PDF typography/overflow only against a real multi-product output.
+8. Keep Radar disabled until the same strong ingest secret exists runtime/scheduler and real official EUR-Lex ingestion persists events.
+9. Keep EU the only active market and direct marketplace connectors inactive until legitimate credentials exist.
 
 ## BLOCKED EXTERNAL
 - Final Netlify production deploy/env verification with privileged Supabase/Stripe secrets, truthful legal fields and free-only AI secret.
