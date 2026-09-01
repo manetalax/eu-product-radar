@@ -15,7 +15,19 @@ const UNLIMITED_INTERNAL_PLAN_ID = 'starter' as const;
 const TERMINAL_SUBSCRIPTION_STATUSES = new Set(['canceled', 'incomplete_expired']);
 const MAX_CHECKOUT_SESSION_SCAN = 500;
 const BILLING_JSON_MAX_BYTES = 4 * 1024;
+const AUTH_BILLING_INTENT_MAX_AGE_MS = 15 * 60 * 1000;
 type UnlimitedBillingOption = 'monthly' | 'annual' | 'lifetime';
+
+function recentAuthBillingIntent(userMetadata: Record<string, unknown> | undefined): UnlimitedBillingOption | null {
+  if (!userMetadata || userMetadata.plan_interest_id !== UNLIMITED_INTERNAL_PLAN_ID) return null;
+  if (!isUnlimitedBillingOption(userMetadata.plan_interest_billing_option)) return null;
+  if (typeof userMetadata.plan_interest_at !== 'string') return null;
+  const savedAt = Date.parse(userMetadata.plan_interest_at);
+  if (!Number.isFinite(savedAt)) return null;
+  const age = Date.now() - savedAt;
+  if (age < 0 || age > AUTH_BILLING_INTENT_MAX_AGE_MS) return null;
+  return userMetadata.plan_interest_billing_option;
+}
 
 async function hasCurrentStripeSubscription(stripe: ReturnType<typeof stripeClient>, customerId: string) {
   let startingAfter: string | undefined;
@@ -105,7 +117,11 @@ export async function POST(request: Request) {
     const body = await readJsonBody(request, BILLING_JSON_MAX_BYTES) as Record<string, unknown> | null;
     const candidate = body?.purchaseId ?? body?.planId;
     if (candidate !== UNLIMITED_INTERNAL_PLAN_ID) throw new Error(b('onlyUnlimited'));
-    const requestedOption = body?.billingOption ?? 'monthly';
+    // Explicit request data wins. The short-lived Auth metadata fallback exists only for
+    // the immediate post-login purchase-intent path, where the legacy dashboard request
+    // does not yet include billingOption. Stale metadata can never silently change a later
+    // manual checkout from its monthly default.
+    const requestedOption = body?.billingOption ?? recentAuthBillingIntent(user.user_metadata as Record<string, unknown> | undefined) ?? 'monthly';
     if (!isUnlimitedBillingOption(requestedOption)) throw new Error(b('invalidRequest'));
     billingOption = requestedOption;
     if (process.env.NODE_ENV === 'production' && !legalConfig()) throw new Error(b('legalNotReady'));
