@@ -54,7 +54,8 @@ export default function IntelligenceSuite() {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [aiError, setAiError] = useState('');
   const [platformUrl, setPlatformUrl] = useState('');
 
   useEffect(() => {
@@ -93,7 +94,7 @@ export default function IntelligenceSuite() {
           if (!cancelled) setEvidenceRows(Array.isArray(evidenceBody.evidence) ? evidenceBody.evidence as EvidenceRow[] : []);
         }
       } catch {
-        if (!cancelled) setError(t.loadError);
+        if (!cancelled) setLoadError(t.loadError);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -140,7 +141,7 @@ export default function IntelligenceSuite() {
   async function askAi(event: FormEvent) {
     event.preventDefault();
     if (!analysis || !product || !result || !question.trim() || aiBusy) return;
-    setAiBusy(true); setAnswer(''); setError('');
+    setAiBusy(true); setAnswer(''); setAiError('');
     try {
       const response = await fetch('/api/regulatory-agent', {
         method: 'POST',
@@ -156,7 +157,7 @@ export default function IntelligenceSuite() {
       if (!response.ok || typeof body.answer !== 'string' || !body.answer.trim()) throw new Error(t.aiError);
       setAnswer(body.answer);
     } catch {
-      setError(t.aiError);
+      setAiError(t.aiError);
     } finally { setAiBusy(false); }
   }
 
@@ -164,21 +165,24 @@ export default function IntelligenceSuite() {
   const severityLabel = (severity: 'info' | 'review' | 'action') => severity === 'action' ? t.action : severity === 'review' ? t.review : t.information;
   const confidenceLabel = (confidence: 'high' | 'medium' | 'low') => confidence === 'high' ? report.confidenceHigh : confidence === 'medium' ? report.confidenceMedium : report.confidenceLow;
 
-  return <section className={styles.suite} aria-label={t.aria}>
+  return <section className={styles.suite} aria-label={t.aria} aria-busy={loading}>
     <div className={styles.hero}>
       <div><span className={styles.eyebrow}>{section.suiteEyebrow}</span><h2>{t.heroTitle}</h2><p>{t.heroLead}</p></div>
       <span className={styles.badge}>AI · TWIN · RADAR · CONNECT</span>
     </div>
 
-    {loading ? <div className={styles.empty}>{t.loading}</div> : !analysis ? <div className={styles.empty}>{t.noAnalysis}</div> : <div className={styles.grid}>
-      <article className={`${styles.card} ${styles.wide}`}>
+    <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{loading ? t.loading : ''}</p>
+    {loadError && <div className={styles.error} role="alert">{loadError}</div>}
+    {loading ? <div className={styles.empty}>{t.loading}</div> : loadError ? null : !analysis ? <div className={styles.empty}>{t.noAnalysis}</div> : <div className={styles.grid}>
+      <article className={`${styles.card} ${styles.wide}`} aria-busy={aiBusy}>
         <div className={styles.cardHead}><div><h3>ImportVerifier AI</h3><p>{t.aiLead}</p></div><span className={styles.status}>{t.active}</span></div>
-        <select className={styles.productSelect} value={selected} onChange={e => { setSelected(Number(e.target.value)); setAnswer(''); }} aria-label={t.productLabel}>
+        <select className={styles.productSelect} value={selected} disabled={aiBusy} onChange={e => { setSelected(Number(e.target.value)); setAnswer(''); }} aria-label={t.productLabel}>
           {analysis.products.map((item, index) => <option value={index} key={`${item.name}-${index}`}>{item.name}</option>)}
         </select>
-        <form className={styles.aiForm} onSubmit={askAi}><input className={styles.aiInput} value={question} maxLength={2000} onChange={e => setQuestion(e.target.value)} placeholder={t.questionPlaceholder} /><button className={styles.button} disabled={aiBusy || !question.trim()}>{aiBusy ? t.asking : t.ask}</button></form>
+        <form className={styles.aiForm} onSubmit={askAi}><input className={styles.aiInput} value={question} disabled={aiBusy} maxLength={2000} onChange={e => setQuestion(e.target.value)} placeholder={t.questionPlaceholder} /><button className={styles.button} disabled={aiBusy || !question.trim()}>{aiBusy ? t.asking : t.ask}</button></form>
+        <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{aiBusy ? t.asking : answer}</p>
         {answer && <div className={styles.answer}>{answer}</div>}
-        {error && <div className={styles.error}>{error}</div>}
+        {aiError && <div className={styles.error} role="alert">{aiError}</div>}
         <div className={styles.disclaimer}>{t.aiDisclaimer}</div>
       </article>
 
