@@ -19,8 +19,14 @@ const copy = {
   pt: 'A confirmar o seu acesso Unlimited…',
 } as const;
 const CONFIRM_TIMEOUT_MS = 20_000;
+const MAX_CONFIRM_ATTEMPTS = 3;
+const RETRYABLE_CONFIRM_STATUSES = new Set([409, 429, 502, 503, 504]);
 
 class CheckoutConfirmationError extends Error {}
+
+function retryDelay(attempt: number) {
+  return Math.min(2_000, 500 * (2 ** attempt));
+}
 
 export default function CheckoutReturnSync({ checkout, sessionId, synced = false }: Props) {
   const { language } = useLanguage();
@@ -34,21 +40,38 @@ export default function CheckoutReturnSync({ checkout, sessionId, synced = false
     const timeout = window.setTimeout(() => controller.abort(), CONFIRM_TIMEOUT_MS);
     void (async () => {
       try {
-        const response = await fetch('/api/billing/confirm', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId }),
-          signal: controller.signal,
-        });
-        let confirmed = false;
-        try {
-          const parsed = await response.json();
-          confirmed = Boolean(parsed && typeof parsed === 'object' && !Array.isArray(parsed) && (parsed as Record<string, unknown>).confirmed === true);
-        } catch {
-          // Never expose parser/proxy details to customers.
+        for (let attempt = 0; attempt < MAX_CONFIRM_ATTEMPTS; attempt += 1) {
+          if (cancelled) return;
+          let response: Response;
+          try {
+            response = await fetch('/api/billing/confirm', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionId }),
+              signal: controller.signal,
+            });
+          } catch (networkError) {
+            if (controller.signal.aborted || attempt === MAX_CONFIRM_ATTEMPTS - 1) throw networkError;
+            await new Promise(resolve => window.setTimeout(resolve, retryDelay(attempt)));
+            continue;
+          }
+
+          let confirmed = false;
+          try {
+            const parsed = await response.json();
+            confirmed = Boolean(parsed && typeof parsed === 'object' && !Array.isArray(parsed) && (parsed as Record<string, unknown>).confirmed === true);
+          } catch {
+            // Never expose parser/proxy details to customers.
+          }
+          if (response.ok && confirmed) {
+            if (!cancelled) window.location.replace('/dashboard?checkout=success&synced=1');
+            return;
+          }
+          if (!RETRYABLE_CONFIRM_STATUSES.has(response.status) || attempt === MAX_CONFIRM_ATTEMPTS - 1) {
+            throw new CheckoutConfirmationError(billingText(language, 'paymentOpen'));
+          }
+          await new Promise(resolve => window.setTimeout(resolve, retryDelay(attempt)));
         }
-        if (!response.ok || !confirmed) throw new CheckoutConfirmationError(billingText(language, 'paymentOpen'));
-        if (!cancelled) window.location.replace('/dashboard?checkout=success&synced=1');
       } catch (confirmError) {
         if (!cancelled) {
           setError(confirmError instanceof CheckoutConfirmationError ? confirmError.message : billingText(language, 'paymentOpen'));
