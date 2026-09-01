@@ -1,0 +1,135 @@
+.account-danger-zone {
+  grid-column: 1 / -1;
+  border-color: #fecaca;
+  background: linear-gradient(180deg, #fff, #fffafa);
+}
+
+.account-danger-zone .eyebrow {
+  color: #b42318;
+}
+
+.danger-zone-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.danger-zone-heading h2 {
+  margin-bottom: 0;
+}
+
+.danger-outline {
+  border: 1px solid #fda29b;
+  background: #fff;
+  color: #b42318;
+}
+
+.danger-outline:hover:not(:disabled) {
+  background: #fff1f0;
+}
+
+.account-delete-confirmation {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 22px;
+  padding: 18px;
+  border: 1px solid #fecaca;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.account-delete-confirmation label {
+  display: grid;
+  gap: 7px;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.account-delete-confirmation input {
+  width: 100%;
+  min-height: 46px;
+  padding: 11px 12px;
+  border: 1px solid #d0d5dd;
+  border-radius: 11px;
+  background: #fff;
+  color: var(--text);
+}
+
+.account-delete-confirmation input:focus {
+  border-color: #f97066;
+  outline: 3px solid #fda29b45;
+}
+
+.delete-warning {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 4px;
+  padding: 13px 14px;
+  border-radius: 13px;
+  background: #fff1f0;
+  color: #7a271a;
+}
+
+.delete-warning strong {
+  font-size: 13px;
+}
+
+.delete-warning span {
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.delete-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.danger-solid {
+  background: #b42318;
+  color: #fff;
+}
+
+.danger-solid:hover:not(:disabled) {
+  background: #912018;
+}
+
+.danger-solid:disabled {
+  background: #d0d5dd;
+  color: #fff;
+  cursor: not-allowed;
+}
+
+@media (max-width: 700px) {
+  .account-danger-zone {
+    grid-column: auto;
+  }
+
+  .danger-zone-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .danger-zone-heading .btn,
+  .delete-actions .btn {
+    width: 100%;
+  }
+
+  .account-delete-confirmation {
+    grid-template-columns: 1fr;
+    padding: 15px;
+  }
+
+  .delete-warning,
+  .delete-actions {
+    grid-column: auto;
+  }
+
+  .delete-actions {
+    flex-direction: column-reverse;
+  }
+}

@@ -1,0 +1,52 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dashboardDictionaries, dashboardText } from '../lib/dashboard-copy-v2';
+
+const languages = ['es','en','fr','de','it','pt'] as const;
+const dashboardSource = readFileSync(new URL('../components/Dashboard.tsx', import.meta.url), 'utf8');
+const dashboardPage = readFileSync(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8');
+
+test('el dashboard tiene exactamente las mismas claves en seis idiomas', () => {
+  const expected = Object.keys(dashboardDictionaries.es).sort();
+  for (const language of languages) {
+    const keys = Object.keys(dashboardDictionaries[language]).sort();
+    assert.deepEqual(keys, expected, language);
+    for (const [key,value] of Object.entries(dashboardDictionaries[language])) {
+      assert.ok(value.trim().length > 0, `${language}.${key} vacío`);
+    }
+  }
+});
+
+test('las superficies principales están realmente traducidas', () => {
+  for (const language of ['en','fr','de','it','pt'] as const) {
+    for (const key of ['tabDashboard','privateSession','dashboardSubtitle','importBody','reportsReady','privacyTitle'] as const) {
+      assert.notEqual(dashboardDictionaries[language][key], dashboardDictionaries.es[key], `${language}.${key}`);
+    }
+  }
+});
+
+test('las plantillas interpolan variables sin dejar tokens visibles', () => {
+  assert.equal(dashboardText('en','remaining',{n:3}), '3 left');
+  assert.equal(dashboardText('fr','workingWith',{file:'catalogue.xlsx'}), 'Vous travaillez avec catalogue.xlsx.');
+  assert.equal(dashboardText('de','subscribeFor',{price:'9,95 €'}), 'Für 9,95 €/Monat abonnieren');
+});
+
+test('Dashboard.tsx está conectado estructuralmente al idioma activo', () => {
+  assert.match(dashboardSource, /dashboardText\(language, key, values\)/);
+  assert.match(dashboardSource, /toLocaleString\(localeFor\(language\)/);
+  assert.match(dashboardSource, /pdfBytes\(current, language\)/);
+  assert.match(dashboardSource, /reportBytes\(current, language\)/);
+  assert.match(dashboardSource, /guideScopeFor\(language\)/);
+  assert.match(dashboardSource, /documentationFor\(product, currentMarketCode, language\)/);
+  assert.doesNotMatch(dashboardSource, /\bGUIDE_SCOPE\b/);
+  assert.doesNotMatch(dashboardSource, /formatPrice\('es'/);
+  assert.doesNotMatch(dashboardSource, /\['dashboard', 'Resumen', 'Vista general'\]/);
+});
+
+test('dashboard dynamic route seeds language server-side before customer UI hydration', () => {
+  assert.match(dashboardPage, /lang\?: string/);
+  assert.match(dashboardPage, /const language = await serverLanguage\(params\.lang\)/);
+  assert.match(dashboardPage, /redirect\(`\/login\?lang=\$\{language\}`\)/);
+  assert.match(dashboardPage, /<LanguageProvider initialLanguage=\{language\}>/);
+});

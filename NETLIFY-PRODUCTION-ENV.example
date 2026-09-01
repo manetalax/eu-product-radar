@@ -1,0 +1,46 @@
+# ImportVerifier — Netlify production environment template
+# Safe canonical values are prefilled. Never commit the real values for blank secret/legal fields.
+# Netlify production must pass the release guard in next.config.ts before it can publish.
+
+# Canonical public application configuration
+NEXT_PUBLIC_SITE_URL=https://importverifier.netlify.app
+NEXT_PUBLIC_SUPABASE_URL=https://hfuwwjdcyudflamwwnon.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_v-MjugChJ8sS8t1O1mQ4bQ_D15ZfUl9
+
+# Supabase privileged server credential — obtain from the canonical project; must start sb_secret_
+SUPABASE_SECRET_KEY=
+
+# Stripe live billing — secret values stay only in Netlify
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_STARTER=price_1UAJy5HJnO8odw1Mn4jMVjFt
+STRIPE_PRICE_ANNUAL=price_1UAjP0HJnO8odw1M7RBK8jsR
+STRIPE_PRICE_LIFETIME=price_1UAjP8HJnO8odw1MmSXdkNIh
+
+# Truthful legal provider identity — required before paid Checkout is allowed in production
+LEGAL_PROVIDER_NAME=
+LEGAL_PROVIDER_ADDRESS=
+LEGAL_TAX_ID=
+LEGAL_JURISDICTION=
+LEGAL_REFUND_POLICY=
+
+# Production AI policy — paid-provider fallback is intentionally disabled
+AI_COST_POLICY=free_only
+SILICONFLOW_API_KEY=
+SILICONFLOW_BASE_URL=https://api.siliconflow.com/v1
+SILICONFLOW_TEXT_MODEL=THUDM/GLM-Z1-9B-0414
+SILICONFLOW_OCR_MODEL=PaddlePaddle/PaddleOCR-VL-1.5
+SILICONFLOW_VISION_MODEL=PaddlePaddle/PaddleOCR-VL-1.5
+
+# Optional paid-provider credentials are intentionally not required under free_only
+OPENAI_API_KEY=
+OPENAI_PRODUCT_EXTRACT_MODEL=gpt-5.6-terra
+OPENAI_REGULATORY_AGENT_MODEL=
+
+# Regulatory Radar — keep false until a strong shared secret is configured AND real EUR-Lex events persist
+REGULATORY_INGEST_SECRET=
+REGULATORY_RADAR_LIVE=false
+
+# Optional integrations / telemetry
+RESEND_API_KEY=
+NEXT_PUBLIC_POSTHOG_KEY=

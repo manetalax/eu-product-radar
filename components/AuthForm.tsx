@@ -1,19 +1,17 @@
 'use client';
+
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 import Brand from '@/components/Brand';
 import TrustMark from '@/components/TrustMark';
-import { PlanId, PLANS_BY_ID } from '@/lib/plans';
+import { authCopy, authErrorKey, AuthErrorKey, AuthMode, AuthNoticeKey, LoginNoticeKey } from '@/lib/auth-i18n';
+import type { UnlimitedBillingOption } from '@/lib/billing';
+import { landingCopy, Language, LANGUAGE_OPTIONS } from '@/lib/landing-i18n';
+import { PurchaseId, purchaseName } from '@/lib/plans';
+import { IMPORTVERIFIER_PRODUCTION_URL } from '@/lib/release-config';
 import { authService } from '@/lib/services/auth-client';
 import { planInterestMetadata, savePlanIntent } from '@/lib/services/plan-interest';
-
-type Mode = 'login' | 'signup' | 'forgot' | 'reset';
-const titles: Record<Mode, string> = {
-  login: 'Entrar en tu cuenta',
-  signup: 'Crear cuenta',
-  forgot: 'Recuperar contraseña',
-  reset: 'Nueva contraseña'
-};
+import { useLanguage } from '@/lib/use-language';
 
 function GoogleIcon() {
   return (
@@ -34,144 +32,174 @@ function EyeIcon({ hidden }: { hidden: boolean }) {
   );
 }
 
-function authMessage(error: { code?: string; message: string }) {
-  if (error.code === 'invalid_credentials') return 'El correo o la contraseña no son correctos.';
-  if (error.code === 'email_not_confirmed') return 'Confirma primero tu correo mediante el enlace que recibiste.';
-  if (error.code?.includes('rate_limit') || /rate limit/i.test(error.message)) return 'Se ha alcanzado el límite temporal de intentos o correos. Espera antes de volver a intentarlo.';
-  if (/not authorized|email_address_not_authorized/i.test(`${error.code} ${error.message}`)) return 'El correo aún está limitado a cuentas de prueba autorizadas. El administrador debe configurar SMTP para admitir otros correos.';
-  if (error.code === 'weak_password') return 'Elige una contraseña más segura y que no hayas utilizado en otro servicio.';
-  if (error.code === 'same_password') return 'La nueva contraseña debe ser distinta de la anterior.';
-  return 'No se ha podido completar la operación. Revisa los datos, la conexión y vuelve a intentarlo.';
-}
-
-export default function AuthForm({ initialMode = 'login', initialMessage = '', requestedPlan }: { initialMode?: Mode; initialMessage?: string; requestedPlan?: PlanId }) {
-  const [mode, setMode] = useState<Mode>(initialMode);
+export default function AuthForm({
+  initialMode = 'login',
+  initialMessageKey,
+  requestedPlan,
+  requestedBillingOption = 'monthly',
+}: {
+  initialMode?: AuthMode;
+  initialMessageKey?: LoginNoticeKey;
+  requestedPlan?: PurchaseId;
+  requestedBillingOption?: UnlimitedBillingOption;
+}) {
+  const { language, setLanguage } = useLanguage();
+  const t = authCopy[language];
+  const trust = landingCopy[language].trust;
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState(initialMessage);
+  const [errorKey, setErrorKey] = useState<AuthErrorKey | null>(null);
+  const [noticeKey, setNoticeKey] = useState<AuthNoticeKey | null>(initialMessageKey ?? null);
 
-  const change = (next: Mode) => {
+  const change = (next: AuthMode) => {
     setMode(next);
-    setError('');
-    setNotice('');
+    setErrorKey(null);
+    setNoticeKey(null);
     setPassword('');
     setConfirm('');
     setShowPassword(false);
     setShowConfirm(false);
   };
 
+  const callbackUrl = (next?: string) => {
+    const currentOrigin = window.location.origin;
+    const localDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const origin = localDevelopment ? currentOrigin : IMPORTVERIFIER_PRODUCTION_URL;
+    const params = new URLSearchParams({ lang: language });
+    if (next) params.set('next', next);
+    return `${origin}/auth/callback?${params.toString()}`;
+  };
+
+  const rememberPlanIntent = () => {
+    if (requestedPlan) savePlanIntent(requestedPlan, requestedBillingOption);
+  };
+
   async function signInWithGoogle() {
     setBusy(true);
-    setError('');
-    setNotice('');
+    setErrorKey(null);
+    setNoticeKey(null);
     try {
-      if (requestedPlan) savePlanIntent(requestedPlan);
-      const { data, error } = await authService.signInWithOAuth(`${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`);
+      rememberPlanIntent();
+      const { data, error } = await authService.signInWithOAuth(callbackUrl());
       if (error || !data.url) {
-        setError('No se ha podido iniciar el acceso con Google. Comprueba que el proveedor está configurado en Supabase.');
+        setErrorKey('googleConfig');
         setBusy(false);
         return;
       }
       window.location.assign(data.url);
     } catch {
-      setError('No se ha podido conectar con Google. Vuelve a intentarlo.');
+      setErrorKey('googleConnection');
       setBusy(false);
     }
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError('');
-    setNotice('');
+    setErrorKey(null);
+    setNoticeKey(null);
     if ((mode === 'signup' || mode === 'reset') && (password.length < 8 || password !== confirm)) {
-      setError('Usa al menos 8 caracteres y escribe la misma contraseña en los dos campos.');
+      setErrorKey('passwordMismatch');
       return;
     }
     setBusy(true);
     try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!;
       if (mode === 'login') {
         const { error } = await authService.signInWithPassword(email.trim(), password);
-        if (error) setError(authMessage(error));
+        if (error) setErrorKey(authErrorKey(error));
         else {
-          if (requestedPlan) savePlanIntent(requestedPlan);
-          window.location.assign('/dashboard');
+          rememberPlanIntent();
+          window.location.assign(`/dashboard?lang=${language}`);
         }
       } else if (mode === 'signup') {
-        const { data, error } = await authService.signUp(email.trim(), password, `${siteUrl}/auth/callback`, requestedPlan ? planInterestMetadata(requestedPlan) : undefined);
-        if (error) setError(authMessage(error));
-        else if (data.session) window.location.assign('/dashboard');
-        else {
-          if (requestedPlan) savePlanIntent(requestedPlan);
-          setNotice('Si el registro puede completarse, recibirás un correo de confirmación. Revisa también spam. Si ya tenías cuenta, utiliza Entrar o Recuperar contraseña.');
+        const { data, error } = await authService.signUp(
+          email.trim(),
+          password,
+          callbackUrl(),
+          requestedPlan ? planInterestMetadata(requestedPlan, requestedBillingOption) : undefined,
+        );
+        if (error) setErrorKey(authErrorKey(error));
+        else if (data.session) {
+          rememberPlanIntent();
+          window.location.assign(`/dashboard?lang=${language}`);
+        } else {
+          rememberPlanIntent();
+          setNoticeKey('signupConfirmation');
           setPassword('');
           setConfirm('');
         }
       } else if (mode === 'forgot') {
-        const { error } = await authService.resetPasswordForEmail(email.trim(), `${siteUrl}/auth/callback?next=/reset-password`);
-        if (error) setError(authMessage(error)); else setNotice('Si existe una cuenta autorizada con ese correo, recibirás un enlace para cambiar la contraseña.');
+        const { error } = await authService.resetPasswordForEmail(email.trim(), callbackUrl('/reset-password'));
+        if (error) setErrorKey(authErrorKey(error)); else setNoticeKey('forgotEmail');
       } else {
         const { error } = await authService.updatePassword(password);
-        if (error) setError(authMessage(error));
+        if (error) setErrorKey(authErrorKey(error));
         else {
           await authService.signOut();
-          window.location.assign('/login?message=password_updated');
+          window.location.assign(`/login?message=password_updated&lang=${language}`);
         }
       }
     } catch {
-      setError('No se ha podido conectar. Comprueba tu conexión y la configuración del servicio.');
+      setErrorKey('connection');
     } finally {
       setBusy(false);
     }
   }
 
   return <main className="shell"><section className="login card auth-card">
-    <Brand />
-    <h1>{titles[mode]}</h1>
-    {requestedPlan && (mode === 'login' || mode === 'signup') && <p className="plan-intent-note"><strong>{PLANS_BY_ID[requestedPlan].name} seleccionado.</strong> Primero crea tu cuenta o entra. Solo registraremos tu interés; no se activa ningún cobro.</p>}
-    <p className="muted">Tu cuenta y tus catálogos son privados. La comprobación actual detecta campos incompletos; no certifica conformidad normativa.</p>
+    <div className="auth-brand-row">
+      <Brand market="EU" href={`/${language}`} />
+      <label className="language-picker auth-language-picker">
+        <span className="sr-only">{t.language}</span>
+        <select value={language} aria-label={t.language} disabled={busy} onChange={event => setLanguage(event.target.value as Language)}>
+          {LANGUAGE_OPTIONS.map(option => <option key={option.code} value={option.code}>{option.label}</option>)}
+        </select>
+      </label>
+    </div>
+    <h1>{t.titles[mode]}</h1>
+    {requestedPlan && (mode === 'login' || mode === 'signup') && <p className="plan-intent-note"><strong>{t.selectedPlan(purchaseName(requestedPlan))}</strong> {t.selectedPlanHelp}</p>}
+    <p className="muted">{t.intro}</p>
 
     {(mode === 'login' || mode === 'signup') && <div className="auth-actions oauth-section">
       <button type="button" className="btn oauth-btn full" disabled={busy} onClick={signInWithGoogle}>
         <span className="oauth-icon"><GoogleIcon /></span>
-        <span>{busy ? 'Conectando con Google…' : 'Continuar con Google'}</span>
+        <span>{busy ? t.googleConnecting : t.googleContinue}</span>
       </button>
-      <div className="auth-divider"><span>o continúa con correo electrónico</span></div>
+      <div className="auth-divider"><span>{t.emailDivider}</span></div>
     </div>}
 
     <form onSubmit={submit}>
-      {mode !== 'reset' && <label>Correo electrónico<input required type="email" autoComplete="email" maxLength={254} value={email} disabled={busy} onChange={e => setEmail(e.target.value)} /></label>}
+      {mode !== 'reset' && <label>{t.email}<input required type="email" autoComplete="email" maxLength={254} value={email} disabled={busy} onChange={e => setEmail(e.target.value)} /></label>}
 
-      {mode !== 'forgot' && <label>Contraseña
+      {mode !== 'forgot' && <label>{t.password}
         <div className="password-field">
           <input required type={showPassword ? 'text' : 'password'} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={mode === 'login' ? 1 : 8} maxLength={128} value={password} disabled={busy} onChange={e => setPassword(e.target.value)} />
-          <button type="button" className="password-toggle" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={showPassword} disabled={busy} onClick={() => setShowPassword(value => !value)}><EyeIcon hidden={showPassword} /></button>
+          <button type="button" className="password-toggle" aria-label={showPassword ? t.hidePassword : t.showPassword} aria-pressed={showPassword} disabled={busy} onClick={() => setShowPassword(value => !value)}><EyeIcon hidden={showPassword} /></button>
         </div>
-        {(mode === 'signup' || mode === 'reset') && <span className="field-help">Mínimo 8 caracteres.</span>}
+        {(mode === 'signup' || mode === 'reset') && <span className="field-help">{t.minimumPassword}</span>}
       </label>}
 
-      {(mode === 'signup' || mode === 'reset') && <label>Repite la contraseña
+      {(mode === 'signup' || mode === 'reset') && <label>{t.confirmPassword}
         <div className="password-field">
           <input required type={showConfirm ? 'text' : 'password'} autoComplete="new-password" minLength={8} maxLength={128} value={confirm} disabled={busy} onChange={e => setConfirm(e.target.value)} />
-          <button type="button" className="password-toggle" aria-label={showConfirm ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={showConfirm} disabled={busy} onClick={() => setShowConfirm(value => !value)}><EyeIcon hidden={showConfirm} /></button>
+          <button type="button" className="password-toggle" aria-label={showConfirm ? t.hidePassword : t.showPassword} aria-pressed={showConfirm} disabled={busy} onClick={() => setShowConfirm(value => !value)}><EyeIcon hidden={showConfirm} /></button>
         </div>
       </label>}
 
-      {error && <p className="message error" role="alert">{error}</p>}
-      {notice && <p className="message success" role="status">{notice}</p>}
-      <button className="btn primary full" disabled={busy}>{busy ? 'Procesando…' : mode === 'forgot' ? 'Enviar enlace' : mode === 'reset' ? 'Guardar contraseña' : mode === 'signup' ? 'Crear cuenta con correo' : 'Entrar con correo'}</button>
+      {errorKey && <p className="message error" role="alert">{t.errors[errorKey]}</p>}
+      {noticeKey && <p className="message success" role="status">{t.notices[noticeKey]}</p>}
+      <button className="btn primary full" disabled={busy}>{busy ? t.processing : mode === 'forgot' ? t.sendLink : mode === 'reset' ? t.savePassword : mode === 'signup' ? t.createWithEmail : t.signInWithEmail}</button>
     </form>
 
     {mode !== 'reset' && <div className="auth-actions auth-secondary-actions">
-      <button className="btn ghost" disabled={busy} onClick={() => change(mode === 'login' ? 'signup' : 'login')}>{mode === 'login' ? 'Crear una cuenta' : 'Ya tengo cuenta'}</button>
-      {mode === 'login' && <button className="text-button" disabled={busy} onClick={() => change('forgot')}>¿Has olvidado tu contraseña?</button>}
+      <button className="btn ghost" disabled={busy} onClick={() => change(mode === 'login' ? 'signup' : 'login')}>{mode === 'login' ? t.createAccount : t.haveAccount}</button>
+      {mode === 'login' && <button className="text-button" disabled={busy} onClick={() => change('forgot')}>{t.forgotPassword}</button>}
     </div>}
-    <TrustMark title="EPR Trust Mark" detail="Comprobaciones internas de transparencia" httpsLabel="Conexión HTTPS segura" explanation="Sello interno de Product Radar. No es una certificación externa ni acredita la conformidad de un producto." compact />
-    <Link className="back-link" href="/">Volver a la portada</Link>
+    <TrustMark title={trust.title} detail={trust.detail} httpsLabel={trust.https} explanation={trust.explanation} compact />
+    <Link className="back-link" href={`/${language}`}>{t.back}</Link>
   </section></main>;
 }

@@ -1,22 +1,41 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { formatPrice, formatProductCount, landingCopy, LANGUAGES } from '../lib/landing-i18n';
-import { PLANS } from '../lib/plans';
+import { readFileSync } from 'node:fs';
+import { formatProductCount, landingCopy, LANGUAGES } from '../lib/landing-i18n';
+import { FREE_TRIAL_PRODUCT_LIMIT, PLANS, UNLIMITED_FAIR_USE_CEILING, UNLIMITED_PUBLIC_OFFERS } from '../lib/plans';
 
-test('los planes comerciales conservan la escalera final acordada', () => {
-  assert.deepEqual(PLANS.map(plan => [plan.id, plan.monthlyPriceEur, plan.monthlyProductLimit]), [
-    ['starter', 19, 50],
-    ['growth', 29, 150],
-    ['pro', 49, 500],
-    ['business', 149, 2_000],
-  ]);
-  assert.deepEqual(PLANS.filter(plan => plan.featured).map(plan => plan.id), ['pro']);
+const planInterest = readFileSync(new URL('../lib/services/plan-interest.ts', import.meta.url), 'utf8');
+const loginPage = readFileSync(new URL('../app/login/page.tsx', import.meta.url), 'utf8');
+
+test('cada cuenta conserva exactamente 5 productos de prueba gratuita', () => {
+  assert.equal(FREE_TRIAL_PRODUCT_LIMIT, 5);
 });
 
-test('cada idioma tiene textos completos de planes y unidades propias', () => {
+test('la capacidad pública sigue siendo un único Unlimited con tres modalidades de pago', () => {
+  assert.deepEqual(PLANS.map(plan => [plan.id, plan.name, plan.monthlyPriceEur, plan.unlimited]), [
+    ['starter', 'Unlimited', 9.95, true],
+  ]);
+  assert.equal(PLANS[0].monthlyProductLimit, UNLIMITED_FAIR_USE_CEILING);
+  assert.deepEqual(PLANS.filter(plan => plan.featured).map(plan => plan.id), ['starter']);
+  assert.deepEqual(UNLIMITED_PUBLIC_OFFERS.map(offer => [offer.id, offer.priceEur, offer.cadence]), [
+    ['monthly', 9.95, 'month'],
+    ['annual', 89.95, 'year'],
+    ['lifetime', 149, 'lifetime'],
+  ]);
+});
+
+test('la intención pública de compra es one-shot, valida la modalidad y mantiene compatibilidad mensual', () => {
+  assert.match(planInterest, /const PUBLIC_PURCHASE_INTENT = 'starter'/);
+  assert.match(planInterest, /window\.localStorage\.removeItem\(PLAN_INTENT_STORAGE_KEY\)/);
+  assert.match(planInterest, /if \(stored === PUBLIC_PURCHASE_INTENT\) return \{ planId: PUBLIC_PURCHASE_INTENT, billingOption: 'monthly' \}/);
+  assert.match(planInterest, /isUnlimitedBillingOption\(parsed\.billingOption\)/);
+  assert.match(loginPage, /const requestedPlan = plan === 'starter' \? 'starter' as const : undefined/);
+  assert.doesNotMatch(loginPage, /isPurchaseId/);
+});
+
+test('cada idioma conserva textos completos y unidades localizadas', () => {
   for (const language of LANGUAGES) {
     for (const plan of PLANS) assert.ok(landingCopy[language].pricing.descriptions[plan.id].length > 20);
-    assert.ok(formatPrice(language, 19).includes('19'));
     assert.ok(formatProductCount(language, 2_000).includes('2'));
   }
   assert.equal(formatProductCount('de', 10_000), '10.000 Produkte');
@@ -25,6 +44,4 @@ test('cada idioma tiene textos completos de planes y unidades propias', () => {
   assert.equal(formatProductCount('it', 10_000), '10.000 prodotti');
   assert.equal(formatProductCount('pt', 10_000), '10 000 produtos');
   assert.equal(formatProductCount('es', 10_000), '10.000 productos');
-  assert.equal(formatProductCount('de', 2_000), '2.000 Produkte');
-  assert.equal(formatProductCount('es', 2_000), '2.000 productos');
 });

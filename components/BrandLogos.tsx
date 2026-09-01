@@ -1,4 +1,4 @@
-import { siEbay, siEtsy, siMastercard, siNetlify, siPaypal, siShopify, siStripe, siSupabase, siVisa, siWoocommerce } from 'simple-icons';
+import { siEbay, siEtsy, siMastercard, siNetlify, siShopify, siStripe, siSupabase, siVisa, siWoocommerce } from 'simple-icons';
 
 type Logo = { name: string; icon?: { path: string; hex: string } };
 type LogoGroup = 'commerce' | 'payments' | 'infrastructure';
@@ -13,7 +13,6 @@ const LOGOS: Record<LogoGroup, readonly Logo[]> = {
   ],
   payments: [
     { name: 'Stripe', icon: siStripe },
-    { name: 'PayPal', icon: siPaypal },
     { name: 'Visa', icon: siVisa },
     { name: 'Mastercard', icon: siMastercard },
   ],

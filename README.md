@@ -1,50 +1,51 @@
-# Product Radar
+# ImportVerifier
 
-Next.js 16.3.3 + TypeScript. Implementación de cuentas reales y catálogos privados con Supabase.
+Next.js 16.3.3 + TypeScript. SaaS de análisis regulatorio de productos para importadores y vendedores, con cuentas privadas, trazabilidad documental y foco inicial en la Unión Europea.
 
 ## Activación
 
-Sigue [SETUP.md](SETUP.md) antes de publicar esta versión: incluye la migración SQL, las direcciones de autenticación, las plantillas de correo y la prueba de aceptación. Crear un proyecto en Supabase no aplica automáticamente estas configuraciones.
+Sigue [SETUP.md](SETUP.md) y, para el estado operativo más reciente, lee primero [WORK-CHAT-CONTINUITY.md](WORK-CHAT-CONTINUITY.md). Crear servicios externos no aplica automáticamente sus redirects, secretos ni ajustes de seguridad.
 
 ## Implementado
 
-- Registro, confirmación de correo, acceso, cierre de sesión y cambio/recuperación de contraseña.
-- Panel privado sin productos precargados y con historial persistente.
-- Importación CSV UTF-8 / XLS / XLSX validada, con límites de tamaño y filas.
-- Lectura flexible de exportaciones de comercio electrónico: el nombre es obligatorio y los campos ausentes se convierten en tareas del análisis.
-- Módulo europeo activo con guía documental, fuentes oficiales e informes Excel y PDF.
-- Arquitectura por mercado: Europa activa; Estados Unidos, China, Reino Unido y Japón preparados como próximos módulos.
-- RLS y permisos explícitos que aíslan los catálogos de cada cuenta.
-- Identidad global centralizada y marca de mercado separada del núcleo del producto.
-- Experiencias responsive diferenciadas para escritorio, tablet/iPad y móvil, con manifiesto PWA y safe areas.
-- Planes, precios, límites e idiomas definidos en módulos TypeScript puros y reutilizables por futuros clientes web o nativos.
-- Autenticación y registro de interés comercial encapsulados en servicios cliente, sin acoplar la interfaz directamente a Supabase.
-- Pruebas automatizadas de importación, reglas y seguridad de base de datos.
+- Registro, confirmación de correo, acceso, Google OAuth, cierre de sesión y cambio/recuperación de contraseña.
+- Panel privado con historial persistente y aislamiento por cuenta mediante RLS.
+- Exactamente 5 productos gratuitos totales por cuenta, sin tarjeta y sin reinicio mensual.
+- Único plan público de pago: **ImportVerifier Unlimited · 9,95 €/mes**. `starter` se conserva únicamente como identificador interno compatible con Stripe y la base de datos.
+- Stripe Checkout mensual, portal de cliente, sincronización de entitlement, webhooks firmados e integración con borrado de cuenta.
+- Importación local CSV/XLS/XLSX y entrada mediante texto/documentos/imágenes compatibles; los flujos de IA de producción están diseñados para política `free_only` sin fuga a proveedores premium.
+- Módulo regulatorio UE versionado, guía documental, fuentes oficiales, Product Regulatory Twin, evidencia persistida y Regulatory Impact Radar.
+- Informes PDF y Excel localizados con evidencia, trazabilidad y advertencias de incertidumbre; el PDF y la hoja regulatoria usan una jerarquía visual premium.
+- Estados Unidos, China, Reino Unido y Japón permanecen preparados como módulos separados pero **no están activos para clientes** hasta completar su validación documental.
+- Borrado autoservicio de cuenta y datos con doble confirmación, revocación global de sesiones y eliminación segura.
+- Experiencia responsive para escritorio, móvil e iPad y PWA con safe areas, controles táctiles e higiene de caché para contenido privado.
+- Portada, autenticación, dashboard, informes y superficies activas traducidas a español, inglés, francés, alemán, italiano y portugués.
+- Arquitectura de conectores Shopify/Amazon/Etsy preparada; no se anuncian como activos hasta disponer de OAuth/API oficiales.
+- Pruebas automatizadas de importación, cuota lifetime, billing, reglas, seguridad, RLS, evidencia, Radar, i18n, PWA y exportación.
 
-## Planes preparados
+## Oferta comercial canónica
 
-- Starter: 19 €/mes, hasta 50 productos.
-- Growth: 29 €/mes, hasta 150 productos.
-- Pro: 49 €/mes, hasta 500 productos; opción recomendada.
-- Business: 149 €/mes, hasta 2.000 productos.
+- **Free trial:** 5 productos totales por cuenta, sin tarjeta y sin reinicio.
+- **ImportVerifier Unlimited:** 9,95 € al mes.
 
-La prueba gratuita conserva 5 productos. Los planes se muestran y formatean íntegramente en español, inglés, francés, alemán, italiano y portugués. La reserva registra interés: no existe todavía checkout ni cargo.
+No existen planes públicos Starter, Growth, Pro o Business en la oferta actual. Cualquier referencia histórica a `starter` representa el ID interno del plan Unlimited y no una oferta distinta.
 
 ## Base para aplicaciones
 
-`lib/plans.ts`, `lib/landing-i18n.ts`, `lib/analysis.ts`, `lib/markets.ts` y `lib/import-products.ts` concentran reglas y datos reutilizables sin componentes visuales. `lib/services/` aísla los proveedores web de autenticación y del interés comercial. Las futuras apps Android/iPhone pueden reutilizar el dominio y sustituir únicamente la capa de interfaz y el adaptador de autenticación.
+`lib/plans.ts`, `lib/billing.ts`, `lib/landing-i18n.ts`, `lib/analysis.ts`, `lib/markets.ts` y `lib/import-products.ts` concentran reglas y datos reutilizables sin depender de la interfaz. La arquitectura mantiene preparada la evolución a clientes iPhone/iPad/Android y escritorio sin duplicar el dominio regulatorio.
 
 ## Ejecutar
 
 ```bash
 npm ci
 cp .env.example .env.local
-# Configurar las tres variables públicas.
+# Configurar las variables públicas y los secretos indicados en .env.example.
 npm test
+npm run typecheck
 npm run build
 npm run dev
 ```
 
-## Alcance
+## Alcance y publicación
 
-El indicador actual cuenta campos ausentes: no comprueba veracidad, requisitos por categoría ni conformidad normativa. Europa es el único módulo operativo; los demás mercados son una hoja de ruta. Los planes de pago permiten registrar interés, pero no cobran suscripciones. El SMTP para clientes, controles de abuso, proceso de borrado y verificación en el entorno real son necesarios antes de abrir el servicio al público.
+Europa es el único mercado operativo. El sistema presenta evaluación, evidencia, incertidumbres y documentación requerida; no debe anunciarse como certificación oficial ni afiliación institucional. La publicación real depende además de la configuración externa descrita en `WORK-CHAT-CONTINUITY.md`, incluyendo dominio/redirects de Auth, secretos de Netlify, SMTP, protección frente a contraseñas filtradas, proveedor gratuito de IA y datos legales veraces para habilitar cobros.

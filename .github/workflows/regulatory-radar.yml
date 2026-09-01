@@ -1,0 +1,27 @@
+name: ImportVerifier regulatory radar
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 */6 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  refresh-eurlex:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Refresh official EUR-Lex radar
+        env:
+          REGULATORY_INGEST_SECRET: ${{ secrets.REGULATORY_INGEST_SECRET }}
+        run: |
+          test -n "$REGULATORY_INGEST_SECRET"
+          curl --fail-with-body --silent --show-error \
+            --retry 2 --retry-delay 5 --max-time 60 \
+            -X POST \
+            -H "Authorization: Bearer $REGULATORY_INGEST_SECRET" \
+            -H "Content-Type: application/json" \
+            --data '{}' \
+            https://importverifier.netlify.app/api/internal/regulatory-refresh

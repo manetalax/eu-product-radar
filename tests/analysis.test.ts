@@ -18,8 +18,8 @@ test('el informe exportado conserva datos, resumen y formato después de abrir e
   const source = reportFixture();
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(await reportBytes(source) as unknown as ExcelJS.Buffer);
-  assert.deepEqual(wb.worksheets.map(s => s.name), ['Resumen', 'Productos', 'Datos técnicos', 'Guía documental']);
-  const summary = wb.getWorksheet('Resumen')!, products = wb.getWorksheet('Productos')!, technical = wb.getWorksheet('Datos técnicos')!;
+  assert.deepEqual(wb.worksheets.map(s => s.name), ['Resumen', 'Productos', 'Datos técnicos', 'Guía documental', 'Evidencia', 'Evaluación regulatoria']);
+  const summary = wb.getWorksheet('Resumen')!, products = wb.getWorksheet('Productos')!, technical = wb.getWorksheet('Datos técnicos')!, regulatory = wb.getWorksheet('Evaluación regulatoria')!;
   assert.deepEqual([8,9,10,11,13].map(row => summary.getCell(row, 2).result), [5,2,2,1,47]);
   assert.deepEqual([5,6,7,8,9].map(row => products.getCell(row, 2).value), [92,64,36,36,8]);
   source.products.forEach((p, i) => assert.deepEqual([1,2,3,4].map(col => technical.getCell(i + 13, col).value ?? ''), [p.name,p.manufacturer,p.responsible,p.warning]));
@@ -29,6 +29,7 @@ test('el informe exportado conserva datos, resumen y formato después de abrir e
   assert.ok(products.getRow(5).height! >= 60);
   assert.equal(products.views[0].state, 'frozen');
   assert.equal(summary.getCell('B5').type, ExcelJS.ValueType.Date);
+  assert.match(String(regulatory.getCell('A1').value), /REGULATORIA/);
 });
 test('el informe mantiene los textos con apariencia de fórmulas como datos y rechaza reglas desconocidas', async () => {
   const source = reportFixture();
@@ -107,11 +108,13 @@ test('el indicador solo evalúa presencia, no cumplimiento', () => {
   const products=validateProducts([{name:'Ejemplo',manufacturer:'No comprobado',responsible:'No comprobado',warning:'No comprobado'}]);
   assert.equal(analyze(products)[0].score,8);
 });
-test('la cuota gratuita cuenta cinco productos por mes UTC y nunca queda negativa', () => {
-  const quota = productQuota(3, new Date('2026-08-29T23:30:00Z'));
-  assert.deepEqual(quota, { limit: 5, used: 3, remaining: 2, periodStart: '2026-08-01' });
+test('la prueba gratuita cuenta cinco productos totales por cuenta y nunca se reinicia por fecha', () => {
+  const august = productQuota(3, new Date('2026-08-29T23:30:00Z'));
+  const september = productQuota(3, new Date('2026-09-29T23:30:00Z'));
+  assert.deepEqual(august, { limit: 5, used: 3, remaining: 2, periodStart: 'lifetime', billing: { planId: 'free', planName: 'Gratis', status: null, productLimit: 5, currentPeriodEnd: null, cancelAtPeriodEnd: false, billingOption: null } });
+  assert.deepEqual(september, august);
   assert.equal(productQuota(8).remaining, 0);
-  assert.match(quotaExceededMessage(4, quota), /contiene 4.*te quedan 2/);
+  assert.match(quotaExceededMessage(4, august), /5 productos en total.*contiene 4.*te quedan 2/i);
 });
 test('redirecciones de autenticación limitadas a destinos internos concretos', () => {
   for(const path of ['https://evil.example','//evil.example','/\\evil.example',null,'/dashboard?token=x']) assert.equal(safeAuthDestination(path),'/dashboard');
@@ -119,12 +122,12 @@ test('redirecciones de autenticación limitadas a destinos internos concretos', 
 });
 test('las mutaciones requieren el origen configurado y JSON de tamaño acotado', async () => {
   const old=process.env.NEXT_PUBLIC_SITE_URL;
-  process.env.NEXT_PUBLIC_SITE_URL='https://euproductradar.netlify.app';
+  process.env.NEXT_PUBLIC_SITE_URL='https://importverifier.netlify.app';
   try {
-    assert.equal(sameOrigin(new Request('https://euproductradar.netlify.app/api/analyses',{headers:{origin:'https://evil.example'}})),false);
-    assert.equal(sameOrigin(new Request('https://euproductradar.netlify.app/api/analyses',{headers:{origin:process.env.NEXT_PUBLIC_SITE_URL}})),true);
+    assert.equal(sameOrigin(new Request('https://importverifier.netlify.app/api/analyses',{headers:{origin:'https://evil.example'}})),false);
+    assert.equal(sameOrigin(new Request('https://importverifier.netlify.app/api/analyses',{headers:{origin:process.env.NEXT_PUBLIC_SITE_URL}})),true);
     assert.deepEqual(await readJsonBody(new Request('http://local',{method:'POST',body:'{"products":[]}'})),{products:[]});
     await assert.rejects(readJsonBody(new Request('http://local',{method:'POST',body:'x'})),/válido/);
-    await assert.rejects(readJsonBody(new Request('http://local',{method:'POST',body:'a'.repeat(MAX_BODY_BYTES+1)})),/2 MB/);
+    await assert.rejects(readJsonBody(new Request('http://local',{method:'POST',body:'a'.repeat(MAX_BODY_BYTES+1)})),/límite permitido/);
   } finally { if(old===undefined)delete process.env.NEXT_PUBLIC_SITE_URL;else process.env.NEXT_PUBLIC_SITE_URL=old; }
 });
