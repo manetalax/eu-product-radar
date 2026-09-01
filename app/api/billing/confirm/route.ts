@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { billingOptionForStripePrice } from '@/lib/billing';
 import { billingText } from '@/lib/billing-i18n';
 import { PRIVATE_HEADERS, readJsonBody, sameOrigin } from '@/lib/http';
 import { requestLanguage } from '@/lib/request-language';
@@ -47,7 +48,15 @@ export async function POST(request: Request) {
       if (!CONFIRMED_SUBSCRIPTION_STATUSES.has(subscription.status)) {
         return json({ error: b('paymentOpen') }, 409);
       }
-      return json({ confirmed: true, billingOption: session.metadata?.billing_option ?? 'monthly' });
+
+      // Stripe price identity is authoritative. Checkout metadata is useful for correlation,
+      // but it must never decide what billing cadence the API reports to the customer.
+      const priceId = subscription.items.data.length === 1 ? subscription.items.data[0]?.price?.id : null;
+      const billingOption = billingOptionForStripePrice(priceId);
+      if (billingOption !== 'monthly' && billingOption !== 'annual') {
+        return json({ error: b('paymentOpen') }, 409);
+      }
+      return json({ confirmed: true, billingOption });
     }
 
     if (session.mode === 'payment') {
