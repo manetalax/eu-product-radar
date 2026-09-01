@@ -16,7 +16,7 @@
 ## Operating rule
 Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, record it and continue elsewhere. Do not repeat DONE sweeps. Batch browser/credential/device acceptance for the end. Use connected tools before asking the owner for a credential or console action; reduce owner intervention to the irreducible external step.
 
-`AGENTS.md` now codifies a multidisciplinary senior review model covering product/strategy, UX/design, application engineering, architecture/platform, security/privacy, billing/revenue, AI/data, regulatory/evidence, QA/release, performance/reliability, growth/SEO/localization and operations/SRE. Apply relevant departments to each substantial change, but do not manufacture speculative work when a surface is already correct.
+`AGENTS.md` codifies a multidisciplinary senior review model covering product/strategy, UX/design, application engineering, architecture/platform, security/privacy, billing/revenue, AI/data, regulatory/evidence, QA/release, performance/reliability, growth/SEO/localization and operations/SRE. Apply relevant departments to each substantial change, but do not manufacture speculative work when a surface is already correct.
 
 ## Commercial invariants
 - Exactly 5 free products total per account, lifetime/cumulative, no card/reset.
@@ -57,19 +57,20 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 
 ## DONE — 2026-09-01 current pass
 - Reconfirmed PR #4 open, mergeable, unmerged.
-- Found the exact CI regression introduced by cadence-aware Dashboard work: `tests/dashboard-billing-intent.test.ts` still required the obsolete monthly-only `void startCheckout()` call.
-- Repaired the regression test so it now locks the correct behavior: persisted purchase intent passes `intent.billingOption`, `startCheckout` accepts `UnlimitedBillingOption`, and the request sends `billingOption: option`.
-- Dashboard settings now distinguish Lifetime from recurring Unlimited: Lifetime has no misleading subscription-management action; monthly/annual retain Portal management.
-- Free Dashboard users see all three canonical acquisition choices and explicit billing cadence; the selected choice is sent to Checkout.
-- Added responsive Dashboard billing presentation: 3 choices on wide desktop, 2+1 on intermediate/tablet widths, 1 column on mobile; annual is visually emphasized as the value option without changing entitlement semantics.
-- Added the multidisciplinary product-company operating standard to `AGENTS.md` and the rule to minimize owner intervention by using connected tools first.
-- Netlify had already reported the cadence-aware functional HEAD `624ee341...` READY even though GitHub CI exposed the stale test; therefore Netlify readiness alone is not accepted as release evidence.
+- Repaired obsolete Dashboard billing-intent regression; persisted purchase intent passes `intent.billingOption`, `startCheckout` accepts `UnlimitedBillingOption`, and the request sends `billingOption: option`.
+- Dashboard settings distinguish Lifetime from recurring Unlimited: Lifetime has no misleading subscription-management action; monthly/annual retain Portal management.
+- Free Dashboard users see all three canonical acquisition choices and explicit billing cadence; selected choice is sent to Checkout.
+- Responsive Dashboard billing presentation: 3 choices desktop, 2+1 tablet, 1 mobile; annual visually emphasized without changing entitlement semantics.
+- Added multidisciplinary operating standard and minimize-owner-intervention rule to `AGENTS.md`.
+- Exact HEAD `ad921ee3ebbef679b2cc5e5553ff10e5582d94c7` was subsequently verified: PR release check #1828 SUCCESS and canonical Netlify Deploy Preview SUCCESS.
+- CI efficiency review found the active PR branch was triggering two identical full release checks for every commit (`push` + `pull_request`). Removed the active branch from the push trigger while retaining PR validation, concurrency cancellation, immutable action pins and npm dependency caching. This cuts redundant CI work without weakening PR release validation.
 
 ## Latest exact verification — 2026-09-01
-- Current repository HEAD before this handoff commit: **`a3af21112b2a60457585e3411c8d556a357bd73b`** (`style: load Dashboard billing layout`).
-- The earlier cadence-aware HEAD `624ee341...` had Netlify Deploy Preview READY but GitHub release check #1818 failed in `npm test`; root cause was the obsolete Dashboard billing-intent regression and is now corrected in `e19afa8...`.
-- Exact-head release checks for `a3af211...` (#1825 push / #1826 PR) were still running at the last inspection; both had reached the workflow and were in `npm ci`. Do not mark this HEAD green until one exact-head run completes tests, typecheck and build successfully.
-- This handoff update creates a newer docs-only HEAD. Reconfirm exact PR HEAD, CI and Netlify after it.
+- Last fully green application/docs HEAD before CI-efficiency commit: **`ad921ee3ebbef679b2cc5e5553ff10e5582d94c7`**.
+- Exact PR-triggered release check #1828: SUCCESS.
+- Exact `netlify/importverifier/deploy-preview`: SUCCESS.
+- CI-efficiency functional commit: **`27f5bd88d9c7c769d9c068265da8f2b5c3e447e3`** (`ci: avoid duplicate release checks on PR branch`).
+- This handoff update creates a newer docs-only HEAD. Reconfirm exact PR HEAD, PR-triggered CI and canonical Netlify preview after it.
 - PR #4 remains open/unmerged. Never merge without explicit owner instruction.
 
 ## Production facts
@@ -82,14 +83,14 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Production env template intentionally keeps privileged secrets and sensitive legal identifiers blank; never commit them.
 
 ## NEXT — execute without asking
-1. Reconfirm exact final HEAD after this handoff commit, exact GitHub release check and correct `netlify/importverifier/deploy-preview`; repair any regression immediately.
+1. Reconfirm exact final HEAD after this handoff commit, exact PR-triggered GitHub release check and correct `netlify/importverifier/deploy-preview`; repair any regression immediately.
 2. Continue genuinely new multidisciplinary review findings, prioritizing demonstrated security/revenue/correctness/user-friction issues over speculative architecture.
 3. Audit Dashboard billing accessibility/keyboard semantics and localized pricing presentation after CI is green; change only demonstrated issues.
 4. Production acceptance when browser/payment conditions permit: monthly → webhook → Unlimited → Portal/cancel; annual equivalent; Lifetime paid → persistent Unlimited → controlled refund/dispute lifecycle.
 5. Fresh-account acceptance: signup/login → five-product sample accepted → sixth rejected → isolated history → premium PDF/XLSX.
 6. Obtain TTFB/LCP/TBT/CLS/resource evidence before performance changes.
 7. Inspect PDF typography/overflow only against a real multi-product output.
-8. Keep Radar disabled until the same strong ingest secret exists in runtime/scheduler and real official EUR-Lex ingestion persists events.
+8. Keep Radar disabled until same strong ingest secret exists runtime/scheduler and real official EUR-Lex ingestion persists events.
 9. Keep EU the only active market and direct marketplace connectors inactive until legitimate credentials exist.
 
 ## BLOCKED EXTERNAL
