@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { readTextBody } from '@/lib/http';
+import { revokeLifetimeEntitlementForFullyRefundedCharge, syncLifetimeCheckoutSession } from '@/lib/stripe/lifetime-entitlement';
 import { stripeClient } from '@/lib/stripe/server';
 import { stripeObjectId, syncStripeSubscription } from '@/lib/stripe/subscription-sync';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -10,6 +11,10 @@ const STRIPE_WEBHOOK_MAX_BYTES = 1024 * 1024;
 
 async function retrieveLatestSubscription(subscriptionId: string) {
   return stripeClient().subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] });
+}
+
+async function retrieveCheckoutSession(sessionId: string) {
+  return stripeClient().checkout.sessions.retrieve(sessionId, { expand: ['line_items.data.price'] });
 }
 
 export async function POST(request: Request) {
@@ -53,12 +58,19 @@ export async function POST(request: Request) {
 
   try {
     if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
-      const session = event.data.object as Stripe.Checkout.Session;
-      const subscriptionId = stripeObjectId(session.subscription);
-      if (subscriptionId) await syncStripeSubscription(await retrieveLatestSubscription(subscriptionId));
+      const snapshot = event.data.object as Stripe.Checkout.Session;
+      const session = await retrieveCheckoutSession(snapshot.id);
+      if (session.mode === 'subscription') {
+        const subscriptionId = stripeObjectId(session.subscription);
+        if (subscriptionId) await syncStripeSubscription(await retrieveLatestSubscription(subscriptionId));
+      } else if (session.mode === 'payment' && session.payment_status === 'paid') {
+        await syncLifetimeCheckoutSession(session);
+      }
     } else if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
       const snapshot = event.data.object as Stripe.Subscription;
       await syncStripeSubscription(await retrieveLatestSubscription(snapshot.id));
+    } else if (event.type === 'charge.refunded') {
+      await revokeLifetimeEntitlementForFullyRefundedCharge(event.data.object as Stripe.Charge);
     }
 
     const completedAt = new Date().toISOString();
