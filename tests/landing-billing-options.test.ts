@@ -8,7 +8,7 @@ const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8')
 
 test('public Unlimited offers remain monthly, annual and Lifetime only', () => {
   assert.deepEqual(UNLIMITED_PUBLIC_OFFERS.map(offer => offer.id), ['monthly', 'annual', 'lifetime']);
-  assert.deepEqual(UNLIMITED_PUBLIC_OFFERS.map(offer => offer.priceEur), [9.95, 89.95, 149]);
+  assert.deepEqual(UNLIMITED_PUBLIC_OFFERS.map(offer => offer.priceEur), [9.95, 89.95, 149.95]);
 });
 
 test('landing sends each billing choice through login and publishes all paid offers', () => {

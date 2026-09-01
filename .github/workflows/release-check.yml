@@ -4,10 +4,10 @@ on:
   pull_request:
   push:
     branches:
-      # Keep direct push validation only for the legacy release-prep branch.
-      # The active ImportVerifier branch is already validated by pull_request,
-      # avoiding two identical full npm/test/typecheck/build runs per commit.
-      - feat/importverifier-release-prep-final3
+      # `main` is the canonical production branch after PR #4 merge. Validate
+      # every production-bound commit while avoiding duplicate push checks on
+      # feature branches that are already covered by pull_request.
+      - main
 
 concurrency:
   group: importverifier-release-${{ github.workflow }}-${{ github.ref }}

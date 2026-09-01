@@ -20,7 +20,7 @@ test('la capacidad pública sigue siendo un único Unlimited con tres modalidade
   assert.deepEqual(UNLIMITED_PUBLIC_OFFERS.map(offer => [offer.id, offer.priceEur, offer.cadence]), [
     ['monthly', 9.95, 'month'],
     ['annual', 89.95, 'year'],
-    ['lifetime', 149, 'lifetime'],
+    ['lifetime', 149.95, 'lifetime'],
   ]);
 });
 

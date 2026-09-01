@@ -19,7 +19,7 @@ export const FREE_TRIAL_PRODUCT_LIMIT = 5;
 export const UNLIMITED_FAIR_USE_CEILING = 1_000_000;
 export const UNLIMITED_MONTHLY_PRICE_EUR = 9.95;
 export const UNLIMITED_ANNUAL_PRICE_EUR = 89.95;
-export const UNLIMITED_LIFETIME_PRICE_EUR = 149;
+export const UNLIMITED_LIFETIME_PRICE_EUR = 149.95;
 export const UNLIMITED_PLAN: PlanDefinition = {
   id: 'starter',
   name: 'Unlimited',

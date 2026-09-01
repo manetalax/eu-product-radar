@@ -6,7 +6,7 @@ export type UnlimitedBillingOption = typeof UNLIMITED_BILLING_OPTIONS[number];
 
 export const IMPORTVERIFIER_UNLIMITED_PRICE_ID = 'price_1UAJy5HJnO8odw1Mn4jMVjFt';
 export const IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID = 'price_1UAjP0HJnO8odw1M7RBK8jsR';
-export const IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID = 'price_1UAjP8HJnO8odw1MmSXdkNIh';
+export const IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID = 'price_1UAuxTHJnO8odw1Mf8QHeGbs';
 
 export const UNLIMITED_PRICE_CONFIG: Record<UnlimitedBillingOption, {
   priceId: string;
@@ -16,7 +16,7 @@ export const UNLIMITED_PRICE_CONFIG: Record<UnlimitedBillingOption, {
 }> = {
   monthly: { priceId: IMPORTVERIFIER_UNLIMITED_PRICE_ID, amountCents: 995, checkoutMode: 'subscription', recurringInterval: 'month' },
   annual: { priceId: IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID, amountCents: 8995, checkoutMode: 'subscription', recurringInterval: 'year' },
-  lifetime: { priceId: IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID, amountCents: 14900, checkoutMode: 'payment', recurringInterval: null },
+  lifetime: { priceId: IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID, amountCents: 14995, checkoutMode: 'payment', recurringInterval: null },
 };
 
 export type BillingPlanId = 'free' | PlanId;
