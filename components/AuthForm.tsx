@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Brand from '@/components/Brand';
 import TrustMark from '@/components/TrustMark';
 import { authCopy, authErrorKey, AuthErrorKey, AuthMode, AuthNoticeKey, LoginNoticeKey } from '@/lib/auth-i18n';
+import type { UnlimitedBillingOption } from '@/lib/billing';
 import { landingCopy, Language, LANGUAGE_OPTIONS } from '@/lib/landing-i18n';
 import { PurchaseId, purchaseName } from '@/lib/plans';
 import { IMPORTVERIFIER_PRODUCTION_URL } from '@/lib/release-config';
@@ -31,7 +32,17 @@ function EyeIcon({ hidden }: { hidden: boolean }) {
   );
 }
 
-export default function AuthForm({ initialMode = 'login', initialMessageKey, requestedPlan }: { initialMode?: AuthMode; initialMessageKey?: LoginNoticeKey; requestedPlan?: PurchaseId }) {
+export default function AuthForm({
+  initialMode = 'login',
+  initialMessageKey,
+  requestedPlan,
+  requestedBillingOption = 'monthly',
+}: {
+  initialMode?: AuthMode;
+  initialMessageKey?: LoginNoticeKey;
+  requestedPlan?: PurchaseId;
+  requestedBillingOption?: UnlimitedBillingOption;
+}) {
   const { language, setLanguage } = useLanguage();
   const t = authCopy[language];
   const trust = landingCopy[language].trust;
@@ -64,12 +75,16 @@ export default function AuthForm({ initialMode = 'login', initialMessageKey, req
     return `${origin}/auth/callback?${params.toString()}`;
   };
 
+  const rememberPlanIntent = () => {
+    if (requestedPlan) savePlanIntent(requestedPlan, requestedBillingOption);
+  };
+
   async function signInWithGoogle() {
     setBusy(true);
     setErrorKey(null);
     setNoticeKey(null);
     try {
-      if (requestedPlan) savePlanIntent(requestedPlan);
+      rememberPlanIntent();
       const { data, error } = await authService.signInWithOAuth(callbackUrl());
       if (error || !data.url) {
         setErrorKey('googleConfig');
@@ -97,15 +112,22 @@ export default function AuthForm({ initialMode = 'login', initialMessageKey, req
         const { error } = await authService.signInWithPassword(email.trim(), password);
         if (error) setErrorKey(authErrorKey(error));
         else {
-          if (requestedPlan) savePlanIntent(requestedPlan);
+          rememberPlanIntent();
           window.location.assign(`/dashboard?lang=${language}`);
         }
       } else if (mode === 'signup') {
-        const { data, error } = await authService.signUp(email.trim(), password, callbackUrl(), requestedPlan ? planInterestMetadata(requestedPlan) : undefined);
+        const { data, error } = await authService.signUp(
+          email.trim(),
+          password,
+          callbackUrl(),
+          requestedPlan ? planInterestMetadata(requestedPlan, requestedBillingOption) : undefined,
+        );
         if (error) setErrorKey(authErrorKey(error));
-        else if (data.session) window.location.assign(`/dashboard?lang=${language}`);
-        else {
-          if (requestedPlan) savePlanIntent(requestedPlan);
+        else if (data.session) {
+          rememberPlanIntent();
+          window.location.assign(`/dashboard?lang=${language}`);
+        } else {
+          rememberPlanIntent();
           setNoticeKey('signupConfirmation');
           setPassword('');
           setConfirm('');
