@@ -35,57 +35,62 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Five-product lifetime free quota, atomic/idempotent creation, isolated histories/RLS.
 - Monthly/annual/Lifetime Checkout architecture and three live Stripe prices.
 - Lifetime production migration with forced RLS/own-row read policy.
-- Live-mode webhook gate, current-state subscription sync, refund/dispute lifecycle and Lifetime replay/order hardening.
-- Landing/FAQ/Schema.org monthly/annual/Lifetime in ES/EN/FR/DE/IT/PT and auth billing-option continuity.
+- Live-mode webhook gate, current-state subscription sync, webhook execution serialization, refund/dispute lifecycle and Lifetime replay/order hardening.
+- Landing/FAQ/Schema.org monthly/annual/Lifetime in ES/EN/FR/DE/IT/PT.
 - Retired audit entitlement removal and legacy recurring-plan normalization.
 - Universal CSV/XLS/XLSX/document/text/photo ingestion, HEIC/HEIF, prompt-injection/upload boundaries.
 - EU deterministic regulatory engine, Evidence, Regulatory Twin and fail-closed Regulatory Impact Radar architecture.
 - Official regulatory/evidence URL allowlists and persistence/render/export/AI-context sanitization.
-- PWA private-cache hardening, localized start/offline/shortcuts and iOS/mobile upload/export safeguards.
+- PWA private-cache hardening, credentialless public-shell caching, localized start/offline/shortcuts and iOS/mobile upload/export safeguards.
 - Premium localized PDF/XLSX with evidence traceability and spreadsheet formula-injection protection.
 - Static localized landing, recovery surfaces, SEO, security headers and production release guard.
 - Shopify/Amazon/Etsy architecture exists but direct integrations remain inactive pending official credentials.
-- Account deletion current-state Stripe cancellation, Checkout duplicate-subscription preflight and active/trialing-only recurring Checkout confirmation.
-- Free/Lifetime quota period semantics report `lifetime`; recurring Unlimited reports `subscription`.
+- Account deletion current-state Stripe cancellation and duplicate-subscription preflight.
+- Production server-only Supabase RPC/table privilege repair; browser roles remain closed.
 
-## DONE — 2026-09-01 current execution
-- Reconfirmed starting documented HEAD `be6d507a0226138b3200c222eaa68556a296986f`: exact GitHub release checks **#1755/#1756 SUCCESS** and correct `netlify/importverifier/deploy-preview` **SUCCESS/READY**.
-- Production AI rate-limit and internal-table `service_role` privilege repairs remain applied; browser roles stay closed. Do not repeat this sweep unless a new server path or migration changes the privilege surface.
-- Stripe same-event webhook execution serialization/stale recovery remains in place and covered.
-- **Billing request boundary tightened:** Checkout and synchronous Checkout confirmation use a 4 KiB JSON body ceiling rather than the generic multi-megabyte API limit.
-- **Checkout confirmation authority tightened:** recurring confirmation derives monthly/annual from the current Stripe subscription item price after re-reading Stripe, not mutable Checkout metadata.
-- **Billing Portal current-state check tightened:** Portal is created only when Stripe currently has a non-terminal recurring subscription for that customer; Lifetime-only customers no longer receive a misleading subscription-management destination.
-- **Stripe customer ownership tightened:** recurring subscription synchronization requires an already persisted `stripe_customer_id` → user ownership row. Mutable subscription metadata cannot attach an unknown Stripe customer to an ImportVerifier account; conflicting metadata is rejected.
-- **Post-auth billing-option recovery added:** a fresh authenticated `plan_interest` in Supabase user metadata can recover annual/Lifetime for the immediate dashboard Checkout when the client omits `billingOption`; the intent is strictly validated, expires after 15 minutes, explicit request billing remains authoritative and stale/invalid intent falls back to monthly. Regression: `tests/auth-billing-option-continuity.test.ts`.
-- **PWA public-cache credential isolation tightened:** public landing navigations that may enter the shared offline shell are now fetched through `credentials: 'omit'` before caching rather than reusing a possibly cookie-bearing navigation request. Cache generation rotated to `importverifier-shell-v7`, evicting older shell behavior. Regression: `tests/pwa-cache-boundary.test.ts`. Functional commits: `67eb84ff3976ff0678fcd7bf2762dc2a9938ecbc`, `3627545944c3e1ad4837ef4444cbce0fa6ea1edf`.
-- Exact release check **#1791** for functional/test HEAD `3627545944c3e1ad4837ef4444cbce0fa6ea1edf` was running at handoff time; `npm ci` had passed and full tests were in progress. Do not infer green until the exact run finishes.
-- PR #4 remained open, mergeable and unmerged at verification. This documentation commit creates a newer docs-only HEAD; reconfirm exact CI and `netlify/importverifier/deploy-preview` on the final HEAD before treating it as verified.
+## DONE — 2026-09-01 latest execution
+- Starting documented HEAD was reverified before work; PR #4 remained open/unmerged.
+- **Billing request boundary:** Checkout and synchronous confirmation accept at most 4 KiB JSON. Oversized requests return 413; malformed JSON returns localized safe 400 without parser/provider leakage.
+- **Recurring confirmation authority:** browser confirmation now derives monthly/annual from the current Stripe subscription price, not Checkout metadata, and confirms only active/trialing subscriptions.
+- **Portal semantics:** Billing Portal requires a current manageable recurring Stripe state (`active`, `trialing`, `past_due`, `unpaid`, `paused`). Lifetime-only, canceled, incomplete or incomplete-expired customers do not receive a misleading subscription-management destination.
+- **Stripe ownership:** recurring sync requires an already persisted Stripe customer→ImportVerifier-user relationship; mutable Stripe metadata cannot attach an unknown customer to an account.
+- **Auth/OAuth billing continuity:** the annual/Lifetime choice now survives existing-account email login and Google OAuth through a validated, non-sensitive, same-site 15-minute billing preference cookie. Checkout precedence is explicit request → allowlisted cookie → fresh <=15-minute user metadata → monthly fallback. The cookie grants no entitlement and is cleared with the purchase intent after a Checkout destination is obtained.
+- **Checkout return resilience:** confirmation retries only transient states/network failures, maximum three attempts inside the existing 20-second global timeout. Non-retryable failures remain fail-closed and customer-safe.
+- **PWA cache isolation from concurrent compatible work:** public shell navigation uses `credentials:'omit'`; cache generation is `importverifier-shell-v7`.
+- **Supabase advisors rechecked:** Security Advisor has no new vulnerability beyond the existing leaked-password warning. RLS/no-policy INFO entries are internal server-only tables with client object privileges intentionally absent. Performance Advisor only reports unused-index INFO on the pre-launch/low-traffic database; do not remove indexes without representative query evidence.
+
+## Latest exact verification — 2026-09-01
+- Latest verified functional/test HEAD: **`44a950ed73a106a6a7b939f63b12682a21a5abd5`** (`test: lock transient Checkout confirmation retries`).
+- GitHub `ImportVerifier release check` **#1812 SUCCESS** on exact `44a950e...`: `npm ci`, full tests, typecheck and production build all passed.
+- Correct `netlify/importverifier/deploy-preview` for exact `44a950e...` is **SUCCESS / Deploy Preview ready** at the canonical PR #4 preview.
+- Durable handoff update commit after that functional verification: **`4622690cf3d60d7e236dbf8c8fe7968f7fb91c01`**.
+- This short-handoff update creates a newer docs-only HEAD. Reconfirm exact CI/Netlify for final repository HEAD before treating the docs-only tip as verified.
+- PR #4 remained open, mergeable and unmerged at the latest pre-handoff check. Never merge without explicit owner instruction.
 
 ## Production facts
-- Supabase project `hfuwwjdcyudflamwwnon` is the production project used by current migrations.
-- Lifetime entitlement migration is applied; pre-sale entitlement baseline was 0 rows.
-- Production migrations `20260901090429` and `20260901090719` restore the minimum required server-only RPC/table privileges while keeping client boundaries closed.
+- Supabase project `hfuwwjdcyudflamwwnon` is production.
+- Lifetime entitlement migration is applied; pre-sale baseline was 0 Lifetime rows.
+- Production migrations `20260901090429` and `20260901090719` establish minimum server-only privileges required by current APIs.
 - Stripe live product has all three canonical prices and the canonical webhook listens to Checkout/subscriptions/refunds/disputes.
 - Radar remains non-live; keep `REGULATORY_RADAR_LIVE=false` until official ingestion persists events.
-- Supabase leaked-password protection remains disabled externally.
+- Supabase leaked-password protection remains disabled. Current connected Supabase actions do not expose Auth configuration writes; CAPTCHA also needs a legitimate external provider site/secret and frontend token path.
 
 ## NEXT — execute without asking
 1. Reconfirm exact final HEAD after this handoff commit, exact GitHub release check and correct `netlify/importverifier/deploy-preview`; repair any regression immediately.
-2. Continue only genuinely new security/billing/reliability findings. In particular, verify new server-side PostgREST/RPC paths retain minimum privileges without broadening browser access; do not repeat completed privilege sweeps unless code/migrations change.
-3. Improve authenticated billing UX so Lifetime accounts never present subscription-only management language/actions, while recurring monthly/annual retain Portal management.
+2. **Dashboard billing UX:** Lifetime accounts still visually inherit subscription-oriented settings from the large Dashboard component even though the server now blocks a meaningless Portal. Hide subscription-management action for Lifetime and present monthly/annual/Lifetime choices cleanly for free users without risking the already-hardened billing backend.
+3. Continue only genuinely new security/billing/reliability findings; do not repeat completed Stripe/PWA/Supabase privilege sweeps without new evidence.
 4. Production acceptance when browser/payment conditions permit: monthly → webhook → Unlimited → Portal/cancel; annual equivalent; Lifetime paid → persistent Unlimited → controlled refund/dispute lifecycle.
 5. Fresh-account acceptance: signup/login → five-product sample accepted → sixth rejected → isolated history → premium PDF/XLSX.
 6. Obtain TTFB/LCP/TBT/CLS/resource evidence before performance changes.
 7. Inspect PDF typography/overflow only against a real multi-product output.
-8. Keep Radar disabled until same strong ingest secret exists in runtime/scheduler and real official EUR-Lex ingestion persists events.
-9. Review Supabase leaked-password protection/CAPTCHA when console capability is available.
-10. Keep EU the only active market and direct marketplace connectors inactive until legitimate credentials exist.
+8. Keep Radar disabled until the same strong ingest secret exists in runtime/scheduler and real official EUR-Lex ingestion persists events.
+9. Keep EU the only active market and direct marketplace connectors inactive until legitimate credentials exist.
 
 ## BLOCKED EXTERNAL
 - Final production env/promotion with complete legal/provider, runtime and free-only AI secrets.
 - Controlled real monthly/annual/Lifetime Checkout/Portal/cancel/refund/dispute transactions.
 - Strong shared Radar ingest secret + first official EUR-Lex ingestion.
-- Supabase Auth leaked-password/CAPTCHA controls.
+- Supabase Auth leaked-password/CAPTCHA controls; leaked-password protection may also depend on Supabase plan availability, and CAPTCHA requires external provider credentials.
 - Fresh non-owner SMTP signup/reset acceptance.
 - Physical iPhone/iPad/Safari/PWA QA.
 - Official Shopify/Amazon/Etsy credentials/scopes.
