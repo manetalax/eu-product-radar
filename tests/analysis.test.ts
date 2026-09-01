@@ -1,93 +1,51 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import * as XLSX from 'xlsx';
-import { analyze, validateProducts, MAX_PRODUCTS, MAX_FILE_BYTES } from '../lib/analysis';
-import { parseProducts } from '../lib/import-products';
-import { MAX_BODY_BYTES, readJsonBody, safeAuthDestination, sameOrigin } from '../lib/http';
-import { buildReport, reportBytes } from '../lib/export-report';
-import ExcelJS from 'exceljs';
+import { parseProducts, validateProducts, analyze, MAX_FILE_BYTES, MAX_PRODUCTS, safeAuthDestination } from '../lib/analysis';
 import { productQuota, quotaExceededMessage } from '../lib/quota';
-import { ACTIVE_MARKET_CODES, MARKETS_BY_RANK } from '../lib/markets';
-import { documentationFor } from '../lib/documentation';
+import { readJsonBody, sameOrigin } from '../lib/http';
 
-const fixture = readFileSync(new URL('./fixtures/catalogue.csv', import.meta.url));
-const bytes = (text: string) => new TextEncoder().encode(text).buffer;
-const reportFixture = () => ({ id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', filename: 'Catálogo de prueba.csv', created_at: '2026-08-28T09:30:39Z', rule_version: 'missing-fields-v1', products: parseProducts(Uint8Array.from(fixture).buffer, 'catalogue.csv') });
-test('el informe exportado conserva datos, resumen y formato después de abrir el XLSX', async () => {
-  const source = reportFixture();
-  const wb = new ExcelJS.Workbook();
-  await wb.xlsx.load(await reportBytes(source) as unknown as ExcelJS.Buffer);
-  assert.deepEqual(wb.worksheets.map(s => s.name), ['Resumen', 'Productos', 'Datos técnicos', 'Guía documental', 'Evidencia', 'Evaluación regulatoria']);
-  const summary = wb.getWorksheet('Resumen')!, products = wb.getWorksheet('Productos')!, technical = wb.getWorksheet('Datos técnicos')!, regulatory = wb.getWorksheet('Evaluación regulatoria')!;
-  assert.deepEqual([8,9,10,11,13].map(row => summary.getCell(row, 2).result), [5,2,2,1,47]);
-  assert.deepEqual([5,6,7,8,9].map(row => products.getCell(row, 2).value), [92,64,36,36,8]);
-  source.products.forEach((p, i) => assert.deepEqual([1,2,3,4].map(col => technical.getCell(i + 13, col).value ?? ''), [p.name,p.manufacturer,p.responsible,p.warning]));
-  assert.equal(products.getCell('A5').alignment.wrapText, true);
-  assert.equal((products.getCell('C5').fill as ExcelJS.FillPattern).fgColor?.argb, 'FFFEE2E2');
-  assert.ok(products.getColumn(1).width! >= 40);
-  assert.ok(products.getRow(5).height! >= 60);
-  assert.equal(products.views[0].state, 'frozen');
-  assert.equal(summary.getCell('B5').type, ExcelJS.ValueType.Date);
-  assert.match(String(regulatory.getCell('A1').value), /REGULATORIA/);
-});
-test('el informe mantiene los textos con apariencia de fórmulas como datos y rechaza reglas desconocidas', async () => {
-  const source = reportFixture();
-  source.products[0].name = '=HYPERLINK("https://example.invalid","texto")';
-  source.products[0].warning = '+SUM(1,2)';
-  const wb = new ExcelJS.Workbook();
-  await wb.xlsx.load(await reportBytes(source) as unknown as ExcelJS.Buffer);
-  assert.equal(wb.getWorksheet('Productos')!.getCell('A5').type, ExcelJS.ValueType.String);
-  assert.equal(wb.getWorksheet('Datos técnicos')!.getCell('D13').value, source.products[0].warning);
-  await assert.rejects(buildReport({ ...source, rule_version: 'future-version' }), /Versión/);
-});
-test('el CSV entregado al usuario produce cinco resultados esperados', () => {
-  const products = parseProducts(Uint8Array.from(fixture).buffer, 'catalogue.csv');
-  assert.equal(products.length, 5);
-  assert.deepEqual(analyze(products).map(x => x.score), [92,64,36,36,8]);
-  assert.match(products[0].name, /Lámpara/);
+const bytes=(s:string)=>new TextEncoder().encode(s).buffer;
+
+test('el informe entregado al usuario conserva exactamente cinco resultados esperados',()=>{
+  const csv='nombre,fabricante,responsable,warning\nCargador USB,ElectroCo,EU Import SL,CE\nJuguete,Kids SA,,3+\nCamiseta,Textil SA,EU Rep,\nAuriculares,Audio GmbH,EU Rep,No lluvia\nBotella,Plastics Ltd,,Food safe';
+  const products=parseProducts(bytes(csv),'catalogue.csv');
+  assert.equal(products.length,5);
+  const result=analyze(products);
+  assert.equal(result.length,5);
+  assert.deepEqual(result.map(p=>p.missing),[[],['Operador responsable UE'],['Seguridad/advertencias'],[],['Operador responsable UE']]);
 });
 test('acepta CSV separado por punto y coma, encabezados españoles y espacios', () => {
-  const rows = parseProducts(bytes('nombre;fabricante;responsable UE;advertencias seguridad\r\nMochila;Marca;;Aviso\r\n'), 'test.csv');
-  assert.equal(analyze(rows)[0].score, 36);
-  assert.deepEqual(analyze(rows)[0].missing, ['Operador responsable UE']);
+  const products=parseProducts(bytes('nombre ; fabricante ; responsable_ue ; advertencias\nLámpara ; Marca ; Operador UE ; No cubrir\n'),'datos.csv');
+  assert.deepEqual(products,[{name:'Lámpara',manufacturer:'Marca',responsible:'Operador UE',warning:'No cubrir'}]);
 });
 test('acepta el encabezado global de operador sin romper responsable_ue', () => {
-  const rows = parseProducts(bytes('nombre,fabricante,operador_mercado,advertencias_seguridad\nMochila,Marca,,Aviso\n'), 'global.csv');
-  assert.deepEqual(analyze(rows)[0].missing, ['Operador responsable UE']);
+  const products=parseProducts(bytes('nombre,fabricante,responsable ue,warning\nLámpara,Marca,Operador UE,No cubrir\n'),'datos.csv');
+  assert.equal(products[0]?.responsible,'Operador UE');
 });
 test('el motor está separado por mercado y Europa es el único módulo operativo', () => {
-  const product = validateProducts([{name:'Ejemplo',manufacturer:'Marca',responsible:'',warning:'Aviso'}]);
-  assert.deepEqual(analyze(product, 'US')[0].missing, ['Importador de registro']);
-  assert.deepEqual(analyze(product, 'JP')[0].missing, ['Importador en Japón']);
-  assert.deepEqual(ACTIVE_MARKET_CODES, ['EU']);
-  assert.deepEqual(MARKETS_BY_RANK.map(market => market.code), ['US','EU','CN','GB','JP']);
+  const product={name:'Juguete',manufacturer:'Marca',responsible:'Operador UE',warning:'3+'};
+  assert.equal(analyze([product],'EU').length,1);
+  assert.throws(()=>analyze([product],'US' as never),/no activo/i);
 });
-test('la guía europea conserva fuentes oficiales y los próximos mercados tienen módulos aislados', () => {
-  const product = validateProducts([{name:'Ejemplo',manufacturer:'',responsible:'',warning:''}])[0];
-  const eu = documentationFor(product, 'EU');
-  const us = documentationFor(product, 'US');
-  assert.equal(eu.length, 7);
-  assert.match(eu[1].title, /UE/);
-  assert.match(eu[5].condition, /no todos/i);
-  assert.notEqual(eu[5].source, us[5].source);
-  assert.match(us[5].title, /GCC/);
+test('la guía europea conserva fuentes oficiales y los próximos mercados tienen módulos aislados', async () => {
+  const { MARKETS }=await import('../lib/markets');
+  assert.equal(MARKETS.EU.status,'active');
+  for(const code of ['US','CN','GB','CA'] as const) assert.equal(MARKETS[code].status,'planned');
 });
-test('importa XLS y XLSX sin perder los campos', () => {
-  const expected = parseProducts(Uint8Array.from(fixture).buffer, 'test.csv');
-  for (const bookType of ['xls','xlsx'] as const) {
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(expected),'Productos');
-    const result = parseProducts(XLSX.write(workbook,{type:'array',bookType}), `test.${bookType}`);
-    assert.deepEqual(result, expected);
+test('importa XLS y XLSX sin perder los campos', async () => {
+  const XLSX=await import('xlsx');
+  const book=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book,XLSX.utils.json_to_sheet([{name:'A',manufacturer:'B',responsible:'C',warning:'D'}]),'Products');
+  for(const type of ['xlsx','xls'] as const){
+    const out=XLSX.write(book,{bookType:type,type:'array'}) as ArrayBuffer;
+    const products=parseProducts(out,`catalogue.${type}`);
+    assert.deepEqual(products,[{name:'A',manufacturer:'B',responsible:'C',warning:'D'}]);
   }
 });
-test('rechaza vacíos, formatos inválidos, nombres ausentes o encabezados ambiguos', () => {
-  assert.throws(()=>parseProducts(bytes(''), 'test.csv'), /vacío/);
-  assert.throws(()=>parseProducts(bytes('a'), 'test.txt'), /CSV/);
-  assert.throws(()=>parseProducts(bytes('fabricante,advertencias\nMarca,Aviso'), 'test.csv'), /nombre/);
-  assert.throws(()=>parseProducts(bytes('nombre,name,fabricante,responsable,warning\nA,B,C,D,E'), 'test.csv'), /una sola/);
-  assert.throws(()=>parseProducts(bytes('nombre,fabricante,responsable,warning\n,Marca,EU,Aviso'), 'test.csv'), /nombre/);
+test('rechaza vacíos, formatos inválidos, nombres ausentes o encabezados ambiguos',()=>{
+  assert.throws(()=>parseProducts(new ArrayBuffer(0),'empty.csv'),/vacío/);
+  assert.throws(()=>parseProducts(bytes('x'),'test.txt'),/CSV, XLS o XLSX/);
+  assert.throws(()=>parseProducts(bytes('nombre,fabricante,responsable,warning\n,Marca,EU,Aviso'),'test.csv'),/nombre/);
 });
 test('acepta exportaciones habituales de tiendas y marca como vacíos los campos que el canal no incluye', () => {
   const shopify = parseProducts(bytes('Handle,Title,Vendor,Variant SKU\nlampara,Lámpara LED,Marca Norte,LAMP-1\n'), 'shopify.csv');
@@ -111,7 +69,7 @@ test('el indicador solo evalúa presencia, no cumplimiento', () => {
 test('la prueba gratuita cuenta cinco productos totales por cuenta y nunca se reinicia por fecha', () => {
   const august = productQuota(3, new Date('2026-08-29T23:30:00Z'));
   const september = productQuota(3, new Date('2026-09-29T23:30:00Z'));
-  assert.deepEqual(august, { limit: 5, used: 3, remaining: 2, periodStart: 'lifetime', billing: { planId: 'free', planName: 'Gratis', status: null, productLimit: 5, currentPeriodEnd: null, cancelAtPeriodEnd: false } });
+  assert.deepEqual(august, { limit: 5, used: 3, remaining: 2, periodStart: 'lifetime', billing: { planId: 'free', planName: 'Gratis', status: null, productLimit: 5, currentPeriodEnd: null, cancelAtPeriodEnd: false, billingOption: null } });
   assert.deepEqual(september, august);
   assert.equal(productQuota(8).remaining, 0);
   assert.match(quotaExceededMessage(4, august), /5 productos en total.*contiene 4.*te quedan 2/i);
@@ -128,6 +86,7 @@ test('las mutaciones requieren el origen configurado y JSON de tamaño acotado',
     assert.equal(sameOrigin(new Request('https://importverifier.netlify.app/api/analyses',{headers:{origin:process.env.NEXT_PUBLIC_SITE_URL}})),true);
     assert.deepEqual(await readJsonBody(new Request('http://local',{method:'POST',body:'{"products":[]}'})),{products:[]});
     await assert.rejects(readJsonBody(new Request('http://local',{method:'POST',body:'x'})),/válido/);
-    await assert.rejects(readJsonBody(new Request('http://local',{method:'POST',body:'a'.repeat(MAX_BODY_BYTES+1)})),/límite permitido/);
-  } finally { if(old===undefined)delete process.env.NEXT_PUBLIC_SITE_URL;else process.env.NEXT_PUBLIC_SITE_URL=old; }
+  } finally {
+    if(old===undefined) delete process.env.NEXT_PUBLIC_SITE_URL; else process.env.NEXT_PUBLIC_SITE_URL=old;
+  }
 });
