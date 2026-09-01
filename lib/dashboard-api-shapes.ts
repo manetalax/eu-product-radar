@@ -1,5 +1,5 @@
 import { Analysis, AnalysisSummary, Product, validateProducts } from './analysis';
-import { BillingStatus } from './billing';
+import { BillingStatus, isUnlimitedBillingOption } from './billing';
 import { isMarketCode } from './markets';
 import { isPlanId } from './plans';
 import { ProductQuota } from './quota';
@@ -36,6 +36,11 @@ function billingStatusFromUnknown(value: unknown): BillingStatus | null {
   if (!nonNegativeInteger(source.productLimit, MAX_PRODUCT_LIMIT)) return null;
   if (source.currentPeriodEnd !== null && !timestamp(source.currentPeriodEnd)) return null;
   if (typeof source.cancelAtPeriodEnd !== 'boolean') return null;
+  const billingOption = source.billingOption === undefined || source.billingOption === null
+    ? null
+    : isUnlimitedBillingOption(source.billingOption) ? source.billingOption : undefined;
+  if (billingOption === undefined) return null;
+  if (planId === 'free' && billingOption !== null) return null;
   return {
     planId,
     planName: source.planName,
@@ -43,6 +48,7 @@ function billingStatusFromUnknown(value: unknown): BillingStatus | null {
     productLimit: source.productLimit,
     currentPeriodEnd: source.currentPeriodEnd as string | null,
     cancelAtPeriodEnd: source.cancelAtPeriodEnd,
+    billingOption,
   };
 }
 
