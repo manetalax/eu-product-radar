@@ -1,8 +1,8 @@
-import { FREE_TRIAL_PRODUCT_LIMIT, isPlanId, ONE_TIME_AUDIT, PlanId, UNLIMITED_PLAN } from './plans';
+import { FREE_TRIAL_PRODUCT_LIMIT, isPlanId, PlanId, UNLIMITED_PLAN } from './plans';
 
 export const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'trialing'] as const;
 export const IMPORTVERIFIER_UNLIMITED_PRICE_ID = 'price_1UAJy5HJnO8odw1Mn4jMVjFt';
-export type BillingPlanId = 'free' | 'audit' | PlanId;
+export type BillingPlanId = 'free' | PlanId;
 
 export type BillingStatus = {
   planId: BillingPlanId;
@@ -28,8 +28,8 @@ export function billingStatus(record: SubscriptionRecord | null, now = new Date(
   const paid = Boolean(storedPlanId && status && ACTIVE_SUBSCRIPTION_STATUSES.includes(status as typeof ACTIVE_SUBSCRIPTION_STATUSES[number]) && endIsValid);
   if (!paid || !storedPlanId) return { planId: 'free', planName: 'Gratis', status, productLimit: FREE_TRIAL_PRODUCT_LIMIT, currentPeriodEnd: periodEnd, cancelAtPeriodEnd: Boolean(record?.cancel_at_period_end) };
 
-  // Historical plan IDs remain readable in persistence/webhooks, but every currently
-  // active paid subscriber receives the single public ImportVerifier Unlimited entitlement.
+  // Historical subscription plan IDs remain readable in persistence/webhooks, but every
+  // currently active paid subscriber receives the single public ImportVerifier Unlimited entitlement.
   return {
     planId: UNLIMITED_PLAN.id,
     planName: UNLIMITED_PLAN.name,
@@ -38,10 +38,6 @@ export function billingStatus(record: SubscriptionRecord | null, now = new Date(
     currentPeriodEnd: periodEnd,
     cancelAtPeriodEnd: Boolean(record?.cancel_at_period_end),
   };
-}
-
-export function auditBillingStatus(): BillingStatus {
-  return { planId: 'audit', planName: ONE_TIME_AUDIT.name, status: 'paid', productLimit: ONE_TIME_AUDIT.productLimit, currentPeriodEnd: null, cancelAtPeriodEnd: false };
 }
 
 export function stripePriceId(planId: PlanId, production = process.env.NODE_ENV === 'production'): string {
