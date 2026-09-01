@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { formatPrice, LANGUAGES } from '../lib/landing-i18n';
+import { UNLIMITED_PRICE_CONFIG } from '../lib/billing';
 import { UNLIMITED_ANNUAL_PRICE_EUR, UNLIMITED_LIFETIME_PRICE_EUR, UNLIMITED_MONTHLY_PRICE_EUR, UNLIMITED_PLAN } from '../lib/plans';
 
 test('canonical Unlimited price is EUR 9.95 and keeps cents in every supported locale', () => {
@@ -17,6 +18,13 @@ test('all three public Unlimited prices retain their cents in every locale', () 
   for (const language of LANGUAGES) {
     for (const price of expected) assert.match(formatPrice(language, price), /[,.]95/, language);
   }
+});
+
+test('Stripe amounts match the three displayed EUR prices exactly', () => {
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(UNLIMITED_PRICE_CONFIG).map(([key, value]) => [key, value.amountCents])),
+    { monthly: 995, annual: 8995, lifetime: 14995 },
+  );
 });
 
 test('integer EUR prices remain clean without forced cents', () => {
