@@ -16,7 +16,8 @@ test('results and history-open transitions use the focus-preserving path', () =>
   const focusedTransitions = dashboard.match(/moveToTabWithFocus\('products'\)/g) ?? [];
   assert.ok(focusedTransitions.length >= 4, 'expected upload, history open, view-products and view-results transitions to preserve focus');
   assert.match(dashboard, /async function open\(id: string\)[\s\S]{0,620}moveToTabWithFocus\('products'\)/);
-  assert.match(dashboard, /d\('viewProducts'\)[\s\S]{0,1200}moveToTabWithFocus\('products'\)[\s\S]{0,160}d\('viewResults'\)/);
+  assert.match(dashboard, /onClick=\{\(\) => moveToTabWithFocus\('products'\)\}>\{d\('viewProducts'\)\}/);
+  assert.match(dashboard, /onClick=\{\(\) => moveToTabWithFocus\('products'\)\}>\{d\('viewResults'\)\}/);
 });
 
 test('persistent side navigation keeps focus on the selected navigation control', () => {
