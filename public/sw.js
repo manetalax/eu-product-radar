@@ -1,4 +1,4 @@
-const CACHE = 'importverifier-shell-v6';
+const CACHE = 'importverifier-shell-v7';
 const LANDING_LANGUAGES = new Set(['es', 'en', 'fr', 'de', 'it', 'pt']);
 const SHELL = ['/es', '/en', '/fr', '/de', '/it', '/pt', '/icon.svg'];
 const PRIVATE_PREFIXES = ['/api/', '/auth/', '/dashboard', '/reset-password'];
@@ -52,7 +52,7 @@ self.addEventListener('fetch', event => {
   if (request.mode === 'navigate' && url.pathname === '/') {
     const language = requestedLandingLanguage(url);
     event.respondWith(
-      fetch(request)
+      fetch(publicShellRequest(`${url.pathname}${url.search}`))
         .then(response => {
           if (language && responseAllowsCaching(response)) {
             const copy = response.clone();
@@ -74,7 +74,7 @@ self.addEventListener('fetch', event => {
   if (request.mode === 'navigate') {
     if (!CACHEABLE_NAVIGATIONS.has(url.pathname) || url.search) return;
     event.respondWith(
-      fetch(request)
+      fetch(publicShellRequest(url.pathname))
         .then(response => {
           if (responseAllowsCaching(response)) {
             const copy = response.clone();
