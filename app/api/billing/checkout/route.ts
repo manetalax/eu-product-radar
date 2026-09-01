@@ -13,6 +13,8 @@ export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
 const UNLIMITED_INTERNAL_PLAN_ID = 'starter' as const;
 const TERMINAL_SUBSCRIPTION_STATUSES = new Set(['canceled', 'incomplete_expired']);
+const MAX_CHECKOUT_SESSION_SCAN = 500;
+type UnlimitedBillingOption = 'monthly' | 'annual' | 'lifetime';
 
 async function hasCurrentStripeSubscription(stripe: ReturnType<typeof stripeClient>, customerId: string) {
   let startingAfter: string | undefined;
@@ -46,6 +48,54 @@ async function hasCurrentStripeSubscription(stripe: ReturnType<typeof stripeClie
   return hasCurrent;
 }
 
+async function reconcileCheckoutSessions(
+  stripe: ReturnType<typeof stripeClient>,
+  customerId: string,
+  userId: string,
+  requestedOption: UnlimitedBillingOption,
+) {
+  let startingAfter: string | undefined;
+  let scanned = 0;
+  let generation = 0;
+  let reusableUrl: string | null = null;
+
+  do {
+    const page = await stripe.checkout.sessions.list({
+      customer: customerId,
+      limit: 100,
+      ...(startingAfter ? { starting_after: startingAfter } : {}),
+    });
+    scanned += page.data.length;
+    if (scanned > MAX_CHECKOUT_SESSION_SCAN) throw new Error('checkout_session_scan_limit');
+
+    for (const session of page.data) {
+      const owned = session.metadata?.user_id === userId
+        && session.metadata?.plan_id === UNLIMITED_INTERNAL_PLAN_ID
+        && isUnlimitedBillingOption(session.metadata?.billing_option);
+      if (!owned) continue;
+      generation += 1;
+      if (session.status !== 'open') continue;
+
+      if (session.metadata?.billing_option === requestedOption && !reusableUrl && session.url) {
+        reusableUrl = session.url;
+        continue;
+      }
+
+      // Only one payable ImportVerifier Checkout should remain open for an account.
+      // Expire older/sibling modalities so switching monthly ↔ annual ↔ Lifetime cannot
+      // leave two valid payment pages behind.
+      await stripe.checkout.sessions.expire(session.id);
+    }
+
+    if (!page.has_more) break;
+    const lastId = page.data.at(-1)?.id;
+    if (!lastId) throw new Error('checkout_session_pagination_failed');
+    startingAfter = lastId;
+  } while (startingAfter);
+
+  return { reusableUrl, generation };
+}
+
 export async function POST(request: Request) {
   const language = requestLanguage(request);
   const b = (key: Parameters<typeof billingText>[1]) => billingText(language, key);
@@ -54,7 +104,7 @@ export async function POST(request: Request) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return json({ error: b('signInCheckout') }, 401);
 
-  let billingOption: 'monthly' | 'annual' | 'lifetime' = 'monthly';
+  let billingOption: UnlimitedBillingOption = 'monthly';
   try {
     const body = await readJsonBody(request) as Record<string, unknown> | null;
     const candidate = body?.purchaseId ?? body?.planId;
@@ -112,9 +162,21 @@ export async function POST(request: Request) {
       && recurringMatches;
     if (!validUnlimitedPrice) throw new Error(b('stripePrice'));
 
+    const { reusableUrl, generation } = await reconcileCheckoutSessions(stripe, customerId, user.id, billingOption);
+    if (reusableUrl) {
+      const trustedReusableUrl = trustedStripeNavigationUrl(reusableUrl, 'checkout');
+      if (!trustedReusableUrl) throw new Error(b('stripePage'));
+      return json({ url: trustedReusableUrl });
+    }
+
     const metadata = { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID, billing_option: billingOption };
     const successUrl = `${siteOrigin}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${siteOrigin}/dashboard?checkout=cancelled`;
+    // Generation is shared across billing modalities. Two truly concurrent requests that
+    // both see the same Stripe history use the same idempotency key: identical requests
+    // converge on one Checkout; different modalities conflict safely instead of creating
+    // two payable sessions. A later retry sees the newly created session and advances the generation.
+    const checkoutIdempotencyKey = `checkout-${user.id}-${generation}`;
 
     const session = expected.checkoutMode === 'subscription'
       ? await stripe.checkout.sessions.create({
@@ -127,7 +189,7 @@ export async function POST(request: Request) {
         cancel_url: cancelUrl,
         metadata,
         subscription_data: { metadata },
-      }, { idempotencyKey: `checkout-${user.id}-${billingOption}-${new Date().toISOString().slice(0, 13)}` })
+      }, { idempotencyKey: checkoutIdempotencyKey })
       : await stripe.checkout.sessions.create({
         mode: 'payment',
         customer: customerId,
@@ -140,7 +202,7 @@ export async function POST(request: Request) {
         cancel_url: cancelUrl,
         metadata,
         payment_intent_data: { metadata },
-      }, { idempotencyKey: `checkout-${user.id}-${billingOption}` });
+      }, { idempotencyKey: checkoutIdempotencyKey });
 
     const checkoutUrl = trustedStripeNavigationUrl(session.url, 'checkout');
     if (!checkoutUrl) throw new Error(b('stripePage'));
