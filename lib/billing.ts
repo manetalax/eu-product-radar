@@ -16,7 +16,7 @@ export const UNLIMITED_PRICE_CONFIG: Record<UnlimitedBillingOption, {
 }> = {
   monthly: { priceId: IMPORTVERIFIER_UNLIMITED_PRICE_ID, amountCents: 995, checkoutMode: 'subscription', recurringInterval: 'month' },
   annual: { priceId: IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID, amountCents: 8995, checkoutMode: 'subscription', recurringInterval: 'year' },
-  lifetime: { priceId: IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID, amountCents: 14900, checkoutMode: 'payment', recurringInterval: null },
+  lifetime: { priceId: IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID, amountCents: 14995, checkoutMode: 'payment', recurringInterval: null },
 };
 
 export type BillingPlanId = 'free' | PlanId;
