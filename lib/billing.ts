@@ -55,6 +55,13 @@ export function unlimitedBillingStatus(status: 'lifetime' | 'active' = 'lifetime
   };
 }
 
+function billingOptionForStoredStripePrice(priceId: string | null): UnlimitedBillingOption | null {
+  if (!priceId) return null;
+  // Persisted production rows keep their canonical live Stripe price IDs even when code is
+  // exercised in test/development. Recognize those first, then allow configured non-live IDs.
+  return billingOptionForStripePrice(priceId, true) ?? billingOptionForStripePrice(priceId, false);
+}
+
 export function billingStatus(record: SubscriptionRecord | null, now = new Date()): BillingStatus {
   const storedPlanId = isPlanId(record?.plan_id) ? record.plan_id : null;
   const status = typeof record?.status === 'string' ? record.status : null;
@@ -72,7 +79,7 @@ export function billingStatus(record: SubscriptionRecord | null, now = new Date(
   };
 
   const priceId = typeof record?.stripe_price_id === 'string' ? record.stripe_price_id : null;
-  const billingOption = billingOptionForStripePrice(priceId);
+  const billingOption = billingOptionForStoredStripePrice(priceId);
 
   // Historical subscription plan IDs remain readable in persistence/webhooks, but every
   // currently active paid subscriber receives the public ImportVerifier Unlimited entitlement.
