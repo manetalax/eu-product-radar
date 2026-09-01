@@ -19,10 +19,15 @@ test('trial upgrade still validates Stripe checkout navigation before redirectin
   assert.match(trial, /!response\.ok \|\| !navigationUrl/);
 });
 
-test('trial exhaustion shows concrete retained value before the paid continuation', () => {
+test('trial exhaustion offers the three truthful Unlimited billing choices with retained value', () => {
   assert.match(trial, /trial-upgrade-benefits/);
   assert.match(trial, /ImportVerifier AI \+ Regulatory Twin/);
   assert.match(trial, /PDF y Excel con historial y trazabilidad/);
-  assert.match(trial, /Pago seguro mediante Stripe · facturación mensual/);
+  assert.match(trial, /id:'monthly'/);
+  assert.match(trial, /id:'annual'/);
+  assert.match(trial, /id:'lifetime'/);
+  assert.match(trial, /Ahorra 29,45 € frente a 12 meses/);
+  assert.match(trial, /Pago seguro mediante Stripe/);
+  assert.match(trial, /JSON\.stringify\(\{ purchaseId: 'starter', billingOption \}\)/);
   assert.doesNotMatch(trial, /countdown|limited time|only today/i);
 });
