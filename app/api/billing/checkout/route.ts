@@ -12,11 +12,28 @@ import { createClient } from '@/lib/supabase/server';
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
 const UNLIMITED_INTERNAL_PLAN_ID = 'starter' as const;
+const BILLING_INTENT_COOKIE = 'importverifier-billing-intent';
 const TERMINAL_SUBSCRIPTION_STATUSES = new Set(['canceled', 'incomplete_expired']);
 const MAX_CHECKOUT_SESSION_SCAN = 500;
 const BILLING_JSON_MAX_BYTES = 4 * 1024;
 const AUTH_BILLING_INTENT_MAX_AGE_MS = 15 * 60 * 1000;
 type UnlimitedBillingOption = 'monthly' | 'annual' | 'lifetime';
+
+function cookieBillingIntent(request: Request): UnlimitedBillingOption | null {
+  const rawCookie = request.headers.get('cookie');
+  if (!rawCookie) return null;
+  for (const part of rawCookie.split(';')) {
+    const [rawName, ...rawValue] = part.trim().split('=');
+    if (rawName !== BILLING_INTENT_COOKIE) continue;
+    try {
+      const value = decodeURIComponent(rawValue.join('='));
+      return isUnlimitedBillingOption(value) ? value : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
 
 function recentAuthBillingIntent(userMetadata: Record<string, unknown> | undefined): UnlimitedBillingOption | null {
   if (!userMetadata || userMetadata.plan_interest_id !== UNLIMITED_INTERNAL_PLAN_ID) return null;
@@ -121,7 +138,13 @@ export async function POST(request: Request) {
 
   const candidate = body?.purchaseId ?? body?.planId;
   if (candidate !== UNLIMITED_INTERNAL_PLAN_ID) return json({ error: b('onlyUnlimited') }, 400);
-  const requestedOption = body?.billingOption ?? recentAuthBillingIntent(user.user_metadata as Record<string, unknown> | undefined) ?? 'monthly';
+  // An explicit authenticated request is authoritative. The short-lived same-site cookie
+  // bridges OAuth/login navigation where the current dashboard client still sends only
+  // purchaseId; authenticated metadata is a second recovery path for signup/callbacks.
+  const requestedOption = body?.billingOption
+    ?? cookieBillingIntent(request)
+    ?? recentAuthBillingIntent(user.user_metadata as Record<string, unknown> | undefined)
+    ?? 'monthly';
   if (!isUnlimitedBillingOption(requestedOption)) return json({ error: b('invalidRequest') }, 400);
   const billingOption: UnlimitedBillingOption = requestedOption;
   if (process.env.NODE_ENV === 'production' && !legalConfig()) return json({ error: b('legalNotReady') }, 400);
