@@ -1,4 +1,4 @@
-const CACHE = 'importverifier-shell-v7';
+const CACHE = 'importverifier-shell-v8';
 const LANDING_LANGUAGES = new Set(['es', 'en', 'fr', 'de', 'it', 'pt']);
 const SHELL = ['/es', '/en', '/fr', '/de', '/it', '/pt', '/icon.svg'];
 const PRIVATE_PREFIXES = ['/api/', '/auth/', '/dashboard', '/reset-password'];
@@ -18,6 +18,10 @@ function responseAllowsCaching(response) {
 
 function publicShellRequest(path) {
   return new Request(path, { credentials: 'omit', cache: 'reload' });
+}
+
+function publicAssetRequest(request) {
+  return new Request(request, { credentials: 'omit' });
 }
 
 function requestedLandingLanguage(url) {
@@ -89,7 +93,7 @@ self.addEventListener('fetch', event => {
 
   if (!CACHEABLE_ASSET_DESTINATIONS.has(request.destination)) return;
   event.respondWith(
-    caches.match(request).then(cached => cached || fetch(request).then(response => {
+    caches.match(request).then(cached => cached || fetch(publicAssetRequest(request)).then(response => {
       if (responseAllowsCaching(response)) {
         const copy = response.clone();
         caches.open(CACHE).then(cache => cache.put(request, copy));
