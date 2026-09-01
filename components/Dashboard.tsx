@@ -248,7 +248,7 @@ export default function Dashboard({ email }: { email: string }) {
       const url = URL.createObjectURL(new Blob([bytes], { type: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
       const link = document.createElement('a');
       link.href = url;
-      link.download = `import-rules-verifier-${analysisMarket(current).toLowerCase()}-${current.created_at.slice(0, 10)}-${current.id.slice(0, 8)}.${format}`;
+      link.download = `importverifier-${analysisMarket(current).toLowerCase()}-${current.created_at.slice(0, 10)}-${current.id.slice(0, 8)}.${format}`;
       document.body.appendChild(link);
       link.click();
       link.remove();
