@@ -39,17 +39,20 @@ Continue autonomously through actionable IN PROGRESS/NEXT work. Skip anything al
 - Server-only Supabase privilege repair and advisor review; browser roles remain closed.
 - Dashboard exposes all three Unlimited purchase choices and handles five-free → upgrade correctly.
 - Checkout return no longer claims payment success before server confirmation.
+- Checkout return confirmation uses explicit atomic status semantics for assistive technology; failures remain alerts.
 - Account-deletion confirmation moves focus into the form and restores focus on cancel; mobile inputs are 16px with touch-sized controls.
 
 ## DONE — current hardening execution (2026-09-01)
-- Reconfirmed pre-change branch HEAD `3748b0a7d47a0b535d04b49106ff79eb0953f281` and exact push release check **#1855 SUCCESS**.
-- Audited `CheckoutReturnSync` as a genuinely new accessibility surface.
-- Found that the initial “confirming Unlimited access” message relied only on a live region that is already populated on first render, which is not reliably announced by assistive technology.
-- Fixed the confirmation state so the containing live region is atomic and the busy message itself has `role="status"`; failure remains `role="alert"`.
-- Added `tests/checkout-return-announcement.test.ts` to lock the status/alert semantics.
-- Functional commit: `9829b47ad3ea2a5cfc328b704eeffad1199d8379`.
-- Test commit / current functional HEAD before this handoff update: `7b07a56b1c57aebc68528b9f8ca2a174ce981dfa`.
-- Exact release check for `7b07a56…`: **#1861** was created by the branch push and was still `pending` at the last observation; do not call it green until GitHub reports `completed/success`.
+- Reconfirmed pre-change branch HEAD `543a11e03872563651e648901d47c68912757534`; exact push release check **#1862 SUCCESS**.
+- Audited programmatic Dashboard view changes as a genuinely new keyboard/focus surface.
+- Found that Dashboard actions such as “view products”, “view results” and opening a history analysis switch to Products while unmounting the initiating control, allowing keyboard focus to fall back to the document/body.
+- Added an explicit focus-preserving transition path: destructive view changes mark the destination, switch tabs, then focus the persistent workspace `h1` after React commits the new view. The heading is programmatically focusable with `tabIndex={-1}`.
+- Successful catalogue ingestion and successful history-open also use the same destination focus handoff because their previous file/history controls may no longer provide a useful focus position.
+- Persistent side navigation intentionally continues to call plain `setTab`, so focus remains on the selected navigation button rather than being moved unnecessarily.
+- Added `tests/dashboard-tab-focus.test.ts` to lock the focus target, destructive-transition path and persistent-side-nav behavior.
+- Functional commit: `ec6e6bb1e51fb961b270f3f3b5acf3ddaccb2a1f`.
+- Test commit / functional HEAD before this handoff update: `3aacde8a9c5bb6e88e5761d772424c0d1610ec07`.
+- Exact release check for `3aacde8…`: **#1865** was `pending` at the last observation; do not call it green until GitHub reports `completed/success`.
 
 ## Production facts
 - Supabase project `hfuwwjdcyudflamwwnon` is production.
@@ -61,7 +64,7 @@ Continue autonomously through actionable IN PROGRESS/NEXT work. Skip anything al
 
 ## NEXT — execute without asking
 1. Reconfirm the exact current branch HEAD after this documentation commit and its exact GitHub Actions release check. If a test/typecheck/build failure appears, diagnose and fix it before new feature work.
-2. Continue genuinely new keyboard/focus review, prioritizing actions that programmatically switch Dashboard tabs and unmount the initiating control (for example “view results” / opening a history item) so keyboard focus does not fall back to the document body.
+2. Continue genuinely new accessibility review after closing Dashboard destructive-tab focus, prioritizing asynchronous status/error surfaces or controls that become disabled/unmounted during server work; do not manufacture changes where focus remains stable.
 3. Continue new evidence-backed findings across security, mobile/iPad/PWA, billing, AI, Evidence, reports and Radar; prioritize correctness, revenue protection, privacy and customer friction over cosmetic churn.
 4. Obtain browser performance evidence before any TTFB/LCP/TBT/CLS optimization.
 5. Inspect PDF typography/overflow only against a real multi-product output.
