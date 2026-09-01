@@ -21,7 +21,8 @@ Continue autonomously through every actionable task. Never stop because one task
 - Afterwards one feature entitlement only: **ImportVerifier Unlimited**.
 - Unlimited purchase modalities are **EUR 9.95/month**, **EUR 89.95/year**, or **EUR 149 Lifetime one-time**. These are billing choices, not different feature tiers.
 - `starter` is only the internal Stripe/database compatibility ID for Unlimited.
-- Monthly and annual are subscription entitlements. Lifetime is a distinct persistent entitlement granted only by a canonical **paid** one-time Stripe Checkout and revoked after a full refund.
+- Monthly and annual are subscription entitlements. Lifetime is a distinct persistent entitlement granted only by a canonical **paid** one-time Stripe Checkout.
+- A fully refunded Lifetime payment or an active/lost dispute must not retain access. A won dispute may restore access only while the underlying charge remains collected.
 - Historical `one_time_audits` never grant product entitlement.
 - End users see **ImportVerifier AI**, never provider/model names.
 - Production AI cost policy is fail-closed `AI_COST_POLICY=free_only`.
@@ -52,54 +53,57 @@ Continue autonomously through every actionable task. Never stop because one task
 - Premium error/global-error/not-found/loading recovery in six languages with no raw exception leakage.
 - Canonical customer export filenames `importverifier-<market>-<date>-<id>.<format>` with mobile/iPad-safe delayed object URL revocation.
 - Production release guard requires all three exact live Stripe prices; selected billing option survives email auth and Google OAuth.
+- Public landing/FAQ/Schema.org shows monthly/annual/Lifetime in six locales with 3/2/1 responsive pricing and truthful shared Unlimited features.
+- Lifetime zero-charge protection: no promotion codes, exact paid Checkout + PaymentIntent required, `no_payment_required` never grants permanent access.
 
 ## DONE — 2026-09-01 latest run
-- **Public pricing now matches the real product:** static landing/FAQ/Schema.org in ES/EN/FR/DE/IT/PT presents one Unlimited entitlement with monthly EUR 9.95, annual EUR 89.95 and Lifetime EUR 149. Each CTA preserves `plan=starter` + `billing=monthly|annual|lifetime` through login. Annual is visually emphasized as value, without inventing feature differences.
-- **Responsive pricing repaired:** obsolete five-plan grid could compress the three new cards. Pricing now uses 3 columns desktop, 2 tablet/iPad-width, 1 mobile, with regression coverage.
-- **Lifetime zero-charge entitlement vulnerability closed:** Lifetime Checkout no longer accepts promotion codes, `syncLifetimeCheckoutSession` requires exact `payment_status=paid` plus PaymentIntent, and `no_payment_required` can never grant permanent access.
-- **Webhook retry inconsistency closed:** one-time Checkout webhook processing now invokes Lifetime synchronization only for `paid` sessions; unpaid/no-payment states are ignored rather than causing repeated 503 grant failures.
-- **Regression repaired:** release check #1633 exposed a stale localization test that expected the old monthly-only `pricingTitle(price)` API. The test now protects localized monthly/annual/Lifetime surfaces instead of the retired shape.
-- Focused regressions lock the three public offers, CTA billing continuity, 3/2/1 responsive grid, paid-only Lifetime entitlement and promotion-code boundary.
-- No speculative performance, PDF-layout, Radar-live or marketplace changes were made without evidence/credentials.
+- **Lifetime refund/dispute replay hardening:** a previously revoked Lifetime payment cannot be reactivated by the same Checkout session or PaymentIntent through a delayed webhook or browser confirmation. Synchronization returns a safe no-op for the revoked same payment, the browser treats it as unconfirmed, and webhook processing can finish instead of entering an endless retry loop.
+- **Chargeback lifecycle added:** `charge.dispute.created` suspends the matching Lifetime entitlement; `charge.dispute.closed` restores only on Stripe `won` and only when the latest Charge is not fully refunded. Other closed outcomes remain revoked. Charge state is re-read from Stripe before entitlement mutation.
+- **Production Stripe webhook corrected:** canonical live endpoint `https://importverifier.netlify.app/api/billing/webhook` now listens to Checkout/subscription events plus `charge.refunded`, `charge.dispute.created` and `charge.dispute.closed`. Without this change the refund/dispute code could not have acted in production.
+- **Lifetime Supabase migration applied and verified in production:** migration `unlimited_lifetime_entitlement` is recorded; table exists with RLS enabled + forced, one own-row SELECT policy and 0 entitlement rows immediately after migration (expected pre-sale baseline).
+- **Browser confirmation tightened:** Lifetime `mode=payment` now requires `payment_status=paid` before sync and returns 409 rather than a generic 503 for unpaid/revoked cases. Subscription confirmation retains valid paid/no-payment-required semantics for recurring Checkout.
+- Supabase security advisor after migration did not flag the Lifetime table. Existing warning remains: leaked-password protection is disabled. Internal no-policy tables remain intentionally inaccessible to client roles and should be reviewed only if their privilege model changes.
+- No speculative performance/PDF/Radar/marketplace work was done without required evidence or credentials.
 
 ## Latest exact verification — 2026-09-01
-- Latest verified functional/test HEAD before documentation commits: **`7021c968ffc5a41b7474e4c15383c7db56bfb054`** (`test: keep Lifetime webhook paid-only`).
-- GitHub `ImportVerifier release check` **#1639 SUCCESS** on exact `7021c968...`: `npm ci`, full test suite, typecheck and production build all passed.
-- Durable handoff update commit: `124bcc65324c2246cc2ed004da3bdd4f60235087`.
-- This short handoff commit creates a newer docs-only HEAD. Reconfirm its exact GitHub CI and `netlify/importverifier/deploy-preview` status before treating the docs HEAD as verified.
-- PR #4 remains open and must not be merged without explicit owner instruction.
+- Latest verified functional/test HEAD before documentation commits: **`9b036b7adda48524eb6239df2ae66aa5a6a1b8cc`** (`test: lock revoked Lifetime no-op semantics`).
+- GitHub `ImportVerifier release check` **#1655 SUCCESS** on exact `9b036b7...`: install, full tests, typecheck and production build passed.
+- Netlify `netlify/importverifier/deploy-preview` for exact `9b036b7...` was still **pending** when documentation began; do not infer READY from an older preview.
+- Durable handoff update commit: **`ed8d5cb8a8a38f1fc896b2e3e2a2f1cbe11a19fc`**.
+- This short handoff commit creates a newer docs-only HEAD. Reconfirm its exact GitHub release check and correct `importverifier` Deploy Preview before treating final repository HEAD as verified.
+- PR #4 remains open, mergeable and unmerged. Never merge without explicit owner instruction.
 
 ## Production service facts last established
-- Supabase project: `hfuwwjdcyudflamwwnon`.
+- Supabase project `hfuwwjdcyudflamwwnon` is ACTIVE_HEALTHY.
+- Migration `unlimited_lifetime_entitlement` is applied in production as version `20260901070312`; table has forced RLS/own-row policy and had 0 rows at verification.
 - Lifetime free quota aggregate previously showed zero accounts above five and maximum usage five.
 - Stripe live product `ImportVerifier Unlimited` has the three canonical live prices listed above.
-- New persistent Lifetime entitlement migration exists in repository; production application/acceptance still needs explicit confirmation.
+- Canonical live Stripe webhook is enabled and subscribed to Checkout/subscription + refund/dispute lifecycle events needed by current code.
 - Historical `one_time_audits` storage may remain but does not grant current entitlement.
-- Production Radar persisted-event baseline remains unestablished/zero; keep `REGULATORY_RADAR_LIVE=false` until real official ingestion succeeds.
-- Supabase leaked-password protection remains an external console task.
+- Production Radar remains non-live until real official ingestion persists events; keep `REGULATORY_RADAR_LIVE=false`.
+- Supabase leaked-password protection remains disabled and is an Auth console task.
 - Production SMTP signup/reset with a genuinely fresh non-owner mailbox is not yet accepted.
 
 ## NEXT — execute without asking
-1. Reconfirm exact HEAD after this docs commit, exact release check and correct `importverifier` Netlify Deploy Preview; repair any regression immediately.
-2. Confirm/apply the Lifetime entitlement migration in production Supabase before enabling real Lifetime acceptance.
-3. Production billing acceptance when external config is ready: monthly EUR 9.95 → webhook → Unlimited → Portal/cancel; annual EUR 89.95 equivalent flow; Lifetime EUR 149 paid Checkout → persistent Unlimited → controlled full-refund revoke; historical audit rows grant no quota.
-4. Review charge dispute/chargeback handling for Lifetime and add fail-safe entitlement behavior if a genuine production gap exists; do not overfit without Stripe lifecycle semantics.
+1. Reconfirm exact HEAD after this handoff commit, exact GitHub release check and correct `importverifier` Netlify Deploy Preview; repair any regression immediately.
+2. Production billing acceptance when external/browser conditions permit: monthly EUR 9.95 → webhook → Unlimited → Portal/cancel; annual EUR 89.95 equivalent lifecycle; Lifetime EUR 149 paid Checkout → persistent Unlimited → controlled full-refund revoke → dispute suspension/won restoration; historical audit rows grant no quota.
+3. Inspect only genuinely new billing/security reliability findings. Do not repeat refund/dispute/zero-charge/live-mode sweeps already locked by tests and production configuration.
+4. Fresh-account acceptance: signup/login → five-product sample accepted → sixth rejected → isolated history → premium PDF/XLSX → each paid flow as applicable.
 5. Performance: obtain detailed TTFB/LCP/TBT/CLS/resource evidence before changing landing architecture.
 6. PDF: inspect typography/overflow only against a real multi-product acceptance output.
-7. Fresh-account acceptance: signup/login → five-product sample accepted → sixth rejected → isolated history → PDF/XLSX → each paid flow as applicable.
-8. Keep Radar disabled until the same strong ingest secret is configured in runtime/scheduler and real official EUR-Lex ingestion persists events.
-9. Keep EU the only active market and marketplace direct connectors inactive until legitimate credentials exist.
+7. Keep Radar disabled until the same strong ingest secret is configured in runtime/scheduler and real official EUR-Lex ingestion persists events.
+8. Keep EU the only active market and marketplace direct connectors inactive until legitimate credentials exist.
+9. Review current Supabase Auth protections when console capability is available: leaked-password protection and appropriate signup-abuse/CAPTCHA controls.
 
 ## BLOCKED EXTERNAL
-- Netlify production env/branch/deploy promotion: real canonical Supabase keys, live Stripe secret/webhook/all three canonical prices, truthful legal-provider identity/address/tax/jurisdiction/refund variables and SiliconFlow/free-only AI values.
-- Confirm/apply `202609010001_unlimited_lifetime_entitlement.sql` in production Supabase and perform real Lifetime/refund acceptance.
+- Final Netlify production env/branch/deploy promotion: complete truthful legal-provider variables, canonical runtime secrets and SiliconFlow/free-only AI values.
+- Real production monthly/annual/Lifetime Checkout/webhook/Portal/cancel/refund/dispute acceptance requires controlled browser transactions and payment methods.
 - Same strong `REGULATORY_INGEST_SECRET` in runtime/scheduler + first real official EUR-Lex ingestion before Radar can be live.
 - Supabase Auth leaked-password protection + appropriate CAPTCHA/signup-abuse controls.
 - Production SMTP/signup/reset acceptance with a fresh non-owner mailbox/browser flow.
 - Physical iPhone/iPad/Safari/PWA photo/upload/export/save-to-Files/rotation validation.
 - Official Shopify/Amazon/Etsy applications, credentials and scopes.
-- Real production monthly/annual/Lifetime Checkout/webhook/Portal/cancel/refund acceptance.
 - Detailed browser performance evidence and real multi-product PDF visual QA.
 
 ## Definition of finished
-Do not call ImportVerifier fully launched until exact current CI and canonical Netlify production are green; production passes the fail-closed configuration gate; a genuinely fresh user proves five-free-lifetime + sixth rejection + isolated history + PDF/XLSX; free-only AI works without premium leakage; monthly/annual/Lifetime billing lifecycles and legal data pass; Radar claims match real official ingestion; inactive markets/connectors remain honest; Auth abuse controls and SMTP acceptance pass; and desktop/iPhone/iPad/PWA QA passes.
+Do not call ImportVerifier fully launched until exact current CI and canonical Netlify production are green; production passes the fail-closed configuration gate; a genuinely fresh user proves five-free-lifetime + sixth rejection + isolated history + PDF/XLSX; free-only AI works without premium leakage; monthly/annual/Lifetime billing, refund/dispute lifecycle and legal data pass; Radar claims match real official ingestion; inactive markets/connectors remain honest; Auth abuse controls and SMTP acceptance pass; and desktop/iPhone/iPad/PWA QA passes.
