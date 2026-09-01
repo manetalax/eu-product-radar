@@ -1,7 +1,6 @@
 import Dashboard from '@/components/Dashboard';
 import AnalysisReviewGate from '@/components/AnalysisReviewGate';
 import CheckoutReturnSync from '@/components/CheckoutReturnSync';
-import FreeTrialUpgradePrompt from '@/components/FreeTrialUpgradePrompt';
 import IntelligenceSuite from '@/components/IntelligenceSuite';
 import LatestRegulatoryAssessment from '@/components/LatestRegulatoryAssessment';
 import UnlimitedExperience from '@/components/UnlimitedExperience';
@@ -23,7 +22,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     <CheckoutReturnSync checkout={params.checkout} sessionId={params.session_id} synced={params.synced === '1'} />
     <WelcomeFlash show={params.welcome === 'registered'} />
     <UnlimitedExperience />
-    <FreeTrialUpgradePrompt />
     <AnalysisReviewGate />
     <Dashboard email={user.email ?? ''} />
     <IntelligenceSuite />
