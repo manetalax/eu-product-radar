@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { billingText } from '@/lib/billing-i18n';
 import { PRIVATE_HEADERS, readJsonBody, sameOrigin } from '@/lib/http';
 import { requestLanguage } from '@/lib/request-language';
+import { syncLifetimeCheckoutSession } from '@/lib/stripe/lifetime-entitlement';
 import { stripeClient } from '@/lib/stripe/server';
 import { stripeObjectId, syncStripeSubscription } from '@/lib/stripe/subscription-sync';
 import { createClient } from '@/lib/supabase/server';
@@ -30,18 +31,27 @@ export async function POST(request: Request) {
 
   try {
     const stripe = stripeClient();
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ['line_items.data.price'] });
     const ownerId = session.metadata?.user_id || session.client_reference_id;
-    if (ownerId !== user.id || session.mode !== 'subscription') return json({ error: b('invalidRequest') }, 403);
+    if (ownerId !== user.id) return json({ error: b('invalidRequest') }, 403);
     if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') {
       return json({ error: b('paymentOpen') }, 409);
     }
 
-    const subscriptionId = stripeObjectId(session.subscription);
-    if (!subscriptionId) return json({ error: b('paymentOpen') }, 409);
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] });
-    await syncStripeSubscription(subscription);
-    return json({ confirmed: true });
+    if (session.mode === 'subscription') {
+      const subscriptionId = stripeObjectId(session.subscription);
+      if (!subscriptionId) return json({ error: b('paymentOpen') }, 409);
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] });
+      await syncStripeSubscription(subscription);
+      return json({ confirmed: true, billingOption: session.metadata?.billing_option ?? 'monthly' });
+    }
+
+    if (session.mode === 'payment') {
+      await syncLifetimeCheckoutSession(session);
+      return json({ confirmed: true, billingOption: 'lifetime' });
+    }
+
+    return json({ error: b('invalidRequest') }, 403);
   } catch {
     return json({ error: b('paymentOpen') }, 503);
   }
