@@ -4,11 +4,17 @@ import { readFileSync } from 'node:fs';
 
 const lifetime = readFileSync(new URL('../lib/stripe/lifetime-entitlement.ts', import.meta.url), 'utf8');
 const checkout = readFileSync(new URL('../app/api/billing/checkout/route.ts', import.meta.url), 'utf8');
+const webhook = readFileSync(new URL('../app/api/billing/webhook/route.ts', import.meta.url), 'utf8');
 
 test('Lifetime entitlement requires a paid Checkout with a payment intent', () => {
   assert.match(lifetime, /session\.payment_status === 'paid'/);
   assert.doesNotMatch(lifetime, /payment_status === 'no_payment_required'/);
   assert.match(lifetime, /if \(!paymentIntentId\) throw new Error\('unrecognized_lifetime_payment'\)/);
+});
+
+test('Lifetime webhook only grants paid one-time Checkout sessions', () => {
+  assert.match(webhook, /session\.mode === 'payment' && session\.payment_status === 'paid'/);
+  assert.doesNotMatch(webhook, /payment_status === 'no_payment_required'/);
 });
 
 test('Lifetime checkout cannot use promotion codes while recurring Unlimited can', () => {
