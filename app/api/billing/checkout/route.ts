@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { billingStatus, stripePriceId } from '@/lib/billing';
+import { billingStatus, isUnlimitedBillingOption, stripePriceIdForBillingOption, UNLIMITED_PRICE_CONFIG } from '@/lib/billing';
 import { billingText } from '@/lib/billing-i18n';
 import { configuredSiteOrigin, sameOrigin, PRIVATE_HEADERS, readJsonBody } from '@/lib/http';
 import { legalConfig } from '@/lib/legal-config';
@@ -12,7 +12,6 @@ import { createClient } from '@/lib/supabase/server';
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
 const UNLIMITED_INTERNAL_PLAN_ID = 'starter' as const;
-const UNLIMITED_MONTHLY_CENTS = 995;
 
 export async function POST(request: Request) {
   const language = requestLanguage(request);
@@ -22,10 +21,14 @@ export async function POST(request: Request) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return json({ error: b('signInCheckout') }, 401);
 
+  let billingOption: 'monthly' | 'annual' | 'lifetime' = 'monthly';
   try {
     const body = await readJsonBody(request) as Record<string, unknown> | null;
     const candidate = body?.purchaseId ?? body?.planId;
     if (candidate !== UNLIMITED_INTERNAL_PLAN_ID) throw new Error(b('onlyUnlimited'));
+    const requestedOption = body?.billingOption ?? 'monthly';
+    if (!isUnlimitedBillingOption(requestedOption)) throw new Error(b('invalidRequest'));
+    billingOption = requestedOption;
     if (process.env.NODE_ENV === 'production' && !legalConfig()) throw new Error(b('legalNotReady'));
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : b('invalidRequest') }, 400);
@@ -34,8 +37,13 @@ export async function POST(request: Request) {
   try {
     const stripe = stripeClient();
     const admin = createAdminClient();
-    const { data: record, error } = await admin.from('subscriptions').select('stripe_customer_id,plan_id,status,current_period_end,cancel_at_period_end').eq('user_id', user.id).maybeSingle();
+    const [{ data: record, error }, { data: lifetime, error: lifetimeError }] = await Promise.all([
+      admin.from('subscriptions').select('stripe_customer_id,plan_id,status,current_period_end,cancel_at_period_end').eq('user_id', user.id).maybeSingle(),
+      admin.from('unlimited_lifetime_entitlements').select('status').eq('user_id', user.id).maybeSingle(),
+    ]);
     if (error && error.code !== 'PGRST116') throw new Error(b('subscriptionRead'));
+    if (lifetimeError && lifetimeError.code !== 'PGRST116') throw new Error(b('subscriptionRead'));
+    if (lifetime?.status === 'active') return json({ error: b('alreadyUnlimited') }, 409);
 
     let customerId = record?.stripe_customer_id as string | null | undefined;
     if (!customerId) {
@@ -55,27 +63,40 @@ export async function POST(request: Request) {
       return json({ url: portalUrl });
     }
 
-    const priceId = stripePriceId(UNLIMITED_INTERNAL_PLAN_ID);
+    const expected = UNLIMITED_PRICE_CONFIG[billingOption];
+    const priceId = stripePriceIdForBillingOption(billingOption);
     const price = await stripe.prices.retrieve(priceId);
+    const recurringMatches = expected.recurringInterval === null
+      ? price.type === 'one_time' && price.recurring == null
+      : price.type === 'recurring' && price.recurring?.interval === expected.recurringInterval && price.recurring.interval_count === 1;
     const validUnlimitedPrice = price.active
       && price.currency === 'eur'
-      && price.unit_amount === UNLIMITED_MONTHLY_CENTS
-      && price.type === 'recurring'
-      && price.recurring?.interval === 'month'
-      && price.recurring.interval_count === 1;
+      && price.unit_amount === expected.amountCents
+      && recurringMatches;
     if (!validUnlimitedPrice) throw new Error(b('stripePrice'));
 
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
+    const common = {
       customer: customerId,
       client_reference_id: user.id,
       line_items: [{ price: priceId, quantity: 1 }],
       allow_promotion_codes: true,
       success_url: `${siteOrigin}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteOrigin}/dashboard?checkout=cancelled`,
-      metadata: { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID },
-      subscription_data: { metadata: { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID } },
-    }, { idempotencyKey: `checkout-${user.id}-${UNLIMITED_INTERNAL_PLAN_ID}-${new Date().toISOString().slice(0, 13)}` });
+      metadata: { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID, billing_option: billingOption },
+    } as const;
+
+    const session = expected.checkoutMode === 'subscription'
+      ? await stripe.checkout.sessions.create({
+        ...common,
+        mode: 'subscription',
+        subscription_data: { metadata: { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID, billing_option: billingOption } },
+      }, { idempotencyKey: `checkout-${user.id}-${billingOption}-${new Date().toISOString().slice(0, 13)}` })
+      : await stripe.checkout.sessions.create({
+        ...common,
+        mode: 'payment',
+        payment_intent_data: { metadata: { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID, billing_option: billingOption } },
+      }, { idempotencyKey: `checkout-${user.id}-${billingOption}` });
+
     const checkoutUrl = trustedStripeNavigationUrl(session.url, 'checkout');
     if (!checkoutUrl) throw new Error(b('stripePage'));
     return json({ url: checkoutUrl });
