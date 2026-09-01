@@ -47,8 +47,8 @@ Checkout requirements:
 
 - Same-origin request + authenticated account.
 - Only internal `starter` may create public paid access.
-- Billing option must be `monthly`, `annual` or `lifetime`; missing legacy option maps to monthly.
-- Small billing JSON requests are bounded to 4 KiB rather than inheriting the general API body ceiling.
+- Billing option must be `monthly`, `annual` or `lifetime`; missing legacy option maps to monthly only when no fresh authenticated purchase intent exists.
+- Small billing JSON requests are bounded to 4 KiB rather than inheriting the general API body ceiling. Oversized bodies preserve HTTP 413 and malformed JSON returns only localized safe errors; parser/provider details are never reflected.
 - Production fails closed until truthful legal/provider configuration exists.
 - Stripe price is re-read and must exactly match active EUR amount/type/recurrence.
 - Monthly/annual use `subscription` mode and may use promotion codes.
@@ -70,10 +70,11 @@ Open Checkout sessions are also reconciled before creating a new one: only one p
 - Historical recurring plan IDs normalize to Unlimited while active; canceled/expired records fall back to free.
 - Browser Checkout confirmation syncs the latest subscription but returns `confirmed: true` only when the Stripe subscription is actually `active` or `trialing`. Other states remain pending rather than generating a false success message.
 - Browser confirmation derives monthly/annual from the current Stripe subscription item price after re-reading Stripe, not from mutable Checkout metadata.
+- The Checkout return UI retries only bounded transient confirmation states (`409`, `429`, `502`, `503`, `504` or temporary network failure), at most three attempts inside a 20-second global timeout. Invalid/non-retryable responses fail safely instead of looping indefinitely or exposing provider errors.
 
 ### Billing Portal
 
-Portal is a recurring-subscription management surface, not a generic customer page. Before creating a Portal session the server checks current Stripe subscriptions for the persisted customer. Lifetime-only customers without a current recurring subscription receive no subscription-management destination. Monthly/annual customers retain Portal access for cancellation and billing management.
+Portal is a recurring-subscription management surface, not a generic customer page. Before creating a Portal session the server checks current Stripe subscriptions for the persisted customer. Only Stripe states with something meaningful to manage (`active`, `trialing`, `past_due`, `unpaid`, `paused`) qualify. `incomplete`, `incomplete_expired` and `canceled` do not create a Portal destination. Lifetime-only customers without a current recurring subscription therefore receive no subscription-management destination. Monthly/annual customers retain Portal access for cancellation and billing management.
 
 ### Webhook execution serialization
 
@@ -133,10 +134,14 @@ Do not add blanket grants to service_role or client roles. Add a privilege only 
 - Password minimum: eight characters.
 - Auth/OAuth destinations restricted to canonical ImportVerifier/Supabase origins.
 - `plan=starter` and `billing=monthly|annual|lifetime` survive email and Google auth as a one-shot purchase intent.
-- A fresh authenticated `plan_interest` user-metadata record can recover annual/Lifetime for the immediate post-auth Checkout when an older client omits the billing option. The metadata is strictly validated, expires after 15 minutes, explicit request billing is authoritative, and invalid/stale metadata falls back to monthly.
-- Invalid billing values are discarded and consumed purchase intent cannot repeatedly reopen Checkout for an already-Unlimited user.
+- `savePlanIntent` stores the validated billing choice in localStorage and in a non-sensitive, same-site, 15-minute preference cookie. The cookie exists specifically to bridge OAuth/navigation because the Checkout request is server-side and cannot read localStorage. It contains only an allowlisted billing modality, confers no entitlement and is cleared with the purchase intent after a successful Checkout destination is obtained.
+- Checkout preference precedence is explicit authenticated request → validated short-lived billing cookie → fresh authenticated `plan_interest` metadata → monthly compatibility fallback. User metadata is never an authorization source; it only recovers a public billing choice, and actual entitlement still depends on canonical Stripe state.
+- A fresh authenticated `plan_interest` user-metadata record remains a second recovery path and expires after 15 minutes. Invalid/stale metadata is ignored.
+- Invalid billing values are discarded and consumed local purchase intent cannot repeatedly reopen Checkout for an already-Unlimited user.
 - Histories and account-owned records are isolated by RLS/ownership checks.
 - Supabase leaked-password protection/CAPTCHA and genuinely fresh SMTP acceptance remain external acceptance tasks.
+
+Current Supabase Security Advisor status checked 2026-09-01: no new table-access vulnerability was reported. The only warning remains leaked-password protection disabled. INFO notices for internal RLS-enabled/no-policy tables (`ai_usage_events`, `api_rate_limits`, `regulatory_change_events`, `stripe_webhook_events`) are intentional because client roles have no object privileges; do not add permissive client policies merely to silence the advisor.
 
 ---
 
@@ -204,6 +209,8 @@ EU is the only active market.
 
 Do not make speculative landing performance changes without detailed TTFB/LCP/TBT/CLS/resource-waterfall evidence.
 
+Current Supabase Performance Advisor notices are only unused-index INFO findings on a pre-launch/low-traffic database. Do not remove those indexes before representative production query usage exists; no speculative database tuning is justified by that signal alone.
+
 ---
 
 ## 9. Marketplace connectors
@@ -236,7 +243,7 @@ Do not call ImportVerifier fully launched until the exact production candidate p
 - Final Netlify production environment/promotion with complete truthful legal/provider variables, runtime secrets and free-only AI values.
 - Controlled real monthly/annual/Lifetime purchase/cancel/refund/dispute acceptance.
 - Same strong `REGULATORY_INGEST_SECRET` in runtime/scheduler + first real official EUR-Lex ingestion.
-- Supabase Auth leaked-password protection + appropriate CAPTCHA/signup-abuse controls.
+- Supabase Auth leaked-password protection + appropriate CAPTCHA/signup-abuse controls. Current connector exposes database/project operations but not Auth configuration writes; CAPTCHA also requires a legitimate external provider site/secret plus frontend token integration.
 - Production SMTP signup/reset with a genuinely fresh non-owner mailbox.
 - Physical iPhone/iPad/Safari/PWA upload/photo/export/save-to-Files/rotation QA.
 - Official Shopify/Amazon/Etsy applications/credentials/scopes.
