@@ -33,7 +33,8 @@ test('legal pages resolve language server-side and retain truthful configured le
     assert.match(page, /serverLanguage\(params\.lang\)/);
     assert.match(page, /legalConfig\(\)/);
   }
-  assert.match(termsPage, /legal \? legal\.refundPolicy : t\.refundFallback/);
+  assert.match(termsPage, /legal \? legal\.refundPolicy : text\(t\.refundFallback\)/);
+  assert.match(termsPage, /const text = canonicalLegalBrand/);
   assert.match(privacyPage, /legal\.providerName/);
   assert.match(termsPage, /legal\.providerName/);
 });
