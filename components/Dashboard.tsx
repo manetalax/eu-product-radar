@@ -63,6 +63,7 @@ export default function Dashboard({ email }: { email: string }) {
   const input = useRef<HTMLInputElement>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
   const pendingImport = useRef<{ fingerprint: string; id: string } | null>(null);
+  const planIntentHandled = useRef(false);
 
   const currentMarketCode = current ? analysisMarket(current) : selectedMarket;
   const currentMarket = MARKETS[currentMarketCode];
@@ -144,12 +145,22 @@ export default function Dashboard({ email }: { email: string }) {
   }, [language]);
 
   useEffect(() => {
-    const planId = readPlanIntent();
     const checkout = new URLSearchParams(window.location.search).get('checkout');
     if (checkout === 'success') setNotice(d('checkoutSuccess'));
     if (checkout === 'cancelled') setNotice(d('checkoutCancelled'));
-    if (planId) void startCheckout();
   }, []);
+
+  useEffect(() => {
+    if (!quota || planIntentHandled.current) return;
+    const planId = readPlanIntent();
+    planIntentHandled.current = true;
+    if (!planId) return;
+    if (quota.billing.planId === 'starter') {
+      clearPlanIntent();
+      return;
+    }
+    void startCheckout();
+  }, [quota?.billing.planId]);
 
   async function load(file: File) {
     if (busy) return;
