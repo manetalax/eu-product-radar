@@ -10,7 +10,9 @@ function lifetimeLineItemPriceId(session: Stripe.Checkout.Session): string | nul
 }
 
 function lifetimeCheckoutSettled(session: Stripe.Checkout.Session) {
-  return session.payment_status === 'paid' || session.payment_status === 'no_payment_required';
+  // Lifetime is a paid permanent entitlement. Unlike recurring access, a zero-charge
+  // Checkout must never create irreversible product value.
+  return session.payment_status === 'paid';
 }
 
 export async function syncLifetimeCheckoutSession(session: Stripe.Checkout.Session) {
@@ -38,6 +40,7 @@ export async function syncLifetimeCheckoutSession(session: Stripe.Checkout.Sessi
   }
 
   const paymentIntentId = stripeObjectId(session.payment_intent);
+  if (!paymentIntentId) throw new Error('unrecognized_lifetime_payment');
   const now = new Date().toISOString();
   const { error } = await admin.from('unlimited_lifetime_entitlements').upsert({
     user_id: metadataUserId,
