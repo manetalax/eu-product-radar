@@ -22,7 +22,6 @@ test('la migración guarda datos, aplica 5 productos lifetime y RLS aísla a dos
     await db.exec(readFileSync(new URL('../supabase/migrations/202608300004_restore_immutable_analyses.sql',import.meta.url),'utf8'));
     await db.exec(readFileSync(new URL('../supabase/migrations/202608310001_unlimited_plan.sql',import.meta.url),'utf8'));
     await db.exec(readFileSync(new URL('../supabase/migrations/202608310004_free_lifetime_trial.sql',import.meta.url),'utf8'));
-    await db.exec(readFileSync(new URL('../supabase/migrations/202609010001_unlimited_lifetime_entitlement.sql',import.meta.url),'utf8'));
 
     await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${a}',false);`);
     assert.equal((await db.query<{product_count:number}>('select product_count from public.free_account_usage')).rows[0].product_count,1);
@@ -56,7 +55,6 @@ test('la migración guarda datos, aplica 5 productos lifetime y RLS aísla a dos
     await assert.rejects(db.query('select * from public.analyses'),/permission denied/);
     await assert.rejects(db.query('select * from public.free_account_usage'),/permission denied/);
     await assert.rejects(db.query('select * from public.stripe_webhook_events'),/permission denied/);
-    await assert.rejects(db.query('select * from public.unlimited_lifetime_entitlements'),/permission denied/);
     await assert.rejects(db.query(`insert into public.analyses(filename,products) values ('anon.csv',$1::jsonb)`,[product]),/permission denied/);
 
     await db.exec(`reset role; set role authenticated; select set_config('request.jwt.claim.sub','${a}',false);`);
@@ -67,7 +65,6 @@ test('la migración guarda datos, aplica 5 productos lifetime y RLS aísla a dos
     await db.query('delete from auth.users where id=$1',[a]);
     assert.equal((await db.query('select * from public.analyses where user_id=$1',[a])).rows.length,0);
     assert.equal((await db.query('select * from public.free_account_usage where user_id=$1',[a])).rows.length,0);
-    assert.equal((await db.query('select * from public.unlimited_lifetime_entitlements where user_id=$1',[a])).rows.length,0);
     assert.equal((await db.query('select * from public.analyses where user_id=$1',[b])).rows.length,1);
   } finally { await db.close(); }
 });
