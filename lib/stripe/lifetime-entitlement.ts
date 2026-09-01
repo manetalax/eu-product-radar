@@ -34,7 +34,7 @@ async function setLifetimeEntitlementStatusForPaymentIntent(
   return true;
 }
 
-export async function syncLifetimeCheckoutSession(session: Stripe.Checkout.Session) {
+export async function syncLifetimeCheckoutSession(session: Stripe.Checkout.Session): Promise<boolean> {
   if (session.mode !== 'payment' || !lifetimeCheckoutSettled(session)) throw new Error('invalid_lifetime_checkout_state');
   const customerId = stripeObjectId(session.customer);
   const metadataUserId = session.metadata?.user_id || session.client_reference_id || null;
@@ -63,6 +63,8 @@ export async function syncLifetimeCheckoutSession(session: Stripe.Checkout.Sessi
 
   // A refund/dispute revocation is authoritative for that exact payment. A later
   // confirmation request or delayed/replayed Checkout event must not resurrect it.
+  // Return false rather than throwing so a stale Stripe event can be marked processed
+  // instead of being retried forever; browser confirmation treats false as unconfirmed.
   const { data: existingEntitlement, error: entitlementError } = await admin
     .from('unlimited_lifetime_entitlements')
     .select('stripe_checkout_session_id,stripe_payment_intent_id,status')
@@ -71,9 +73,7 @@ export async function syncLifetimeCheckoutSession(session: Stripe.Checkout.Sessi
   if (entitlementError && entitlementError.code !== 'PGRST116') throw entitlementError;
   const samePayment = existingEntitlement?.stripe_checkout_session_id === session.id
     || existingEntitlement?.stripe_payment_intent_id === paymentIntentId;
-  if (samePayment && existingEntitlement?.status === 'revoked') {
-    throw new Error('lifetime_payment_previously_revoked');
-  }
+  if (samePayment && existingEntitlement?.status === 'revoked') return false;
 
   const now = new Date().toISOString();
   const { error } = await admin.from('unlimited_lifetime_entitlements').upsert({
@@ -87,6 +87,7 @@ export async function syncLifetimeCheckoutSession(session: Stripe.Checkout.Sessi
     updated_at: now,
   }, { onConflict: 'user_id' });
   if (error) throw error;
+  return true;
 }
 
 export async function revokeLifetimeEntitlementForFullyRefundedCharge(charge: Stripe.Charge) {
