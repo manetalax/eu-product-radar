@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/server';
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
 const checkoutSessionId = /^cs_(?:live|test)_[A-Za-z0-9]+$/;
+const CONFIRMED_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing']);
 
 export async function POST(request: Request) {
   const language = requestLanguage(request);
@@ -43,6 +44,9 @@ export async function POST(request: Request) {
       if (!subscriptionId) return json({ error: b('paymentOpen') }, 409);
       const subscription = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] });
       await syncStripeSubscription(subscription);
+      if (!CONFIRMED_SUBSCRIPTION_STATUSES.has(subscription.status)) {
+        return json({ error: b('paymentOpen') }, 409);
+      }
       return json({ confirmed: true, billingOption: session.metadata?.billing_option ?? 'monthly' });
     }
 
