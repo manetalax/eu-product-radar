@@ -25,3 +25,11 @@ test('Stripe webhook reads a bounded raw body before signature verification', ()
   assert.match(webhook, /readTextBody\(request, STRIPE_WEBHOOK_MAX_BYTES\)/);
   assert.doesNotMatch(webhook, /await request\.text\(\)/);
 });
+
+test('small billing JSON endpoints do not inherit the generic 2 MB request allowance', () => {
+  for (const path of ['../app/api/billing/checkout/route.ts', '../app/api/billing/confirm/route.ts']) {
+    const route = readFileSync(new URL(path, import.meta.url), 'utf8');
+    assert.match(route, /BILLING_JSON_MAX_BYTES = 4 \* 1024/);
+    assert.match(route, /readJsonBody\(request, BILLING_JSON_MAX_BYTES\)/);
+  }
+});
