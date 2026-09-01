@@ -50,6 +50,13 @@ test('Dashboard success parsers reject malformed 2xx payloads instead of trustin
   assert.equal(productQuotaFromUnknown({ ...freeQuota, remaining: 999 }), null);
   assert.equal(productQuotaFromUnknown({ ...freeQuota, billing: { ...freeQuota.billing, productLimit: 50 } }), null);
   assert.equal(productQuotaFromUnknown({ ...freeQuota, periodStart: 'monthly' }), null);
+  assert.equal(productQuotaFromUnknown({
+    limit: 30,
+    used: 0,
+    remaining: 30,
+    periodStart: 'subscription',
+    billing: { ...freeQuota.billing, planId: 'audit', planName: 'Audit', productLimit: 30, status: 'paid' },
+  }), null);
 });
 
 test('Dashboard quota parser accepts Unlimited compatibility ID without exposing arbitrary plans', () => {
