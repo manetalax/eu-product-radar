@@ -14,6 +14,7 @@ const json = (body: unknown, status = 200) => NextResponse.json(body, { status, 
 const UNLIMITED_INTERNAL_PLAN_ID = 'starter' as const;
 const TERMINAL_SUBSCRIPTION_STATUSES = new Set(['canceled', 'incomplete_expired']);
 const MAX_CHECKOUT_SESSION_SCAN = 500;
+const BILLING_JSON_MAX_BYTES = 4 * 1024;
 type UnlimitedBillingOption = 'monthly' | 'annual' | 'lifetime';
 
 async function hasCurrentStripeSubscription(stripe: ReturnType<typeof stripeClient>, customerId: string) {
@@ -31,8 +32,6 @@ async function hasCurrentStripeSubscription(stripe: ReturnType<typeof stripeClie
     for (const subscription of page.data) {
       if (TERMINAL_SUBSCRIPTION_STATUSES.has(subscription.status)) continue;
       if (subscription.status === 'incomplete') {
-        // An abandoned/incomplete Checkout must not block the customer indefinitely or
-        // remain payable after a new successful subscription is started.
         await stripe.subscriptions.cancel(subscription.id);
         continue;
       }
@@ -81,9 +80,6 @@ async function reconcileCheckoutSessions(
         continue;
       }
 
-      // Only one payable ImportVerifier Checkout should remain open for an account.
-      // Expire older/sibling modalities so switching monthly ↔ annual ↔ Lifetime cannot
-      // leave two valid payment pages behind.
       await stripe.checkout.sessions.expire(session.id);
     }
 
@@ -106,7 +102,7 @@ export async function POST(request: Request) {
 
   let billingOption: UnlimitedBillingOption = 'monthly';
   try {
-    const body = await readJsonBody(request) as Record<string, unknown> | null;
+    const body = await readJsonBody(request, BILLING_JSON_MAX_BYTES) as Record<string, unknown> | null;
     const candidate = body?.purchaseId ?? body?.planId;
     if (candidate !== UNLIMITED_INTERNAL_PLAN_ID) throw new Error(b('onlyUnlimited'));
     const requestedOption = body?.billingOption ?? 'monthly';
@@ -139,10 +135,6 @@ export async function POST(request: Request) {
     const siteOrigin = configuredSiteOrigin();
     if (!siteOrigin) throw new Error(b('siteUrl'));
 
-    // Supabase is a projection and may lag behind signed webhooks. Stripe is authoritative
-    // for whether recurring billing exists right now. This allows a customer whose local row
-    // is stale after cancellation to subscribe again, while any real current Stripe subscription
-    // still routes safely to Portal.
     const stripeHasCurrentSubscription = await hasCurrentStripeSubscription(stripe, customerId);
     if (stripeHasCurrentSubscription) {
       const portal = await stripe.billingPortal.sessions.create({ customer: customerId, return_url: `${siteOrigin}/dashboard` });
@@ -173,10 +165,6 @@ export async function POST(request: Request) {
     const metadata = { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID, billing_option: billingOption };
     const successUrl = `${siteOrigin}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${siteOrigin}/dashboard?checkout=cancelled`;
-    // Generation is shared across billing modalities. Two truly concurrent requests that
-    // both see the same Stripe history use the same idempotency key: identical requests
-    // converge on one Checkout; different modalities conflict safely instead of creating
-    // two payable sessions. A later retry sees the newly created session and advances the generation.
     const checkoutIdempotencyKey = `checkout-${user.id}-${generation}`;
 
     const session = expected.checkoutMode === 'subscription'
@@ -196,8 +184,6 @@ export async function POST(request: Request) {
         customer: customerId,
         client_reference_id: user.id,
         line_items: [{ price: priceId, quantity: 1 }],
-        // Lifetime creates permanent value. Keep promotions on recurring plans only so a
-        // 100% promotion can never turn the one-time Checkout into a free Lifetime grant.
         allow_promotion_codes: false,
         success_url: successUrl,
         cancel_url: cancelUrl,
