@@ -14,7 +14,9 @@
 4. `AGENTS.md`.
 
 ## Operating rule
-Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, record it and continue elsewhere. Do not repeat DONE sweeps. Batch browser/credential/device acceptance for the end.
+Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, record it and continue elsewhere. Do not repeat DONE sweeps. Batch browser/credential/device acceptance for the end. Use connected tools before asking the owner for a credential or console action; reduce owner intervention to the irreducible external step.
+
+`AGENTS.md` now codifies a multidisciplinary senior review model covering product/strategy, UX/design, application engineering, architecture/platform, security/privacy, billing/revenue, AI/data, regulatory/evidence, QA/release, performance/reliability, growth/SEO/localization and operations/SRE. Apply relevant departments to each substantial change, but do not manufacture speculative work when a surface is already correct.
 
 ## Commercial invariants
 - Exactly 5 free products total per account, lifetime/cumulative, no card/reset.
@@ -36,6 +38,10 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Monthly/annual/Lifetime Checkout architecture and three live Stripe prices.
 - Lifetime production migration with forced RLS/own-row read policy.
 - Live-mode webhook gate, current-state subscription sync, webhook execution serialization, refund/dispute lifecycle and Lifetime replay/order hardening.
+- Billing request 4 KiB boundary, safe parser errors, current-price recurring confirmation and recurring-only Portal semantics.
+- Stripe customer ownership is persisted/authoritative; mutable metadata cannot attach an unknown customer.
+- Auth/OAuth preserves allowlisted monthly/annual/Lifetime intent through same-site short-lived preference plus fresh metadata recovery.
+- Checkout return uses bounded transient retries only.
 - Landing/FAQ/Schema.org monthly/annual/Lifetime in ES/EN/FR/DE/IT/PT.
 - Retired audit entitlement removal and legacy recurring-plan normalization.
 - Universal CSV/XLS/XLSX/document/text/photo ingestion, HEIC/HEIF, prompt-injection/upload boundaries.
@@ -47,38 +53,38 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Shopify/Amazon/Etsy architecture exists but direct integrations remain inactive pending official credentials.
 - Account deletion current-state Stripe cancellation and duplicate-subscription preflight.
 - Production server-only Supabase RPC/table privilege repair; browser roles remain closed.
+- Supabase advisors rechecked: only known leaked-password warning; internal RLS/no-policy INFO is intentional and unused-index INFO is not grounds for speculative deletion.
 
-## DONE — 2026-09-01 latest execution
-- Starting documented HEAD was reverified before work; PR #4 remained open/unmerged.
-- **Billing request boundary:** Checkout and synchronous confirmation accept at most 4 KiB JSON. Oversized requests return 413; malformed JSON returns localized safe 400 without parser/provider leakage.
-- **Recurring confirmation authority:** browser confirmation now derives monthly/annual from the current Stripe subscription price, not Checkout metadata, and confirms only active/trialing subscriptions.
-- **Portal semantics:** Billing Portal requires a current manageable recurring Stripe state (`active`, `trialing`, `past_due`, `unpaid`, `paused`). Lifetime-only, canceled, incomplete or incomplete-expired customers do not receive a misleading subscription-management destination.
-- **Stripe ownership:** recurring sync requires an already persisted Stripe customer→ImportVerifier-user relationship; mutable Stripe metadata cannot attach an unknown customer to an account.
-- **Auth/OAuth billing continuity:** the annual/Lifetime choice now survives existing-account email login and Google OAuth through a validated, non-sensitive, same-site 15-minute billing preference cookie. Checkout precedence is explicit request → allowlisted cookie → fresh <=15-minute user metadata → monthly fallback. The cookie grants no entitlement and is cleared with the purchase intent after a Checkout destination is obtained.
-- **Checkout return resilience:** confirmation retries only transient states/network failures, maximum three attempts inside the existing 20-second global timeout. Non-retryable failures remain fail-closed and customer-safe.
-- **PWA cache isolation from concurrent compatible work:** public shell navigation uses `credentials:'omit'`; cache generation is `importverifier-shell-v7`.
-- **Supabase advisors rechecked:** Security Advisor has no new vulnerability beyond the existing leaked-password warning. RLS/no-policy INFO entries are internal server-only tables with client object privileges intentionally absent. Performance Advisor only reports unused-index INFO on the pre-launch/low-traffic database; do not remove indexes without representative query evidence.
+## DONE — 2026-09-01 current pass
+- Reconfirmed PR #4 open, mergeable, unmerged.
+- Found the exact CI regression introduced by cadence-aware Dashboard work: `tests/dashboard-billing-intent.test.ts` still required the obsolete monthly-only `void startCheckout()` call.
+- Repaired the regression test so it now locks the correct behavior: persisted purchase intent passes `intent.billingOption`, `startCheckout` accepts `UnlimitedBillingOption`, and the request sends `billingOption: option`.
+- Dashboard settings now distinguish Lifetime from recurring Unlimited: Lifetime has no misleading subscription-management action; monthly/annual retain Portal management.
+- Free Dashboard users see all three canonical acquisition choices and explicit billing cadence; the selected choice is sent to Checkout.
+- Added responsive Dashboard billing presentation: 3 choices on wide desktop, 2+1 on intermediate/tablet widths, 1 column on mobile; annual is visually emphasized as the value option without changing entitlement semantics.
+- Added the multidisciplinary product-company operating standard to `AGENTS.md` and the rule to minimize owner intervention by using connected tools first.
+- Netlify had already reported the cadence-aware functional HEAD `624ee341...` READY even though GitHub CI exposed the stale test; therefore Netlify readiness alone is not accepted as release evidence.
 
 ## Latest exact verification — 2026-09-01
-- Latest verified functional/test HEAD: **`44a950ed73a106a6a7b939f63b12682a21a5abd5`** (`test: lock transient Checkout confirmation retries`).
-- GitHub `ImportVerifier release check` **#1812 SUCCESS** on exact `44a950e...`: `npm ci`, full tests, typecheck and production build all passed.
-- Correct `netlify/importverifier/deploy-preview` for exact `44a950e...` is **SUCCESS / Deploy Preview ready** at the canonical PR #4 preview.
-- Durable handoff update commit after that functional verification: **`4622690cf3d60d7e236dbf8c8fe7968f7fb91c01`**.
-- This short-handoff update creates a newer docs-only HEAD. Reconfirm exact CI/Netlify for final repository HEAD before treating the docs-only tip as verified.
-- PR #4 remained open, mergeable and unmerged at the latest pre-handoff check. Never merge without explicit owner instruction.
+- Current repository HEAD before this handoff commit: **`a3af21112b2a60457585e3411c8d556a357bd73b`** (`style: load Dashboard billing layout`).
+- The earlier cadence-aware HEAD `624ee341...` had Netlify Deploy Preview READY but GitHub release check #1818 failed in `npm test`; root cause was the obsolete Dashboard billing-intent regression and is now corrected in `e19afa8...`.
+- Exact-head release checks for `a3af211...` (#1825 push / #1826 PR) were still running at the last inspection; both had reached the workflow and were in `npm ci`. Do not mark this HEAD green until one exact-head run completes tests, typecheck and build successfully.
+- This handoff update creates a newer docs-only HEAD. Reconfirm exact PR HEAD, CI and Netlify after it.
+- PR #4 remains open/unmerged. Never merge without explicit owner instruction.
 
 ## Production facts
 - Supabase project `hfuwwjdcyudflamwwnon` is production.
 - Lifetime entitlement migration is applied; pre-sale baseline was 0 Lifetime rows.
 - Production migrations `20260901090429` and `20260901090719` establish minimum server-only privileges required by current APIs.
-- Stripe live product has all three canonical prices and the canonical webhook listens to Checkout/subscriptions/refunds/disputes.
+- Stripe live product has all three canonical prices and canonical webhook coverage for Checkout/subscriptions/refunds/disputes.
 - Radar remains non-live; keep `REGULATORY_RADAR_LIVE=false` until official ingestion persists events.
-- Supabase leaked-password protection remains disabled. Current connected Supabase actions do not expose Auth configuration writes; CAPTCHA also needs a legitimate external provider site/secret and frontend token path.
+- Supabase leaked-password protection remains disabled. Current connected Supabase actions expose publishable keys/database operations but not the secret Auth configuration needed to enable this control.
+- Production env template intentionally keeps privileged secrets and sensitive legal identifiers blank; never commit them.
 
 ## NEXT — execute without asking
 1. Reconfirm exact final HEAD after this handoff commit, exact GitHub release check and correct `netlify/importverifier/deploy-preview`; repair any regression immediately.
-2. **Dashboard billing UX:** Lifetime accounts still visually inherit subscription-oriented settings from the large Dashboard component even though the server now blocks a meaningless Portal. Hide subscription-management action for Lifetime and present monthly/annual/Lifetime choices cleanly for free users without risking the already-hardened billing backend.
-3. Continue only genuinely new security/billing/reliability findings; do not repeat completed Stripe/PWA/Supabase privilege sweeps without new evidence.
+2. Continue genuinely new multidisciplinary review findings, prioritizing demonstrated security/revenue/correctness/user-friction issues over speculative architecture.
+3. Audit Dashboard billing accessibility/keyboard semantics and localized pricing presentation after CI is green; change only demonstrated issues.
 4. Production acceptance when browser/payment conditions permit: monthly → webhook → Unlimited → Portal/cancel; annual equivalent; Lifetime paid → persistent Unlimited → controlled refund/dispute lifecycle.
 5. Fresh-account acceptance: signup/login → five-product sample accepted → sixth rejected → isolated history → premium PDF/XLSX.
 6. Obtain TTFB/LCP/TBT/CLS/resource evidence before performance changes.
@@ -87,10 +93,10 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 9. Keep EU the only active market and direct marketplace connectors inactive until legitimate credentials exist.
 
 ## BLOCKED EXTERNAL
-- Final production env/promotion with complete legal/provider, runtime and free-only AI secrets.
+- Final Netlify production env/promotion with privileged Supabase/Stripe secrets, truthful sensitive legal fields and free-only AI secret. Connected tools should be used to obtain/configure anything they legitimately expose before asking the owner.
 - Controlled real monthly/annual/Lifetime Checkout/Portal/cancel/refund/dispute transactions.
-- Strong shared Radar ingest secret + first official EUR-Lex ingestion.
-- Supabase Auth leaked-password/CAPTCHA controls; leaked-password protection may also depend on Supabase plan availability, and CAPTCHA requires external provider credentials.
+- Strong shared Radar ingest secret in both runtime and scheduler + first official EUR-Lex ingestion.
+- Supabase Auth leaked-password/CAPTCHA controls; current connector lacks Auth-setting writes and CAPTCHA requires a legitimate external provider credential.
 - Fresh non-owner SMTP signup/reset acceptance.
 - Physical iPhone/iPad/Safari/PWA QA.
 - Official Shopify/Amazon/Etsy credentials/scopes.
