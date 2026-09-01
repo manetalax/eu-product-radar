@@ -10,7 +10,7 @@
 ## Read order
 1. This file — current operational source of truth.
 2. `WORK-HANDOFF-IMPORTVERIFIER.md` — durable architecture and acceptance model.
-3. Latest PR #4 HEAD + exact-HEAD GitHub CI + Netlify status.
+3. Latest PR #4 HEAD + exact-HEAD GitHub CI + correct `importverifier` Netlify status.
 4. `AGENTS.md` — autonomous execution standard.
 
 ## Owner operating instruction
@@ -26,39 +26,35 @@ Continue autonomously through every actionable task. Never stop because one task
 
 ## DONE — do not repeat
 - Lifetime five-product quota, idempotent analysis creation, isolated histories/RLS and privileged-table hardening.
-- Canonical Stripe Unlimited offer, price/currency/cadence validation, live-key enforcement, webhook synchronization/idempotency, Checkout/Portal URL allowlists and customer-safe errors.
-- Dashboard/Latest/Review/Evidence/Intelligence/Trial/Unlimited runtime payload trust boundaries.
-- Canonical Supabase origin/key trust boundaries and OAuth return allowlists.
+- Canonical Stripe Unlimited offer, live price/currency/cadence validation, webhook synchronization/idempotency, Checkout/Portal allowlists and customer-safe errors.
+- Dashboard/Latest/Review/Evidence/Intelligence/Trial/Unlimited runtime trust boundaries; canonical Supabase origin/key boundaries and OAuth return allowlists.
 - Official regulatory/evidence URL allowlists and final persistence/render/export/AI-context sanitization.
-- EU deterministic regulatory engine, Product Regulatory Twin, persisted Evidence and Regulatory Impact Radar architecture.
-- Radar fail-closed publication gate; canonical scheduler target; strong secret/body/content-type/error handling; Radar remains non-live while production has zero persisted events.
+- EU deterministic regulatory engine, Product Regulatory Twin, persisted Evidence and Regulatory Impact Radar architecture; Radar fail-closed publication/ingest gate.
 - Shopify/Amazon/Etsy connector architecture; direct integrations intentionally inactive until official credentials exist.
-- ES/EN/FR/DE/IT/PT active customer localization; canonical ImportVerifier identity; localized SEO/static landing/auth continuity.
-- Google login visible identity; account lifecycle code; production release configuration fail-closed gate.
-- Universal spreadsheet/document/text/photo ingestion including HEIC/HEIF signatures; dedicated mobile camera path; cancellation/multi-file/quota safeguards.
-- PWA private-cache hardening, language-keyed offline/start routes, iOS safe areas/form/modal behavior and delayed download object-URL revocation.
-- Premium PDF/XLSX identity, executive hierarchy, truthful ImportVerifier VERIFIED review seal, evidence/official-source traceability and repeated issuer/EU footer.
-- Landing offer truthfulness: five lifetime free products/no card + one Unlimited plan at €9.95/month; no fabricated scarcity/social proof.
-- Static/server-first landing, six statically generated locale routes and idle PWA registration. Do not make further speculative performance changes without TTFB/LCP/TBT/CLS/resource evidence.
+- ES/EN/FR/DE/IT/PT customer localization, localized SEO/static landing/auth continuity and canonical ImportVerifier identity.
+- Google login identity, account lifecycle code and production fail-closed release configuration.
+- Universal spreadsheet/document/text/photo ingestion including HEIC/HEIF, mobile camera, cancellation/multi-file/quota safeguards and prompt-injection boundaries.
+- PWA private-cache hardening, locale-keyed start/offline behavior, iOS safe areas/forms/modals, delayed object-URL revocation and idle service-worker registration.
+- Premium PDF/XLSX identity, executive hierarchy, VERIFIED review seal, evidence/official-source traceability and repeated issuer/EU footer.
+- Landing offer truthfulness: five lifetime free products/no card + Unlimited €9.95/month; no fabricated scarcity/social proof.
+- Static/server-first landing and six statically generated locale routes. Do not tune performance without TTFB/LCP/TBT/CLS/resource evidence.
+- GitHub Actions Node 24 migration with immutable checkout/setup-node pins; current dependency install reports 0 audited vulnerabilities.
+- Launch acceptance fixtures: five-product canonical sample plus distinct sixth-product rejection fixture.
+- Premium route/global/not-found/loading recovery with ES/EN/FR/DE/IT/PT recovery copy and no raw exception leakage.
+- Production Netlify environment template matches the fail-closed release guard and leaves real secrets/legal values blank.
 
-## DONE — 2026-09-01 current run
-- **Product-extraction prompt-injection boundary:** uploaded text, documents and images are explicitly treated as untrusted data, never model instructions. Embedded prompts/system-role text are ignored and only product facts explicitly supported by the material may be extracted. The same hardened prompt is used for local-text structuring, vision and direct document-provider paths. Regression coverage locks all three paths.
-- **GitHub Actions Node 24 migration / supply-chain hardening:** release workflow no longer uses Node-20-targeting `actions/checkout@v4` or `actions/setup-node@v4`. It pins the official current releases to immutable commits: checkout v7.0.1 `3d3c42e5aac5ba805825da76410c181273ba90b1` and setup-node v7.0.0 `820762786026740c76f36085b0efc47a31fe5020`. Regression coverage prevents reverting to v4/mutable old actions.
-- **Launch acceptance fixtures:** `/importverifier-sample-5-products.csv` remains the canonical five-product trial fixture. `/importverifier-sample-6th-product.csv` is now a separate, valid and distinct one-product fixture so production acceptance can prove the lifetime sixth-product rejection without manually editing a CSV. Regression coverage verifies both fixtures parse correctly and remain distinct.
-- **Premium failure/loading recovery:** explicit App Router route-error, global-error and not-found boundaries now keep failures on branded ImportVerifier surfaces instead of generic framework pages. Recovery copy is complete in ES/EN/FR/DE/IT/PT, global recovery is style-self-contained, document language synchronizes to the supported detected locale, and raw exception message/stack/cause/digest data is never rendered. `app/loading.tsx` adds an accessible language-neutral skeleton/status surface. Regression coverage locks these guarantees.
-- Billing was re-inspected during this run; no genuinely new regression justified churn. Checkout remains limited to Unlimited and validates live price semantics before entitlement.
-- Production Netlify environment template `NETLIFY-PRODUCTION-ENV.example` matches the fail-closed release guard and keeps real secret/legal values blank.
-- Performance/PDF were not changed: detailed Web Vitals and real multi-product PDF acceptance evidence are still required before further tuning.
+## DONE — 2026-09-01 latest run
+- **PWA installed-language shortcut continuity:** `manifestFor(language)` now keeps Dashboard and Privacy shortcuts in the installation language using `?lang=<locale>` for all six active locales. The existing canonical PWA regression test was updated rather than keeping duplicate coverage.
+- CI correctly caught the stale pre-change shortcut expectation on the first attempt. The expectation was repaired and the redundant temporary test removed; the clean functional/test HEAD then passed the full release workflow.
+- Re-inspected customer export/download behavior. Mobile-safe delayed object-URL cleanup remains correct, but a separate public-branding residue was found in PDF/XLSX filenames; this is recorded as NEXT rather than rewriting the large Dashboard component unsafely through a whole-file-only connector.
+- No speculative performance or PDF-layout changes were made without the required runtime/real-output evidence.
 
-## Latest exact functional verification — 2026-09-01
-- Functional HEAD: **`d6a5edb4a8679ebb6d710a9dca9bbeb32d92e42e`** (`test: scope loading copy assertion to rendered text`).
-- GitHub `ImportVerifier release check` **#1488 SUCCESS** on exact `d6a5edb...`: install, **332/332 tests**, typecheck and production build all passed.
-- During this batch CI correctly caught one faulty new test assertion at `dbeba433...`; the assertion was fixed, and the exact successor head above is fully green.
-- `npm ci` on this batch reported **0 vulnerabilities** in the audited dependency tree.
-- Netlify Deploy Preview for the correct project **`importverifier`** is **READY** on exact `d6a5edb...` at `https://deploy-preview-4--importverifier.netlify.app`.
-- Latest available Netlify Lighthouse aggregate remains insufficient for diagnosis; detailed TTFB/LCP/TBT/CLS/resource diagnostics are not exposed by the current connector, so do not tune performance blindly.
-- PR #4 remains **open and not merged**.
-- The durable handoff and this continuity update create newer docs-only heads after the verified functional parent. Reconfirm exact docs-head CI/preview before treating a docs-only head itself as the release candidate.
+## Latest exact verification — 2026-09-01
+- Current verified code/test HEAD before this handoff commit: **`b45f23ec43033876c9aed7100fe862b1a212a0ed`** (`test: remove redundant PWA shortcut coverage`).
+- GitHub `ImportVerifier release check` **#1501 SUCCESS** on exact `b45f23ec...`: install, full tests, typecheck and production build all passed.
+- Correct Netlify project `importverifier` is READY for functional manifest HEAD **`b2ae7da0f5fa257a093e1c8dc69427cbec70dd7d`** at `https://deploy-preview-4--importverifier.netlify.app`. Later `bb58467...`/`b45f23e...` commits are test-only and do not change the deployed bundle.
+- PR #4 remains open, mergeable and not merged.
+- This handoff update creates a newer docs-only HEAD. Reconfirm its GitHub CI before treating that docs HEAD as the latest verified repository state.
 
 ## Production service facts last established
 - Supabase project: `hfuwwjdcyudflamwwnon`.
@@ -69,18 +65,19 @@ Continue autonomously through every actionable task. Never stop because one task
 - Production SMTP signup/reset delivery with a genuinely fresh non-owner mailbox is not yet accepted.
 
 ## NEXT — execute without asking
-1. Reconfirm exact HEAD after the docs commits, GitHub release check and the **correct `importverifier` Deploy Preview**; repair any regression immediately.
-2. Continue only genuinely new customer-facing/security/i18n/reliability findings. Do not repeat the DONE trust-boundary sweeps above.
-3. Performance: obtain detailed TTFB/LCP/TBT/CLS/resource-level evidence before changing landing architecture.
-4. PDF: inspect typography/overflow only against a real multi-product acceptance output.
-5. Production acceptance with a genuinely new account: canonical signup/login → `/importverifier-sample-5-products.csv` → five accepted → `/importverifier-sample-6th-product.csv` rejected → isolated history → premium PDF → Excel → Checkout → webhook entitlement → Portal/cancel lifecycle.
-6. Keep Radar disabled until the same strong ingest secret is configured in runtime/scheduler and real official EUR-Lex ingestion persists events.
-7. Keep EU the only active market and marketplace connectors inactive until legitimate credentials exist.
+1. Reconfirm exact HEAD after this handoff commit and its GitHub release check; repair any regression immediately. Continue to track only the correct `importverifier` Netlify project.
+2. **Customer-facing export branding:** replace the historical PDF/XLSX filename prefix `import-rules-verifier-` in `components/Dashboard.tsx` with canonical `importverifier-`, and update `tests/dashboard-export-download.test.ts`. Preserve the existing delayed object-URL cleanup and mobile behavior. Use a safe editing path that does not risk truncating the large component.
+3. Continue only genuinely new customer-facing/security/i18n/reliability findings; do not repeat DONE trust-boundary sweeps.
+4. Performance: obtain detailed TTFB/LCP/TBT/CLS/resource-level evidence before changing landing architecture.
+5. PDF: inspect typography/overflow only against a real multi-product acceptance output.
+6. Production acceptance with a genuinely new account: signup/login → `/importverifier-sample-5-products.csv` → five accepted → `/importverifier-sample-6th-product.csv` rejected → isolated history → premium PDF → Excel → Checkout → webhook entitlement → Portal/cancel lifecycle.
+7. Keep Radar disabled until the same strong ingest secret is configured in runtime/scheduler and real official EUR-Lex ingestion persists events.
+8. Keep EU the only active market and marketplace connectors inactive until legitimate credentials exist.
 
 ## BLOCKED EXTERNAL
-- Netlify production env/branch/deploy promotion: configure real canonical Supabase keys, live Stripe secret/webhook/canonical price, truthful legal-provider identity/address/tax/jurisdiction/refund values and SiliconFlow/free-only AI values so the fail-closed production build gate can pass.
-- Configure the same strong `REGULATORY_INGEST_SECRET` for production/scheduler, run first real official EUR-Lex ingestion, then and only then enable Radar live.
-- Supabase Auth console: leaked-password protection + appropriate CAPTCHA/signup-abuse controls.
+- Netlify production env/branch/deploy promotion: real canonical Supabase keys, live Stripe secret/webhook/canonical price, truthful legal-provider identity/address/tax/jurisdiction/refund values and SiliconFlow/free-only AI values.
+- Same strong `REGULATORY_INGEST_SECRET` in runtime/scheduler + first real official EUR-Lex ingestion before Radar can be live.
+- Supabase Auth leaked-password protection + appropriate CAPTCHA/signup-abuse controls.
 - Production SMTP/signup/reset acceptance with a fresh non-owner mailbox/browser flow.
 - Physical iPhone/iPad/Safari/PWA photo/upload/export/save-to-Files/rotation validation.
 - Official Shopify/Amazon/Etsy applications, credentials and scopes.
