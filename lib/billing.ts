@@ -1,7 +1,24 @@
-import { FREE_TRIAL_PRODUCT_LIMIT, isPlanId, PlanId, UNLIMITED_PLAN } from './plans';
+import { FREE_TRIAL_PRODUCT_LIMIT, isPlanId, PlanId, UNLIMITED_FAIR_USE_CEILING, UNLIMITED_PLAN } from './plans';
 
 export const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'trialing'] as const;
+export const UNLIMITED_BILLING_OPTIONS = ['monthly', 'annual', 'lifetime'] as const;
+export type UnlimitedBillingOption = typeof UNLIMITED_BILLING_OPTIONS[number];
+
 export const IMPORTVERIFIER_UNLIMITED_PRICE_ID = 'price_1UAJy5HJnO8odw1Mn4jMVjFt';
+export const IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID = 'price_1UAjP0HJnO8odw1M7RBK8jsR';
+export const IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID = 'price_1UAjP8HJnO8odw1MmSXdkNIh';
+
+export const UNLIMITED_PRICE_CONFIG: Record<UnlimitedBillingOption, {
+  priceId: string;
+  amountCents: number;
+  checkoutMode: 'subscription' | 'payment';
+  recurringInterval: 'month' | 'year' | null;
+}> = {
+  monthly: { priceId: IMPORTVERIFIER_UNLIMITED_PRICE_ID, amountCents: 995, checkoutMode: 'subscription', recurringInterval: 'month' },
+  annual: { priceId: IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID, amountCents: 8995, checkoutMode: 'subscription', recurringInterval: 'year' },
+  lifetime: { priceId: IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID, amountCents: 14900, checkoutMode: 'payment', recurringInterval: null },
+};
+
 export type BillingPlanId = 'free' | PlanId;
 
 export type BillingStatus = {
@@ -20,6 +37,21 @@ export type SubscriptionRecord = {
   cancel_at_period_end?: unknown;
 };
 
+export function isUnlimitedBillingOption(value: unknown): value is UnlimitedBillingOption {
+  return typeof value === 'string' && (UNLIMITED_BILLING_OPTIONS as readonly string[]).includes(value);
+}
+
+export function unlimitedBillingStatus(status: 'lifetime' | 'active' = 'lifetime'): BillingStatus {
+  return {
+    planId: UNLIMITED_PLAN.id,
+    planName: UNLIMITED_PLAN.name,
+    status,
+    productLimit: UNLIMITED_FAIR_USE_CEILING,
+    currentPeriodEnd: null,
+    cancelAtPeriodEnd: false,
+  };
+}
+
 export function billingStatus(record: SubscriptionRecord | null, now = new Date()): BillingStatus {
   const storedPlanId = isPlanId(record?.plan_id) ? record.plan_id : null;
   const status = typeof record?.status === 'string' ? record.status : null;
@@ -29,7 +61,7 @@ export function billingStatus(record: SubscriptionRecord | null, now = new Date(
   if (!paid || !storedPlanId) return { planId: 'free', planName: 'Gratis', status, productLimit: FREE_TRIAL_PRODUCT_LIMIT, currentPeriodEnd: periodEnd, cancelAtPeriodEnd: Boolean(record?.cancel_at_period_end) };
 
   // Historical subscription plan IDs remain readable in persistence/webhooks, but every
-  // currently active paid subscriber receives the single public ImportVerifier Unlimited entitlement.
+  // currently active paid subscriber receives the public ImportVerifier Unlimited entitlement.
   return {
     planId: UNLIMITED_PLAN.id,
     planName: UNLIMITED_PLAN.name,
@@ -40,10 +72,33 @@ export function billingStatus(record: SubscriptionRecord | null, now = new Date(
   };
 }
 
+export function stripePriceIdForBillingOption(option: UnlimitedBillingOption, production = process.env.NODE_ENV === 'production'): string {
+  if (production) return UNLIMITED_PRICE_CONFIG[option].priceId;
+  const envName: Record<UnlimitedBillingOption, string> = {
+    monthly: 'STRIPE_PRICE_STARTER',
+    annual: 'STRIPE_PRICE_ANNUAL',
+    lifetime: 'STRIPE_PRICE_LIFETIME',
+  };
+  const value = process.env[envName[option]];
+  if (!value || !/^price_[A-Za-z0-9]+$/.test(value)) throw new Error(`Falta configurar ${envName[option]} en Netlify.`);
+  return value;
+}
+
+export function billingOptionForStripePrice(priceId: string | null | undefined, production = process.env.NODE_ENV === 'production'): UnlimitedBillingOption | null {
+  if (!priceId) return null;
+  const entries: readonly (readonly [UnlimitedBillingOption, string | undefined])[] = production
+    ? UNLIMITED_BILLING_OPTIONS.map(option => [option, UNLIMITED_PRICE_CONFIG[option].priceId] as const)
+    : [
+      ['monthly', process.env.STRIPE_PRICE_STARTER],
+      ['annual', process.env.STRIPE_PRICE_ANNUAL],
+      ['lifetime', process.env.STRIPE_PRICE_LIFETIME],
+    ];
+  return entries.find(([, value]) => value === priceId)?.[0] ?? null;
+}
+
 export function stripePriceId(planId: PlanId, production = process.env.NODE_ENV === 'production'): string {
-  if (production && planId === 'starter') return IMPORTVERIFIER_UNLIMITED_PRICE_ID;
-  const names: Record<PlanId, string> = {
-    starter: 'STRIPE_PRICE_STARTER',
+  if (planId === 'starter') return stripePriceIdForBillingOption('monthly', production);
+  const names: Record<Exclude<PlanId, 'starter'>, string> = {
     growth: 'STRIPE_PRICE_GROWTH',
     pro: 'STRIPE_PRICE_PRO',
     business: 'STRIPE_PRICE_BUSINESS',
@@ -55,8 +110,8 @@ export function stripePriceId(planId: PlanId, production = process.env.NODE_ENV 
 
 export function planIdForStripePrice(priceId: string | null | undefined, production = process.env.NODE_ENV === 'production'): PlanId | null {
   if (!priceId) return null;
+  if (billingOptionForStripePrice(priceId, production)) return 'starter';
   const entries = [
-    ['starter', production ? IMPORTVERIFIER_UNLIMITED_PRICE_ID : process.env.STRIPE_PRICE_STARTER],
     ['growth', process.env.STRIPE_PRICE_GROWTH],
     ['pro', process.env.STRIPE_PRICE_PRO],
     ['business', process.env.STRIPE_PRICE_BUSINESS],
