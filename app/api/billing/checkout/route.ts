@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isUnlimitedBillingOption, stripePriceIdForBillingOption, UNLIMITED_PRICE_CONFIG } from '@/lib/billing';
 import { billingText } from '@/lib/billing-i18n';
-import { configuredSiteOrigin, sameOrigin, PRIVATE_HEADERS, readJsonBody } from '@/lib/http';
+import { configuredSiteOrigin, sameOrigin, PRIVATE_HEADERS, readJsonBody, RequestBodyTooLargeError } from '@/lib/http';
 import { legalConfig } from '@/lib/legal-config';
 import { requestLanguage } from '@/lib/request-language';
 import { trustedStripeNavigationUrl } from '@/lib/stripe/navigation';
@@ -112,22 +112,19 @@ export async function POST(request: Request) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return json({ error: b('signInCheckout') }, 401);
 
-  let billingOption: UnlimitedBillingOption = 'monthly';
+  let body: Record<string, unknown> | null;
   try {
-    const body = await readJsonBody(request, BILLING_JSON_MAX_BYTES) as Record<string, unknown> | null;
-    const candidate = body?.purchaseId ?? body?.planId;
-    if (candidate !== UNLIMITED_INTERNAL_PLAN_ID) throw new Error(b('onlyUnlimited'));
-    // Explicit request data wins. The short-lived Auth metadata fallback exists only for
-    // the immediate post-login purchase-intent path, where the legacy dashboard request
-    // does not yet include billingOption. Stale metadata can never silently change a later
-    // manual checkout from its monthly default.
-    const requestedOption = body?.billingOption ?? recentAuthBillingIntent(user.user_metadata as Record<string, unknown> | undefined) ?? 'monthly';
-    if (!isUnlimitedBillingOption(requestedOption)) throw new Error(b('invalidRequest'));
-    billingOption = requestedOption;
-    if (process.env.NODE_ENV === 'production' && !legalConfig()) throw new Error(b('legalNotReady'));
+    body = await readJsonBody(request, BILLING_JSON_MAX_BYTES) as Record<string, unknown> | null;
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : b('invalidRequest') }, 400);
+    return json({ error: b('invalidRequest') }, error instanceof RequestBodyTooLargeError ? 413 : 400);
   }
+
+  const candidate = body?.purchaseId ?? body?.planId;
+  if (candidate !== UNLIMITED_INTERNAL_PLAN_ID) return json({ error: b('onlyUnlimited') }, 400);
+  const requestedOption = body?.billingOption ?? recentAuthBillingIntent(user.user_metadata as Record<string, unknown> | undefined) ?? 'monthly';
+  if (!isUnlimitedBillingOption(requestedOption)) return json({ error: b('invalidRequest') }, 400);
+  const billingOption: UnlimitedBillingOption = requestedOption;
+  if (process.env.NODE_ENV === 'production' && !legalConfig()) return json({ error: b('legalNotReady') }, 400);
 
   try {
     const stripe = stripeClient();
