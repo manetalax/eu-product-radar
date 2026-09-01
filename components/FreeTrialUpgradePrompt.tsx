@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { UnlimitedBillingOption } from '@/lib/billing';
-import { productQuotaFromUnknown } from '@/lib/dashboard-api-shapes';
 import { localeFor } from '@/lib/landing-i18n';
 import { UNLIMITED_ANNUAL_PRICE_EUR, UNLIMITED_LIFETIME_PRICE_EUR, UNLIMITED_MONTHLY_PRICE_EUR } from '@/lib/plans';
 import { trustedStripeNavigationUrl } from '@/lib/stripe-navigation';
@@ -17,34 +16,12 @@ const copy = {
   pt:{ aria:'Fim do teste gratuito', eyebrow:'TESTE CONCLUÍDO', title:'Utilizou os seus 5 produtos gratuitos.', body:'Continue com o ImportVerifier Unlimited. Escolha a modalidade de pagamento que preferir; as três desbloqueiam a mesma experiência Unlimited.', benefits:['Análises ilimitadas* do catálogo','ImportVerifier AI + Regulatory Twin','PDF e Excel com histórico e rastreabilidade'], monthly:'Mensal', annual:'Anual · melhor valor', lifetime:'Vitalício', monthlySuffix:'/mês', annualSuffix:'/ano', lifetimeSuffix:'pagamento único', annualSave:'Poupe 29,45 € face a 12 mensalidades', busy:'A abrir pagamento seguro…', secure:'Pagamento seguro Stripe', error:'Não foi possível abrir o pagamento.' },
 } as const;
 
-export default function FreeTrialUpgradePrompt() {
+export default function FreeTrialUpgradePrompt({ exhausted }: { exhausted: boolean }) {
   const { language } = useLanguage();
   const t = copy[language];
   const currency = (value: number) => new Intl.NumberFormat(localeFor(language), { style:'currency', currency:'EUR', minimumFractionDigits:value % 1 ? 2 : 0, maximumFractionDigits:2 }).format(value);
-  const [exhausted, setExhausted] = useState(false);
   const [busy, setBusy] = useState<UnlimitedBillingOption | null>(null);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/analyses?page=0', { cache: 'no-store' })
-      .then(async response => {
-        if (!response.ok) return null;
-        try {
-          const parsed = await response.json();
-          return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null;
-        } catch {
-          return null;
-        }
-      })
-      .then(body => {
-        if (cancelled) return;
-        const quota = productQuotaFromUnknown(body?.quota);
-        setExhausted(quota?.billing.planId === 'free' && quota.remaining === 0);
-      })
-      .catch(() => { if (!cancelled) setExhausted(false); });
-    return () => { cancelled = true; };
-  }, []);
 
   async function upgrade(billingOption: UnlimitedBillingOption) {
     if (busy) return;
@@ -84,7 +61,7 @@ export default function FreeTrialUpgradePrompt() {
         <span>{option.label}</span><strong>{currency(option.price)} <small>{option.suffix}</small></strong>{option.note && <small>{option.note}</small>}
       </button>)}
     </div>
-    <small className="trial-upgrade-secure">{busy ? t.busy : t.secure}</small>
+    <small className="trial-upgrade-secure" role="status" aria-live="polite">{busy ? t.busy : t.secure}</small>
     {error && <p role="alert" className="message error">{error}</p>}
   </section>;
 }
