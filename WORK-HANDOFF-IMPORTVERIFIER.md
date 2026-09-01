@@ -27,7 +27,7 @@ Commercial rules:
   - **Lifetime: EUR 149 one-time**.
 - `starter` remains the internal compatibility plan ID for the public Unlimited entitlement. It is not a customer-facing tier name.
 - Monthly and annual are recurring Stripe subscription entitlements.
-- Lifetime is a persistent one-time entitlement. It does not depend on an active subscription and must only be granted after a validated authorized Stripe Lifetime Checkout; a full refund revokes it.
+- Lifetime is a persistent one-time entitlement. It does not depend on an active subscription and must only be granted after a validated paid Stripe Lifetime Checkout; a full refund revokes it.
 - Historical `growth`, `pro`, `business` and historical one-time audit storage remain readable only for compatibility/history. They are not sold to new customers. Historical `one_time_audits` never grant current entitlement.
 - Unlimited remains commercially unlimited while retaining technical fair-use, abuse, rate and file-size safeguards.
 
@@ -50,8 +50,8 @@ Checkout requirements:
 - Billing option must be exactly `monthly`, `annual` or `lifetime`; legacy missing option means monthly for compatibility.
 - Production checkout is fail-closed until required legal-provider configuration exists.
 - Price is re-read from Stripe and must match the selected option’s exact active EUR amount and expected recurrence/type before Checkout opens.
-- Monthly/annual use Checkout `subscription` mode.
-- Lifetime uses Checkout `payment` mode.
+- Monthly/annual use Checkout `subscription` mode and may use Stripe promotion codes.
+- Lifetime uses Checkout `payment` mode and **does not allow promotion codes**. This prevents a 100% discount from creating irreversible permanent value without payment.
 - Checkout navigation is validated against exact trusted Stripe hosts.
 - Return URLs derive only from the validated configured site origin.
 - Existing active Unlimited subscription routes to Stripe Customer Portal rather than opening duplicate recurring purchases.
@@ -70,7 +70,8 @@ Subscription entitlement:
 Lifetime entitlement:
 
 - Stored separately in `public.unlimited_lifetime_entitlements` with RLS and account ownership.
-- `syncLifetimeCheckoutSession` requires payment-mode settled Checkout, exactly one canonical Lifetime price, `starter` + `lifetime` metadata, a recognized Stripe customer and a user identity matching the persisted customer owner.
+- `syncLifetimeCheckoutSession` requires `mode=payment`, exact `payment_status=paid`, a non-null PaymentIntent, exactly one canonical Lifetime price, `starter` + `lifetime` metadata, a recognized Stripe customer and a user identity matching the persisted customer owner.
+- `no_payment_required` is never an entitlement source and the webhook ignores such one-time Checkout states instead of retrying a grant that must fail.
 - Synchronous Checkout confirmation and webhook processing share the same Lifetime synchronizer.
 - Full Stripe refunds revoke the matching active Lifetime entitlement by payment-intent identity.
 - The database quota trigger treats an active Lifetime record as paid Unlimited without mutating the five-product lifetime free counter.
@@ -88,7 +89,7 @@ Release safety:
 Authentication purchase continuity:
 
 - `plan=starter` is the only public plan intent.
-- The selected `billing` option must survive email login, signup/confirmation and Google OAuth through the one-shot local purchase intent.
+- The selected `billing` option survives email login, signup/confirmation and Google OAuth through the one-shot local purchase intent.
 - Invalid billing query values are discarded rather than influencing Checkout.
 - Purchase intent is consumed once and must not repeatedly reopen Checkout after a failure or for an already-Unlimited account.
 
@@ -163,6 +164,9 @@ EU is the only active market. Other market architecture may exist but must not b
 - Root layout avoids request-time language APIs that would force dynamic public rendering.
 - Localized SEO metadata is owned by static locale routes.
 - Language selection is a small client island and preserves locale across navigation/auth.
+- Public pricing now presents one Unlimited capability with **three localized payment cards**: monthly, annual and Lifetime. Annual is the visual value recommendation; no feature differences are invented between payment modalities.
+- Each pricing CTA preserves `plan=starter`, the selected `billing=monthly|annual|lifetime`, and language through auth. FAQ and Schema.org offers publish the same three truthful prices.
+- Pricing grid is responsive: three columns desktop, two tablet, one mobile; this avoids the obsolete five-plan layout on iPad/smaller screens.
 - PWA registration is deferred outside the critical rendering window.
 - Service worker only caches public safe shell/assets and refuses private/authenticated/no-store/cookie-varying responses.
 - PWA start/offline/shortcuts are language-keyed.
@@ -192,7 +196,7 @@ Do not call ImportVerifier fully launched until all of the following are true on
 - A genuinely fresh account proves signup/login, exactly five free products, sixth rejection, isolated history, PDF and XLSX.
 - Monthly EUR 9.95 Checkout → live webhook → Unlimited → Portal/cancel lifecycle passes.
 - Annual EUR 89.95 Checkout → live webhook → Unlimited → Portal/cancel lifecycle passes.
-- Lifetime EUR 149 one-time Checkout → persistent Unlimited passes and a controlled full-refund test revokes it correctly.
+- Lifetime EUR 149 one-time **paid** Checkout → persistent Unlimited passes and a controlled full-refund test revokes it correctly.
 - Historical audit rows demonstrably grant no quota.
 - Free-only AI works without premium-provider leakage.
 - Legal pages/provider details and billing behavior are truthful.
