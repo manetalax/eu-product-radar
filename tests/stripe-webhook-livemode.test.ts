@@ -10,9 +10,10 @@ test('production Stripe webhook rejects test-mode events before persistence or e
 
   const gateIndex = source.indexOf(gate);
   const persistenceIndex = source.indexOf("from('stripe_webhook_events').insert");
-  const auditIndex = source.indexOf("if (session.metadata?.purchase_type === 'audit')");
+  const subscriptionSyncIndex = source.indexOf('syncStripeSubscription');
 
   assert.ok(gateIndex >= 0);
   assert.ok(persistenceIndex > gateIndex, 'livemode gate must run before webhook event persistence');
-  assert.ok(auditIndex > gateIndex, 'livemode gate must run before legacy audit value can be persisted');
+  assert.ok(subscriptionSyncIndex >= 0, 'subscription entitlement sync must remain explicit');
+  assert.doesNotMatch(source, /ONE_TIME_AUDIT|syncAudit|one_time_audits|purchase_type\s*===\s*['"]audit['"]/);
 });
