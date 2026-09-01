@@ -35,8 +35,7 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Five-product lifetime free quota, atomic/idempotent creation, isolated histories/RLS.
 - Monthly/annual/Lifetime Checkout architecture and three live Stripe prices.
 - Lifetime production migration with forced RLS/own-row read policy.
-- Live-mode webhook gate, webhook idempotency/current-state subscription sync, refund/dispute lifecycle.
-- Lifetime zero-charge protection and revoked-payment/event-ordering replay hardening.
+- Live-mode webhook gate, current-state subscription sync, refund/dispute lifecycle and Lifetime replay/order hardening.
 - Landing/FAQ/Schema.org monthly/annual/Lifetime in ES/EN/FR/DE/IT/PT and auth billing-option continuity.
 - Retired audit entitlement removal and legacy recurring-plan normalization.
 - Universal CSV/XLS/XLSX/document/text/photo ingestion, HEIC/HEIF, prompt-injection/upload boundaries.
@@ -46,37 +45,33 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Premium localized PDF/XLSX with evidence traceability and spreadsheet formula-injection protection.
 - Static localized landing, recovery surfaces, SEO, security headers and production release guard.
 - Shopify/Amazon/Etsy architecture exists but direct integrations remain inactive pending official credentials.
+- Account deletion current-state Stripe cancellation, Checkout duplicate-subscription preflight and active/trialing-only recurring Checkout confirmation.
+- Free/Lifetime quota period semantics report `lifetime`; recurring Unlimited reports `subscription`.
 
-## DONE — earlier 2026-09-01 execution
-- Reconfirmed starting HEAD `084a1106c0d2a00861d63ee14f5316b037e4f22c`: release check **#1665 SUCCESS** and correct `netlify/importverifier/deploy-preview` **SUCCESS** at `https://deploy-preview-4--importverifier.netlify.app`.
-- **Account deletion current-state billing safety:** deletion no longer trusts stale local subscription status. It locates the Stripe customer and paginates all current Stripe subscriptions, immediately canceling every cancellable non-terminal subscription before Supabase account deletion. This also prevents a duplicate/historical subscription from surviving because the local projection only stores one row. Already-missing Stripe customer/subscription (`resource_missing`) is safe to continue; all other Stripe failures remain fail-closed.
-- **Checkout duplicate-subscription preflight:** before creating new paid value, Checkout paginates the customer's current Stripe subscriptions directly. Terminal subscriptions are ignored; abandoned `incomplete` subscriptions are canceled; any other current recurring subscription routes to Billing Portal. This reduces duplicate billing when a webhook/local projection is delayed.
-- **Browser confirmation semantics:** recurring Checkout return now synchronizes the latest Stripe subscription but reports `confirmed: true` only for `active`/`trialing`. Incomplete/past-due/non-entitling state is presented as pending instead of false purchase success.
-- **Truthful Lifetime UX:** Checkout return progress copy now says Unlimited “access” rather than “subscription” in ES/EN/FR/DE/IT/PT, so Lifetime is not mislabeled as recurring.
-- Added regression coverage for complete account-deletion cancellation, live Stripe Checkout preflight and active/trialing-only browser confirmation.
-- Functional/test commits: `2d89957efc160aeb7a961e36e383da567ffb9db7`, `6862ee5e2587b46339f5d844bf3d6e68adfc3877`, `ac1b5f5a20921864df27fc0fdf6990f6a4a3a2b6`, `2806074c843edea359a11c7f9655feb0cb526919`, `7111cd49b4d542b33f6eb77492c5637ee23b107a`, `9b8f253283a60154716c8298090d7a5256e5f221`, `e5cf09e5f73624c68ffda5c21b437ba2a8f4e841`, `6e2c6b0ca2ca65b7f1df8be8dcbf825c4dfa9cc5`, `036f04310a41d8e9f7878ceb6762bd1af14a127d`.
-- Durable handoff update: `22bb71b82073995e1f87aa93da1845ccff45e7e3`.
-
-## DONE — latest 2026-09-01 execution
-- Starting branch had regressed at `d17c03417acb64cc2b21e5a6efaa5571c5b6ecb3`; exact release check failed in `npm test`.
-- Root cause was an accidental destructive rewrite of `tests/analysis.test.ts`: wrong module imports, an invented unsupported `CA` market and lost analysis/export/security regression coverage. Restored the complete valid suite while retaining the legitimate new free billing contract `billingOption: null`. Fix commit: `15ffe39927acc5fd11f08ee66003082513615a19`.
-- Corrected paid-quota period semantics: free and Lifetime report `periodStart: lifetime`; monthly/annual recurring Unlimited report `periodStart: subscription`. This avoids presenting Lifetime as a subscription in API/UI/telemetry. Functional commit: `e3c9c0063374bfa3f84582a65383305a06ebf37f`.
-- CI then exposed one stale legal-page assertion, not a product regression. The Terms page intentionally canonicalizes fallback copy through `canonicalLegalBrand`; updated the test to lock that behavior instead of expecting the retired direct fallback. Commit: `61b576f2f9dca8cc1308789601bfdea3e3e84fba`.
-- Added a dedicated regression test locking recurring-vs-Lifetime quota period semantics. Commit: `2d2b8e9dca6eaed804a16189de0fefd3f4cfd105`.
-- Exact-head release check **#1730 SUCCESS** on `2d2b8e9d...`: `npm ci`, full tests, typecheck and production build all passed. The job reports 0 audited npm vulnerabilities.
-- Correct `netlify/importverifier/deploy-preview` for exact `2d2b8e9d...` was still **pending/processing** at the last status read; do not infer readiness from an older preview.
-- This handoff commit creates a newer docs-only HEAD. Reconfirm exact CI and the correct ImportVerifier Deploy Preview before treating final repository HEAD as fully verified.
+## DONE — 2026-09-01 current execution
+- Reconfirmed starting HEAD `5a68123fb6a1df8798e445662e1f9d6007898f4f`: exact release check **#1732 SUCCESS** and correct `netlify/importverifier/deploy-preview` **SUCCESS/READY**.
+- **Production AI rate-limit permission repaired:** `consume_api_rate_limit(uuid,text,integer,integer)` had EXECUTE revoked not only from browser roles but also from `service_role`, while `lib/api-rate-limit.ts` invokes it through the admin client. This made the limiter fail closed even for valid server calls. Production migration `20260901090429_grant_api_rate_limit_service_role` now grants EXECUTE only to `service_role`/database owner and explicitly keeps `public`, `anon` and `authenticated` denied. Repo migration: `supabase/migrations/20260901090429_grant_api_rate_limit_service_role.sql`; regression: `tests/api-rate-limit-privilege.test.ts`.
+- **Production internal-table server privileges repaired:** Supabase/PostgREST `service_role` lacked object-level privileges required by billing, AI telemetry and Radar despite RLS/server intent. Production migration `20260901090719_grant_server_internal_table_privileges` grants only the operations actually used: `subscriptions` SELECT/INSERT/UPDATE; `unlimited_lifetime_entitlements` SELECT/INSERT/UPDATE; `ai_usage_events` SELECT/INSERT; `regulatory_change_events` SELECT/INSERT/UPDATE; `stripe_webhook_events` SELECT/INSERT/UPDATE. No DELETE or browser grants were added. A transaction under `SET LOCAL ROLE service_role` successfully read all affected server tables after migration. Regression: `tests/server-internal-table-privileges.test.ts`.
+- Supabase security advisor after the repair did not expose these internal objects to clients. Existing external warning remains leaked-password protection disabled; intentional no-client-policy internal tables remain INFO only.
+- **Stripe same-event webhook concurrency hardened:** a duplicate delivery arriving while the first handler was still `processing` could previously execute the same handler in parallel. The webhook ledger now serializes execution. A recent in-flight duplicate returns non-2xx (409) so Stripe keeps retry pressure if the first worker crashes. A `processing` row older than five minutes can be recovered only by one retry through an atomic conditional claim on `status=processing` + stale `updated_at`. Completed events remain idempotent duplicates. Regression: `tests/stripe-webhook-concurrency.test.ts`.
+- CI caught two stale account-deletion test expectations (`storedSubscriptionId`, literal `4096`/404 semantics). Production logic was already correct; tests were aligned to current `subscriptionId`, `resource_missing`, and `4 * 1024` contract. Fix commit: `186301bdf9d9f902d38b363dc68923e4b790e3ed`.
+- Durable architecture handoff updated in commit `43ba81358f451b4f23e242f3935316a97058c925` with the service-role privilege model and webhook serialization/recovery contract.
+- **Latest verified functional/test HEAD:** `186301bdf9d9f902d38b363dc68923e4b790e3ed`.
+- GitHub `ImportVerifier release check` **#1753 SUCCESS** on exact `186301bd...`: `npm ci`, full tests, typecheck and production build all passed.
+- Correct `netlify/importverifier/deploy-preview` on exact `186301bd...` is **SUCCESS/READY** at `https://deploy-preview-4--importverifier.netlify.app`.
+- PR #4 remained open and unmerged at verification. This handoff commit creates a newer docs-only HEAD; reconfirm its exact CI and Netlify status before treating the final repository HEAD as fully verified.
 
 ## Production facts
-- Supabase project `hfuwwjdcyudflamwwnon` was last established ACTIVE_HEALTHY.
-- `unlimited_lifetime_entitlement` migration is applied; pre-sale entitlement baseline was 0 rows.
-- Stripe live product has all three canonical prices and canonical webhook listens to Checkout/subscriptions/refunds/disputes.
+- Supabase project `hfuwwjdcyudflamwwnon` is the production project used by current migrations.
+- Lifetime entitlement migration is applied; pre-sale entitlement baseline was 0 rows.
+- Production migrations `20260901090429` and `20260901090719` restore the minimum required server-only RPC/table privileges while keeping client boundaries closed.
+- Stripe live product has all three canonical prices and the canonical webhook listens to Checkout/subscriptions/refunds/disputes.
 - Radar remains non-live; keep `REGULATORY_RADAR_LIVE=false` until official ingestion persists events.
 - Supabase leaked-password protection remains disabled externally.
 
 ## NEXT — execute without asking
 1. Reconfirm exact final HEAD after this handoff commit, exact GitHub release check and correct `netlify/importverifier/deploy-preview`; repair any regression immediately.
-2. Continue only genuinely new billing/security/reliability findings; do not redo Checkout/subscription/Lifetime replay sweeps already locked by tests.
+2. Continue only genuinely new security/billing/reliability findings. In particular, verify new server-side PostgREST/RPC paths retain minimum privileges without broadening browser access; do not repeat the completed privilege sweep unless code/migrations change.
 3. Production acceptance when browser/payment conditions permit: monthly → webhook → Unlimited → Portal/cancel; annual equivalent; Lifetime paid → persistent Unlimited → controlled refund/dispute lifecycle.
 4. Fresh-account acceptance: signup/login → five-product sample accepted → sixth rejected → isolated history → premium PDF/XLSX.
 5. Obtain TTFB/LCP/TBT/CLS/resource evidence before performance changes.
