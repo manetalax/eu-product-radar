@@ -11,12 +11,12 @@ type Props = {
 };
 
 const copy = {
-  es: 'Confirmando tu suscripción Unlimited…',
-  en: 'Confirming your Unlimited subscription…',
-  fr: 'Confirmation de votre abonnement Unlimited…',
-  de: 'Unlimited-Abonnement wird bestätigt…',
-  it: 'Conferma dell’abbonamento Unlimited…',
-  pt: 'A confirmar a sua subscrição Unlimited…',
+  es: 'Confirmando tu acceso Unlimited…',
+  en: 'Confirming your Unlimited access…',
+  fr: 'Confirmation de votre accès Unlimited…',
+  de: 'Unlimited-Zugang wird bestätigt…',
+  it: 'Conferma dell’accesso Unlimited…',
+  pt: 'A confirmar o seu acesso Unlimited…',
 } as const;
 const CONFIRM_TIMEOUT_MS = 20_000;
 
