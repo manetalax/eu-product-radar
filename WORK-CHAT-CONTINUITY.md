@@ -1,118 +1,81 @@
 # ImportVerifier — Chat ↔ Work continuity protocol
 
 ## Canonical project
-- Production: `https://importverifier.netlify.app/`
+- Production target: `https://importverifier.netlify.app/`
 - Repository: `manetalax/eu-product-radar`
-- Historical PR: `#4` — merged externally into `main` on 2026-09-01 at 11:11:57Z; do not attempt another merge.
+- Historical PR `#4` was merged externally into `main` on 2026-09-01; **do not merge again**.
 - Continued hardening branch: `feat/import-rules-verifier-branding`.
-- Never create a replacement project. Do not merge or retarget work without explicit owner instruction.
+- Never create a replacement project or retarget this branch without explicit owner instruction.
 
 ## Read order
 1. This file.
 2. `WORK-HANDOFF-IMPORTVERIFIER.md`.
-3. Exact branch HEAD + exact-HEAD GitHub CI + relevant deployment status.
+3. Exact branch HEAD + exact-HEAD GitHub Actions run.
 4. `AGENTS.md`.
 
 ## Operating rule
-Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, record it and continue elsewhere. Do not repeat DONE sweeps. Batch browser/credential/device acceptance for the end. Use connected tools before asking the owner for a credential or console action; reduce owner intervention to the irreducible external step.
-
-`AGENTS.md` codifies a multidisciplinary senior review model covering product/strategy, UX/design, application engineering, architecture/platform, security/privacy, billing/revenue, AI/data, regulatory/evidence, QA/release, performance/reliability, growth/SEO/localization and operations/SRE. Apply relevant departments to each substantial change, but do not manufacture speculative work when a surface is already correct.
+Continue autonomously through actionable IN PROGRESS/NEXT work. Skip anything already DONE. If a task needs credentials, browser/payment console, physical device or other human-only action, mark it `BLOCKED EXTERNAL` and immediately continue elsewhere. Never expose secrets. Do not make speculative changes without evidence.
 
 ## Commercial invariants
-- Exactly 5 free products total per account, lifetime/cumulative, no card/reset.
-- One feature entitlement: ImportVerifier Unlimited.
-- Monthly EUR 9.95, annual EUR 89.95, Lifetime EUR 149 one-time; identical Unlimited features.
-- Internal compatibility plan ID remains `starter`.
-- Monthly/annual are recurring. Lifetime is persistent and only comes from canonical paid Stripe Checkout.
-- Full refund or active/lost dispute removes Lifetime access; won dispute restores only while the underlying charge remains collected.
-- Historical `one_time_audits` never grant entitlement.
-- Customer-facing AI brand is ImportVerifier AI; production cost policy is fail-closed `AI_COST_POLICY=free_only`.
-
-## Canonical Stripe live prices
-- Monthly: `price_1UAJy5HJnO8odw1Mn4jMVjFt`.
-- Annual: `price_1UAjP0HJnO8odw1M7RBK8jsR`.
-- Lifetime: `price_1UAjP8HJnO8odw1MmSXdkNIh`.
+- Exactly 5 free products total per account, lifetime/cumulative, no reset and no card.
+- One paid entitlement: ImportVerifier Unlimited.
+- EUR 9.95/month, EUR 89.95/year, EUR 149 Lifetime one-time; identical Unlimited feature set.
+- Internal compatibility plan remains `starter`.
+- Monthly/annual recurring; Lifetime persistent only after canonical paid Stripe Checkout.
+- Canonical live Stripe prices:
+  - Monthly `price_1UAJy5HJnO8odw1Mn4jMVjFt`
+  - Annual `price_1UAjP0HJnO8odw1M7RBK8jsR`
+  - Lifetime `price_1UAjP8HJnO8odw1MmSXdkNIh`
+- Customer-facing AI name is ImportVerifier AI; production cost policy is fail-closed `AI_COST_POLICY=free_only`.
 
 ## DONE — do not repeat
-- Five-product lifetime free quota, atomic/idempotent creation, isolated histories/RLS.
-- Monthly/annual/Lifetime Checkout architecture and three live Stripe prices.
-- Lifetime production migration with forced RLS/own-row read policy.
-- Live-mode webhook gate, current-state subscription sync, webhook execution serialization, refund/dispute lifecycle and Lifetime replay/order hardening.
-- Billing request 4 KiB boundary, safe parser errors, current-price recurring confirmation and recurring-only Portal semantics.
-- Stripe customer ownership is persisted/authoritative; mutable metadata cannot attach an unknown customer.
-- Auth/OAuth preserves allowlisted monthly/annual/Lifetime intent through same-site short-lived preference plus fresh metadata recovery.
-- Checkout return uses bounded transient retries only.
-- Landing/FAQ/Schema.org monthly/annual/Lifetime in ES/EN/FR/DE/IT/PT.
-- Retired audit entitlement removal and legacy recurring-plan normalization.
-- Universal CSV/XLS/XLSX/document/text/photo ingestion, HEIC/HEIF, prompt-injection/upload boundaries.
-- EU deterministic regulatory engine, Evidence, Regulatory Twin and fail-closed Regulatory Impact Radar architecture.
-- Official regulatory/evidence URL allowlists and persistence/render/export/AI-context sanitization.
-- PWA private-cache hardening, credentialless public-shell and shared-static-asset caching, localized start/offline/shortcuts and iOS/mobile upload/export safeguards.
-- Premium localized PDF/XLSX with evidence traceability and spreadsheet formula-injection protection.
-- Static localized landing, recovery surfaces, SEO, security headers and production release guard.
-- Shopify/Amazon/Etsy architecture exists but direct integrations remain inactive pending official credentials.
-- Account deletion current-state Stripe cancellation and duplicate-subscription preflight.
-- Production server-only Supabase RPC/table privilege repair; browser roles remain closed.
-- Supabase advisors rechecked: only known leaked-password warning; internal RLS/no-policy INFO is intentional and unused-index INFO is not grounds for speculative deletion.
-- Dashboard billing intent correctly carries monthly/annual/Lifetime through Checkout.
-- Dashboard distinguishes Lifetime from recurring Unlimited and exposes all three canonical purchase choices responsively.
-- Five-free → Unlimited upgrade surface synchronizes live when quota reaches zero and uses trusted Stripe navigation.
+- Atomic/idempotent five-product lifetime free quota and account-isolated histories/RLS.
+- Monthly/annual/Lifetime Checkout, entitlement, Portal, webhook serialization, current-state Stripe sync, duplicate-subscription prevention, refund/dispute/Lifetime reversal hardening, request bounds and trusted Stripe navigation.
+- Auth/OAuth purchase-intent continuity, email/Google auth flows and localized recovery surfaces.
+- Universal CSV/XLS/XLSX/document/text/photo ingestion including HEIC/HEIF, upload limits and prompt-injection boundaries.
+- EU deterministic regulatory engine, Evidence, Regulatory Twin and fail-closed Radar architecture; official URL sanitization across persistence/render/export/AI context.
+- Premium localized PDF/XLSX, spreadsheet formula-injection protection and mobile download cleanup.
+- PWA private-cache hardening, credentialless public shell/static assets, localized manifest/offline/shortcuts and iOS/mobile upload safeguards.
+- Server-only Supabase privilege repair and advisor review; browser roles remain closed.
+- Dashboard exposes all three Unlimited purchase choices and handles five-free → upgrade correctly.
+- Checkout return no longer claims payment success before server confirmation.
+- Account-deletion confirmation moves focus into the form and restores focus on cancel; mobile inputs are 16px with touch-sized controls.
 
-## DONE — 2026-09-01 post-merge hardening pass
-- Detected that PR #4 had been merged externally despite the previous handoff saying open/unmerged. GitHub records merge commit `3cc3e1f43458d35ddcf1962eab29141c529e27f6` at 2026-09-01T11:11:57Z.
-- Reconfirmed the continued hardening branch and restored direct `push` validation after the external PR merge had left post-merge hardening commits without a release check.
-- Audited free-quota → three-option Checkout announcement/focus behavior.
-- Fixed a demonstrated accessibility gap: when the fifth free product exhausts quota and the upgrade surface mounts dynamically, its explanatory copy now uses a polite atomic status announcement without programmatically stealing keyboard focus; regression coverage locks the behavior.
-- Audited Checkout-return truthfulness and found that Dashboard announced `Pago recibido`/equivalent on any `checkout=success` URL before `/api/billing/confirm` had confirmed entitlement/payment state.
-- Fixed the premature success claim: an unsynced Checkout return remains in the neutral `CheckoutReturnSync` live confirmation state; Dashboard only emits the localized success notice after the server-confirmed redirect carries `synced=1`.
-- Added `tests/checkout-return-truthfulness.test.ts` to prevent regression and preserve the neutral polite live state plus failure alert semantics.
-- Intermediate test-only commit `74fbe020ec0108dc212a959123b682144950dcc9` intentionally exposed the Checkout defect and release check #1844 failed before the implementation fix; it is not a release candidate.
-- Functional Checkout fix `b3d7785ddbd38f162e76bfd5eab605a94d495af4` passed release check #1845 SUCCESS.
-- Hardened the shared PWA asset cache: cache generation is now `importverifier-shell-v8`, prior shell generations are invalidated, and same-origin CSS/JS/image/font requests are reconstructed with `credentials: 'omit'` before a response can enter the shared cache. Response cacheability still fails closed on private/no-store/no-cache and `Vary: Cookie/Authorization`.
-- Added regression coverage proving that shared cacheable assets are credentialless, complementing the already credentialless public landing navigation cache boundary.
-- Fixed the demonstrated Dashboard Settings keyboard-focus gap in account deletion: opening the destructive confirmation now moves focus explicitly to the email confirmation field after mount; cancelling clears confirmation state and restores focus to the opener after it remounts.
-- Added `tests/account-delete-focus.test.ts` to lock both focus-entry and focus-return behavior.
-- Intermediate test commit `c9ec2a9693db448009b7bf1fed764e512ee2ccd9` made release check #1850 fail solely because the new test used top-level `await` under the CJS test transform; implementation was not implicated. The regression fixture was corrected to `readFileSync` in `35f536d6a087e254834414537d1818615eb58e79`.
-- Fixed a demonstrated iPhone Safari usability issue in the destructive account flow: the inputs inherit the 12px label font, so the mobile breakpoint now raises account-deletion inputs to 16px while retaining 46px minimum control height and the existing one-column layout, avoiding focus zoom without disabling browser zoom.
-- Extended `tests/account-delete-focus.test.ts` to lock the 16px mobile input rule and touch-sized control floor.
-
-## Latest exact verification — 2026-09-01
-- Latest exact functional HEAD fully verified green: **`a3b5f6f7694cfb3a80d754d56947c6bdb44db342`**.
-- Exact release check for that SHA: **#1854 SUCCESS**; `npm ci`, full `npm test`, typecheck and production build all completed successfully.
-- Previous focus/PWA functional HEAD `35f536d6a087e254834414537d1818615eb58e79` passed release check #1851 SUCCESS.
-- Previous exact functional Checkout HEAD `b3d7785ddbd38f162e76bfd5eab605a94d495af4` passed release check #1845 SUCCESS.
-- PR #4 is **merged/closed**, not open. Do not attempt another merge.
-- This file is a documentation-only commit after the verified functional SHA. Reconfirm the branch HEAD and exact-HEAD CI before a release decision; do not confuse a documentation-only HEAD with the separately proven functional HEAD above.
+## DONE — current hardening execution (2026-09-01)
+- Reconfirmed pre-change branch HEAD `3748b0a7d47a0b535d04b49106ff79eb0953f281` and exact push release check **#1855 SUCCESS**.
+- Audited `CheckoutReturnSync` as a genuinely new accessibility surface.
+- Found that the initial “confirming Unlimited access” message relied only on a live region that is already populated on first render, which is not reliably announced by assistive technology.
+- Fixed the confirmation state so the containing live region is atomic and the busy message itself has `role="status"`; failure remains `role="alert"`.
+- Added `tests/checkout-return-announcement.test.ts` to lock the status/alert semantics.
+- Functional commit: `9829b47ad3ea2a5cfc328b704eeffad1199d8379`.
+- Test commit / current functional HEAD before this handoff update: `7b07a56b1c57aebc68528b9f8ca2a174ce981dfa`.
+- Exact release check for `7b07a56…`: **#1861** was created by the branch push and was still `pending` at the last observation; do not call it green until GitHub reports `completed/success`.
 
 ## Production facts
 - Supabase project `hfuwwjdcyudflamwwnon` is production.
-- Lifetime entitlement migration is applied; pre-sale baseline was 0 Lifetime rows.
-- Production migrations `20260901090429` and `20260901090719` establish minimum server-only privileges required by current APIs.
-- Stripe live product has all three canonical prices and canonical webhook coverage for Checkout/subscriptions/refunds/disputes.
-- Radar remains non-live; keep `REGULATORY_RADAR_LIVE=false` until official ingestion persists events.
-- Supabase leaked-password protection remains disabled. Current connected Supabase actions expose publishable keys/database operations but not the secret Auth configuration needed to enable this control.
-- Production env template intentionally keeps privileged secrets and sensitive legal identifiers blank; never commit them.
+- Lifetime entitlement migration is applied; production server-only privilege migrations are applied.
+- Stripe live product has all three canonical prices and webhook coverage.
+- Keep `REGULATORY_RADAR_LIVE=false` until official ingestion persists real events with a strong shared ingest secret.
+- Supabase leaked-password protection remains disabled and requires an external Auth-setting path not exposed by the current connector.
+- Production env templates intentionally omit secrets and sensitive legal identifiers.
 
 ## NEXT — execute without asking
-1. Reconfirm the documentation-only branch HEAD and its exact-HEAD release check; repair any failing test/typecheck/build regression immediately.
-2. Continue genuinely new keyboard/focus review outside the now-fixed account-deletion flow, prioritizing demonstrated traps in Settings, billing return and dynamically mounted customer actions rather than speculative rewrites.
-3. Continue genuinely new multidisciplinary findings across security, mobile/iPad/PWA, billing, AI, evidence, reports and Radar, prioritizing demonstrated correctness/revenue/privacy/user-friction issues.
-4. Production acceptance when browser/payment conditions permit: monthly → webhook → Unlimited → Portal/cancel; annual equivalent; Lifetime paid → persistent Unlimited → controlled refund/dispute lifecycle.
-5. Fresh-account acceptance: signup/login → five-product sample accepted → sixth rejected → isolated history → premium PDF/XLSX.
-6. Obtain TTFB/LCP/TBT/CLS/resource evidence before performance changes.
-7. Inspect PDF typography/overflow only against a real multi-product output.
-8. Keep Radar disabled until same strong ingest secret exists runtime/scheduler and real official EUR-Lex ingestion persists events.
-9. Keep EU the only active market and direct marketplace connectors inactive until legitimate credentials exist.
+1. Reconfirm the exact current branch HEAD after this documentation commit and its exact GitHub Actions release check. If a test/typecheck/build failure appears, diagnose and fix it before new feature work.
+2. Continue genuinely new keyboard/focus review, prioritizing actions that programmatically switch Dashboard tabs and unmount the initiating control (for example “view results” / opening a history item) so keyboard focus does not fall back to the document body.
+3. Continue new evidence-backed findings across security, mobile/iPad/PWA, billing, AI, Evidence, reports and Radar; prioritize correctness, revenue protection, privacy and customer friction over cosmetic churn.
+4. Obtain browser performance evidence before any TTFB/LCP/TBT/CLS optimization.
+5. Inspect PDF typography/overflow only against a real multi-product output.
+6. Keep EU as the only active market and direct Shopify/Amazon/Etsy connectors inactive until legitimate credentials exist.
 
 ## BLOCKED EXTERNAL
-- Final Netlify production env/promotion with privileged Supabase/Stripe secrets, truthful sensitive legal fields and free-only AI secret. Connected tools should be used to obtain/configure anything they legitimately expose before asking the owner.
-- Controlled real monthly/annual/Lifetime Checkout/Portal/cancel/refund/dispute transactions.
-- Strong shared Radar ingest secret in both runtime and scheduler + first official EUR-Lex ingestion.
-- Supabase Auth leaked-password/CAPTCHA controls; current connector lacks Auth-setting writes and CAPTCHA requires a legitimate external provider credential.
+- Final production env/promotion with privileged Supabase/Stripe secrets, truthful sensitive legal fields and free-only AI secret.
+- Controlled live monthly/annual/Lifetime Checkout → webhook → entitlement → Portal/cancel/refund/dispute acceptance.
 - Fresh non-owner SMTP signup/reset acceptance.
+- Strong Radar ingest secret in runtime + scheduler and first official EUR-Lex persisted ingestion.
+- Supabase leaked-password/CAPTCHA configuration requiring external provider/Auth-console capability.
 - Physical iPhone/iPad/Safari/PWA QA.
 - Official Shopify/Amazon/Etsy credentials/scopes.
 - Detailed browser performance evidence and real multi-product PDF visual QA.
 
 ## Definition of finished
-Do not call ImportVerifier fully launched until exact current CI and canonical production are green; release config passes; fresh-account five-free/sixth-rejection/history/PDF/XLSX passes; free-only AI is proven; all three paid lifecycles and reversals pass; legal/provider data is truthful; Radar claims match persisted official ingestion; Auth/SMTP controls pass; and desktop/iPhone/iPad/PWA QA passes.
+Do not call ImportVerifier fully launched until the exact current CI and canonical production are green; fresh-account five-free/sixth-rejection/history/PDF/XLSX passes; free-only AI is proven; all three paid lifecycles and reversals pass; legal/provider data is truthful; Radar claims match persisted official ingestion; Auth/SMTP controls pass; and desktop/iPhone/iPad/PWA QA passes.
