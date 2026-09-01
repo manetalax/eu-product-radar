@@ -54,6 +54,10 @@ Legal/trust invariants:
 - Private/authenticated content is excluded from persistent PWA caching.
 - Public-shell cache requests omit credentials and reject Cookie/Authorization-varying/private/no-store/no-cache responses.
 - Service-worker online/visibility update failures are contained so Safari/iPadOS/offline transitions do not create unhandled rejections.
+- App Router route failures, root-layout failures and unknown routes have explicit ImportVerifier recovery surfaces through `app/error.tsx`, `app/global-error.tsx` and `app/not-found.tsx`.
+- Recovery copy is complete in ES/EN/FR/DE/IT/PT, does not render raw exception messages/stacks/digests, and synchronizes the document language to the detected supported locale.
+- The global recovery surface is style-self-contained because `global-error` replaces the root layout and therefore cannot assume root CSS loaded successfully.
+- `app/loading.tsx` provides an accessible, language-neutral skeleton/status surface for suspended navigation instead of leaving customers without transient feedback.
 
 ### Public landing
 
@@ -230,7 +234,8 @@ Do not redo these sweeps unless a genuinely new path appears:
 - internal Radar auth/content-type/body-size validation;
 - official regulatory/guidance URL allowlists and final render/export/AI-context sanitization;
 - account/RLS/privileged-table hardening;
-- PWA private-cache/cache-poisoning defenses.
+- PWA private-cache/cache-poisoning defenses;
+- App Router route/global error recovery redacts raw exceptions and preserves localized customer-safe fallback behavior.
 
 Only fix newly discovered gaps; avoid security churn in already hardened surfaces.
 
@@ -263,7 +268,7 @@ Further typography/overflow changes should come from real multi-product acceptan
 
 Active customer languages: ES, EN, FR, DE, IT, PT.
 
-Covered/maintained surfaces include landing, auth, dashboard, upload/extraction, billing, Evidence, Intelligence Suite, regulatory assessment, reports and account lifecycle.
+Covered/maintained surfaces include landing, auth, dashboard, upload/extraction, billing, Evidence, Intelligence Suite, regulatory assessment, reports, account lifecycle and failure/recovery UX.
 
 Language rules:
 
@@ -288,7 +293,8 @@ Already covered statically:
 - multi-file rejection;
 - delayed Blob URL revocation for PDF/XLSX/template save-to-Files robustness;
 - PWA private-cache boundary and update-failure containment;
-- language-keyed offline landing cache.
+- language-keyed offline landing cache;
+- responsive app-level loading, 404 and safe error recovery surfaces that remain usable even when the root layout fails.
 
 Still external:
 
