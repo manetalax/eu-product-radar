@@ -53,8 +53,12 @@ Continue autonomously through actionable IN PROGRESS/NEXT work. Skip anything al
 - Functional auth accessibility commit: `f305cfbc3f3647e4fdd5e4cd626ff4748b0fd581`.
 - Added `tests/auth-async-announcement.test.ts` to lock the busy semantics, persistent live-region shape and absence of forced `.focus()` in `AuthForm`.
 - Test commit / functional HEAD before this handoff update: `6d2ae8c0bc449b6ac77af097597be37fbbc9db36`.
-- Exact release check **#1872** for `6d2ae8c0bc449b6ac77af097597be37fbbc9db36` was created and was still `pending` at the last pre-handoff observation; do not call it green until GitHub completes it.
-- New evidence-backed NEXT identified in `ReadinessEvidencePanel`: optimistic Evidence saves can overlap for the same row while its controls remain enabled, and saving feedback is visual-only. Harden same-row save serialization/disable semantics and provide a persistent polite live announcement without blocking edits to unrelated evidence rows.
+- Documentation HEAD `5b333862eca9f60eb6c78c42dc0e6ce5e021b9a3` completed exact release check **#1873 SUCCESS**.
+- Confirmed the Evidence finding against that exact HEAD: `ReadinessEvidencePanel` used one visual `savingKey`, allowed same-row writes to overlap synchronously and could let a late failure roll back a newer optimistic update.
+- Functional Evidence hardening commit: `1e5fac52c3c18828767b2554e99e78bc432e8c5d` (`fix: serialize evidence saves per row`). A synchronous ref-held token set now rejects overlap before React state can lag; only the active Evidence row's five controls are disabled, while unrelated rows remain usable.
+- Saving state now supports concurrent different-row writes through a set of active keys. The persistent screen-reader-only `role="status"` / `aria-live="polite"` / `aria-atomic="true"` region announces localized progress; existing visible row feedback and assertive error alert remain.
+- Regression commit: `5adb410c605d5c815178ddf8cff8dc43b27f8ac1`. `tests/evidence-save-ux.test.ts` locks synchronous same-row exclusion, per-row disabled semantics, unrelated-row availability and the persistent polite announcement.
+- Exact release check **#1875 SUCCESS** for `5adb410c605d5c815178ddf8cff8dc43b27f8ac1`: install, full tests, typecheck and production build all passed.
 
 ## Production facts
 - Supabase project `hfuwwjdcyudflamwwnon` is production.
@@ -66,12 +70,11 @@ Continue autonomously through actionable IN PROGRESS/NEXT work. Skip anything al
 
 ## NEXT — execute without asking
 1. Reconfirm the exact current branch HEAD after this documentation commit and its exact GitHub Actions release check. If tests/typecheck/build fail, diagnose and fix before new feature work.
-2. Harden `ReadinessEvidencePanel` same-row async saves: prevent overlapping writes/late rollback for the same Evidence item while keeping unrelated rows usable, and announce save progress accessibly through persistent polite status semantics. Add regression coverage.
-3. Continue genuinely new asynchronous accessibility review after Evidence: disabled controls, status/error announcements and focus behavior around other server work. Do not repeat Dashboard, Checkout-return, account-delete, ProductReview or AuthForm work now DONE.
-4. Continue new evidence-backed findings across security, mobile/iPad/PWA, billing, AI, Evidence, reports and Radar; prioritize correctness, revenue protection, privacy and customer friction over cosmetic churn.
-5. Obtain browser performance evidence before any TTFB/LCP/TBT/CLS optimization.
-6. Inspect PDF typography/overflow only against a real multi-product output.
-7. Keep EU as the only active market and direct Shopify/Amazon/Etsy connectors inactive until legitimate credentials exist.
+2. Continue genuinely new asynchronous accessibility review after Evidence: disabled controls, status/error announcements and focus behavior around other server work. Do not repeat Dashboard, Checkout-return, account-delete, ProductReview, AuthForm or Evidence work now DONE.
+3. Continue new evidence-backed findings across security, mobile/iPad/PWA, billing, AI, reports and Radar; prioritize correctness, revenue protection, privacy and customer friction over cosmetic churn.
+4. Obtain browser performance evidence before any TTFB/LCP/TBT/CLS optimization.
+5. Inspect PDF typography/overflow only against a real multi-product output.
+6. Keep EU as the only active market and direct Shopify/Amazon/Etsy connectors inactive until legitimate credentials exist.
 
 ## BLOCKED EXTERNAL
 - Final production env/promotion with privileged Supabase/Stripe secrets, truthful sensitive legal fields and free-only AI secret.
