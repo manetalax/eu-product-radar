@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const lifetime = readFileSync(new URL('../lib/stripe/lifetime-entitlement.ts', import.meta.url), 'utf8');
 const checkout = readFileSync(new URL('../app/api/billing/checkout/route.ts', import.meta.url), 'utf8');
+const confirm = readFileSync(new URL('../app/api/billing/confirm/route.ts', import.meta.url), 'utf8');
 const webhook = readFileSync(new URL('../app/api/billing/webhook/route.ts', import.meta.url), 'utf8');
 
 test('Lifetime entitlement requires a paid Checkout with a payment intent', () => {
@@ -23,9 +24,15 @@ test('Lifetime checkout cannot use promotion codes while recurring Unlimited can
 });
 
 test('a revoked Lifetime payment cannot be resurrected by Checkout replay or confirmation', () => {
-  assert.match(lifetime, /samePayment && existingEntitlement\?\.status === 'revoked'/);
-  assert.match(lifetime, /lifetime_payment_previously_revoked/);
+  assert.match(lifetime, /samePayment && existingEntitlement\?\.status === 'revoked'\) return false/);
   assert.match(lifetime, /stripe_checkout_session_id,stripe_payment_intent_id,status/);
+  assert.match(confirm, /const granted = await syncLifetimeCheckoutSession\(session\)/);
+  assert.match(confirm, /if \(!granted\) return json\(\{ error: b\('paymentOpen'\) \}, 409\)/);
+});
+
+test('Lifetime browser confirmation requires paid status while subscriptions may have no-payment-required states', () => {
+  assert.match(confirm, /session\.mode === 'payment'[\s\S]*session\.payment_status !== 'paid'[\s\S]*409/);
+  assert.match(confirm, /session\.mode === 'subscription'[\s\S]*session\.payment_status !== 'paid' && session\.payment_status !== 'no_payment_required'/);
 });
 
 test('Lifetime access is suspended for disputes and only restored after a won non-refunded charge', () => {
