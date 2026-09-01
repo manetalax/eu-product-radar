@@ -44,16 +44,19 @@ Continue autonomously through every actionable task. Never stop because one task
 ## DONE — 2026-09-01 current run
 - **Product-extraction prompt-injection boundary:** uploaded text, documents and images are explicitly treated as untrusted data, never model instructions. Embedded prompts/system-role text are ignored and only product facts explicitly supported by the material may be extracted. The same hardened prompt is used for local-text structuring, vision and direct document-provider paths. Regression coverage locks all three paths.
 - **GitHub Actions Node 24 migration / supply-chain hardening:** release workflow no longer uses Node-20-targeting `actions/checkout@v4` or `actions/setup-node@v4`. It pins the official current releases to immutable commits: checkout v7.0.1 `3d3c42e5aac5ba805825da76410c181273ba90b1` and setup-node v7.0.0 `820762786026740c76f36085b0efc47a31fe5020`. Regression coverage prevents reverting to v4/mutable old actions.
+- **Launch acceptance fixtures:** `/importverifier-sample-5-products.csv` remains the canonical five-product trial fixture. `/importverifier-sample-6th-product.csv` is now a separate, valid and distinct one-product fixture so production acceptance can prove the lifetime sixth-product rejection without manually editing a CSV. Regression coverage verifies both fixtures parse correctly and remain distinct.
 - Billing was re-inspected during this run; no genuinely new regression justified churn. Checkout remains limited to Unlimited and validates live price semantics before entitlement.
+- Production Netlify environment template `NETLIFY-PRODUCTION-ENV.example` matches the fail-closed release guard and keeps real secret/legal values blank.
 - Performance/PDF were not changed: detailed Web Vitals and real multi-product PDF acceptance evidence are still required before further tuning.
 
 ## Latest exact functional verification — 2026-09-01
-- Functional HEAD: **`69d4d840b7ac8165e14f78e9c442eebe2ac612af`** (`test: pin Node 24 compatible release actions`).
-- GitHub `ImportVerifier release check` **#1459 SUCCESS** on exact `69d4d840...`: install, full tests, typecheck and production build all passed.
-- The immediately preceding extraction-security HEAD `96ee900a14c225109586910ad0edc238a823dcf8` passed release check **#1455 SUCCESS** with **327/327 tests**, typecheck and build.
-- Netlify `netlify/importverifier/deploy-preview` for `69d4d840...` was still **PENDING** at handoff-write time on the correct `importverifier` project. Reconfirm it after this docs-only commit; do not infer READY from an older preview.
-- PR #4 remains open and not merged. GitHub may transiently report mergeability false while recalculating after rapid commits; never merge regardless.
-- This handoff update creates a newer docs-only HEAD. Reconfirm exact-HEAD GitHub CI and the correct ImportVerifier Deploy Preview before treating that docs head as the latest verified release candidate.
+- Functional HEAD: **`8cc3f852f671a14a8682bd3019faa1a2e1d798b3`** (`test: lock sixth-product acceptance fixture`).
+- GitHub `ImportVerifier release check` **#1464 SUCCESS** on exact `8cc3f852...`: install, full tests, typecheck and production build all passed.
+- Netlify Deploy Preview for the correct project **`importverifier`** is **READY** on exact `8cc3f852...` at `https://deploy-preview-4--importverifier.netlify.app`.
+- Immediately preceding docs HEAD `011f2ab00ac5000bd8ac3afb10197ec2f1c6983b` also passed exact release check #1461 and had a READY correct-project preview.
+- Latest available Netlify Lighthouse aggregate before the acceptance-fixture-only change was Performance 18 / Accessibility 100 / Best Practices 92 / SEO 100. Detailed TTFB/LCP/TBT/CLS/resource diagnostics are not exposed by the current connector; do not tune performance blindly.
+- PR #4 is **open, mergeable and not merged**.
+- This continuity update creates a newer docs-only HEAD; reconfirm its exact CI/preview before treating the docs commit itself as the final release HEAD. The functional parent above is fully verified.
 
 ## Production service facts last established
 - Supabase project: `hfuwwjdcyudflamwwnon`.
@@ -68,7 +71,7 @@ Continue autonomously through every actionable task. Never stop because one task
 2. Continue only genuinely new customer-facing/security/i18n/reliability findings. Do not repeat the DONE trust-boundary sweeps above.
 3. Performance: obtain detailed TTFB/LCP/TBT/CLS/resource-level evidence before changing landing architecture.
 4. PDF: inspect typography/overflow only against a real multi-product acceptance output.
-5. Production acceptance with a genuinely new account: canonical signup/login → `/importverifier-sample-5-products.csv` → five accepted → sixth rejected → isolated history → premium PDF → Excel → Checkout → webhook entitlement → Portal/cancel lifecycle.
+5. Production acceptance with a genuinely new account: canonical signup/login → `/importverifier-sample-5-products.csv` → five accepted → `/importverifier-sample-6th-product.csv` rejected → isolated history → premium PDF → Excel → Checkout → webhook entitlement → Portal/cancel lifecycle.
 6. Keep Radar disabled until the same strong ingest secret is configured in runtime/scheduler and real official EUR-Lex ingestion persists events.
 7. Keep EU the only active market and marketplace connectors inactive until legitimate credentials exist.
 
