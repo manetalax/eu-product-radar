@@ -21,16 +21,20 @@ export async function syncStripeSubscription(subscription: Stripe.Subscription) 
     .eq('stripe_customer_id', customerId)
     .maybeSingle();
   if (customerError && customerError.code !== 'PGRST116') throw customerError;
+
+  // Customer ownership persisted by the authenticated Checkout preparation step is the
+  // trust anchor. Stripe metadata is correlation data only and must never be sufficient
+  // on its own to attach a subscription to an application account.
   const existingUserId = existingCustomer?.user_id ?? null;
-  if (existingUserId && metadataUserId && existingUserId !== metadataUserId) throw new Error('subscription_customer_user_mismatch');
-  const userId = existingUserId ?? metadataUserId;
+  if (!existingUserId) throw new Error('unrecognized_subscription_identity');
+  if (metadataUserId && existingUserId !== metadataUserId) throw new Error('subscription_customer_user_mismatch');
+  const userId = existingUserId;
 
   const pricePlanId = planIdForStripePrice(priceId);
   const metadataPlanId = isPlanId(subscription.metadata.plan_id) ? subscription.metadata.plan_id : null;
   if (!pricePlanId) throw new Error('unrecognized_subscription_price');
   if (metadataPlanId && pricePlanId !== metadataPlanId) throw new Error('subscription_plan_price_mismatch');
   const planId = pricePlanId;
-  if (!userId) throw new Error('unrecognized_subscription_identity');
 
   const periodEnd = Number.isFinite(subscription.items.data[0].current_period_end)
     ? new Date(subscription.items.data[0].current_period_end * 1000).toISOString()
