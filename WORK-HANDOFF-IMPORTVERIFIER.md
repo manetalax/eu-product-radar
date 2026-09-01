@@ -48,6 +48,7 @@ Checkout requirements:
 - Same-origin request + authenticated account.
 - Only internal `starter` may create public paid access.
 - Billing option must be `monthly`, `annual` or `lifetime`; missing legacy option maps to monthly.
+- Small billing JSON requests are bounded to 4 KiB rather than inheriting the general API body ceiling.
 - Production fails closed until truthful legal/provider configuration exists.
 - Stripe price is re-read and must exactly match active EUR amount/type/recurrence.
 - Monthly/annual use `subscription` mode and may use promotion codes.
@@ -56,16 +57,23 @@ Checkout requirements:
 
 **Current-state Stripe preflight:** Supabase is treated as a billing projection, not sole authority. Before creating a new Checkout for a known Stripe customer, the server paginates the customer's current subscriptions directly from Stripe. Terminal `canceled`/`incomplete_expired` records are ignored. Abandoned `incomplete` subscriptions are canceled so they cannot remain payable beside a newer successful purchase. Any other current recurring subscription causes the user to be routed to Billing Portal instead of creating duplicate recurring value. This protects against delayed webhooks and stale local state.
 
+Open Checkout sessions are also reconciled before creating a new one: only one payable ImportVerifier Checkout should remain open for an account, same-modality open Checkout can be reused, and switching modalities expires sibling open sessions. Idempotency generation prevents truly concurrent requests from creating multiple payable sessions.
+
 ### Subscription entitlement
 
 - Signed webhook events are persisted idempotently.
 - Production rejects non-live events before persistence/synchronization.
 - Subscription events re-read the latest Stripe subscription.
 - Exactly one subscription item and a recognized configured price are required.
-- Persisted Stripe-customer ownership is authoritative over mutable metadata.
+- Persisted Stripe-customer ownership is authoritative over mutable metadata. An unknown customer ID cannot self-attach to a user through subscription metadata; conflicting metadata is rejected.
 - `active`/`trialing` monthly or annual subscriptions grant the same Unlimited entitlement.
 - Historical recurring plan IDs normalize to Unlimited while active; canceled/expired records fall back to free.
 - Browser Checkout confirmation syncs the latest subscription but returns `confirmed: true` only when the Stripe subscription is actually `active` or `trialing`. Other states remain pending rather than generating a false success message.
+- Browser confirmation derives monthly/annual from the current Stripe subscription item price after re-reading Stripe, not from mutable Checkout metadata.
+
+### Billing Portal
+
+Portal is a recurring-subscription management surface, not a generic customer page. Before creating a Portal session the server checks current Stripe subscriptions for the persisted customer. Lifetime-only customers without a current recurring subscription receive no subscription-management destination. Monthly/annual customers retain Portal access for cancellation and billing management.
 
 ### Webhook execution serialization
 
@@ -125,6 +133,7 @@ Do not add blanket grants to service_role or client roles. Add a privilege only 
 - Password minimum: eight characters.
 - Auth/OAuth destinations restricted to canonical ImportVerifier/Supabase origins.
 - `plan=starter` and `billing=monthly|annual|lifetime` survive email and Google auth as a one-shot purchase intent.
+- A fresh authenticated `plan_interest` user-metadata record can recover annual/Lifetime for the immediate post-auth Checkout when an older client omits the billing option. The metadata is strictly validated, expires after 15 minutes, explicit request billing is authoritative, and invalid/stale metadata falls back to monthly.
 - Invalid billing values are discarded and consumed purchase intent cannot repeatedly reopen Checkout for an already-Unlimited user.
 - Histories and account-owned records are isolated by RLS/ownership checks.
 - Supabase leaked-password protection/CAPTCHA and genuinely fresh SMTP acceptance remain external acceptance tasks.
@@ -188,6 +197,7 @@ EU is the only active market.
 - Pricing layout is 3 columns desktop / 2 tablet / 1 mobile.
 - Checkout-return progress copy uses neutral **Unlimited access** wording so Lifetime is not mislabeled as a subscription.
 - PWA caches only safe public shell/assets and refuses private/auth/no-store/cookie-varying responses.
+- Any public navigation eligible for the shared offline shell is fetched with `credentials: 'omit'` before it can enter cache, preventing cookie-personalized content from being persisted if public pages later become personalized. Cache generation `importverifier-shell-v7` invalidates the older behavior.
 - Locale-keyed PWA start/offline/shortcuts; service worker registration deferred outside critical rendering.
 - Mobile/iPad safeguards cover camera input, file cancellation/multi-file, safe areas, touch sizing, iOS form zoom and export cleanup.
 - Physical iPhone/iPad/Safari/PWA acceptance remains external.
