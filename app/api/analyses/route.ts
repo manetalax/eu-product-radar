@@ -5,7 +5,7 @@ import { analysisApiText } from '@/lib/analysis-api-i18n';
 import { PRIVATE_HEADERS, readJsonBody, sameOrigin } from '@/lib/http';
 import { productQuota, quotaExceededMessage } from '@/lib/quota';
 import { isActiveMarketCode, MarketCode } from '@/lib/markets';
-import { auditBillingStatus, billingStatus } from '@/lib/billing';
+import { billingStatus } from '@/lib/billing';
 import type { Language } from '@/lib/landing-i18n';
 import { requestLanguage } from '@/lib/request-language';
 
@@ -15,18 +15,15 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 async function readQuota(supabase: SupabaseClient, userId: string, language: Language) {
   const a = (key: Parameters<typeof analysisApiText>[1]) => analysisApiText(language, key);
-  const [subscription, audit, freeUsage] = await Promise.all([
+  const [subscription, freeUsage] = await Promise.all([
     supabase.from('subscriptions').select('plan_id,status,current_period_end,cancel_at_period_end').eq('user_id', userId).maybeSingle(),
-    supabase.from('one_time_audits').select('id,product_limit').eq('user_id', userId).eq('status', 'paid').is('consumed_at', null).order('purchased_at', { ascending: true }).limit(1).maybeSingle(),
     supabase.from('free_account_usage').select('product_count').eq('user_id', userId).maybeSingle(),
   ]);
   if (subscription.error?.code && subscription.error.code !== 'PGRST116') throw new Error(a('subscriptionUnavailable'));
-  if (audit.error?.code && audit.error.code !== 'PGRST116') throw new Error(a('auditUnavailable'));
   if (freeUsage.error?.code && freeUsage.error.code !== 'PGRST116') throw new Error(a('freeUnavailable'));
 
   const subscriptionBilling = billingStatus(subscription.data);
   if (subscriptionBilling.planId !== 'free') return productQuota(0, new Date(), subscriptionBilling);
-  if (audit.data) return productQuota(0, new Date(), auditBillingStatus());
   return productQuota(Number(freeUsage.data?.product_count ?? 0), new Date(), subscriptionBilling);
 }
 
@@ -87,10 +84,9 @@ export async function POST(request: Request) {
   catch (quotaError) { return json({ error: quotaError instanceof Error ? quotaError.message : a('quotaUnavailable') }, 503); }
   if (existing.data) return json({ analysis: existing.data, quota });
   if (quota.billing.planId === 'free' && products.length > quota.remaining) return json({ error: quotaExceededMessage(products.length, quota, language), quota }, 429);
-  if (quota.billing.planId === 'audit' && products.length > quota.remaining) return json({ error: quotaExceededMessage(products.length, quota, language), quota }, 429);
 
   const { data, error } = await supabase.from('analyses').insert({ id: requestId, user_id: user.id, filename, products, market_code: marketCode, rule_version: RULE_VERSION }).select('id,filename,created_at,rule_version,market_code,products').single();
-  if (error?.message?.includes('free_account_product_limit_exceeded') || error?.message?.includes('monthly_product_limit_exceeded') || error?.message?.includes('free_monthly_product_limit_exceeded') || error?.message?.includes('one_time_audit_product_limit_exceeded') || error?.message?.includes('one_time_audit_already_consumed')) {
+  if (error?.message?.includes('free_account_product_limit_exceeded') || error?.message?.includes('monthly_product_limit_exceeded') || error?.message?.includes('free_monthly_product_limit_exceeded')) {
     const latestQuota = await readQuota(supabase, user.id, language).catch(() => quota);
     return json({ error: quotaExceededMessage(products.length, latestQuota, language), quota: latestQuota }, 429);
   }
