@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
-const TERMINAL_SUBSCRIPTION_STATUSES = new Set(['canceled', 'incomplete_expired']);
+const MANAGEABLE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing', 'past_due', 'unpaid', 'paused']);
 const MAX_SUBSCRIPTION_SCAN = 500;
 
 async function hasManageableSubscription(customerId: string) {
@@ -25,7 +25,7 @@ async function hasManageableSubscription(customerId: string) {
     });
     scanned += page.data.length;
     if (scanned > MAX_SUBSCRIPTION_SCAN) throw new Error('stripe_subscription_scan_limit');
-    if (page.data.some(subscription => !TERMINAL_SUBSCRIPTION_STATUSES.has(subscription.status))) return true;
+    if (page.data.some(subscription => MANAGEABLE_SUBSCRIPTION_STATUSES.has(subscription.status))) return true;
     if (!page.has_more) return false;
     const lastId = page.data.at(-1)?.id;
     if (!lastId) throw new Error('stripe_subscription_pagination_failed');
@@ -50,9 +50,9 @@ export async function POST(request: Request) {
     if (subscriptionError && subscriptionError.code !== 'PGRST116') throw new Error(b('subscriptionRead'));
     if (!data?.stripe_customer_id) return json({ error: b('noSubscription') }, 404);
 
-    // A Stripe customer can exist for a Lifetime-only purchase. Billing Portal is for
-    // recurring subscriptions, so verify current Stripe state instead of treating the
-    // mere existence of a customer ID as proof that there is something to manage.
+    // A Stripe customer can exist for a Lifetime-only purchase or an abandoned
+    // incomplete Checkout. Portal is useful only for recurring states the customer can
+    // actually manage; pending incomplete subscriptions are reconciled by Checkout.
     if (!await hasManageableSubscription(data.stripe_customer_id)) {
       return json({ error: b('noSubscription') }, 404);
     }
