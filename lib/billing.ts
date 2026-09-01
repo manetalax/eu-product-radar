@@ -86,8 +86,12 @@ export function stripePriceIdForBillingOption(option: UnlimitedBillingOption, pr
 
 export function billingOptionForStripePrice(priceId: string | null | undefined, production = process.env.NODE_ENV === 'production'): UnlimitedBillingOption | null {
   if (!priceId) return null;
-  const entries: readonly (readonly [UnlimitedBillingOption, string | undefined])[] = production
-    ? UNLIMITED_BILLING_OPTIONS.map(option => [option, UNLIMITED_PRICE_CONFIG[option].priceId] as const)
+  const entries: Array<[UnlimitedBillingOption, string | undefined]> = production
+    ? [
+      ['monthly', IMPORTVERIFIER_UNLIMITED_PRICE_ID],
+      ['annual', IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID],
+      ['lifetime', IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID],
+    ]
     : [
       ['monthly', process.env.STRIPE_PRICE_STARTER],
       ['annual', process.env.STRIPE_PRICE_ANNUAL],
