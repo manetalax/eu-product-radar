@@ -62,15 +62,16 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Free Dashboard users see all three canonical acquisition choices and explicit billing cadence; selected choice is sent to Checkout.
 - Responsive Dashboard billing presentation: 3 choices desktop, 2+1 tablet, 1 mobile; annual visually emphasized without changing entitlement semantics.
 - Added multidisciplinary operating standard and minimize-owner-intervention rule to `AGENTS.md`.
-- Exact HEAD `ad921ee3ebbef679b2cc5e5553ff10e5582d94c7` was subsequently verified: PR release check #1828 SUCCESS and canonical Netlify Deploy Preview SUCCESS.
 - CI efficiency review found the active PR branch was triggering two identical full release checks for every commit (`push` + `pull_request`). Removed the active branch from the push trigger while retaining PR validation, concurrency cancellation, immutable action pins and npm dependency caching. This cuts redundant CI work without weakening PR release validation.
+- Fixed a conversion-state defect in the five-free → Unlimited transition: `FreeTrialUpgradePrompt` previously read quota only at mount, so consuming the fifth free product in-session could leave the purchase prompt hidden until reload. It now synchronizes with the live Dashboard quota reaching 100% and announces secure-checkout progress with an ARIA live status.
+- Added `tests/free-trial-upgrade-live-quota.test.ts` to lock the mounted upgrade surface, live exhausted-quota synchronization, trusted Stripe navigation and accessible progress status.
 
 ## Latest exact verification — 2026-09-01
-- Last fully green application/docs HEAD before CI-efficiency commit: **`ad921ee3ebbef679b2cc5e5553ff10e5582d94c7`**.
-- Exact PR-triggered release check #1828: SUCCESS.
-- Exact `netlify/importverifier/deploy-preview`: SUCCESS.
-- CI-efficiency functional commit: **`27f5bd88d9c7c769d9c068265da8f2b5c3e447e3`** (`ci: avoid duplicate release checks on PR branch`).
-- This handoff update creates a newer docs-only HEAD. Reconfirm exact PR HEAD, PR-triggered CI and canonical Netlify preview after it.
+- Latest fully green functional/test HEAD before this handoff update: **`b562892f9edc997cec0bbd621dc6a5960fa99f0c`** (`test: lock live free-quota upgrade prompt`).
+- Exact PR-triggered release check #1835: **SUCCESS** (`npm ci`, `npm test`, `npm run typecheck`, `npm run build` all green).
+- Exact `netlify/importverifier/deploy-preview`: **SUCCESS**, target `https://deploy-preview-4--importverifier.netlify.app`.
+- CI-efficiency functional commit remains **`27f5bd88d9c7c769d9c068265da8f2b5c3e447e3`** (`ci: avoid duplicate release checks on PR branch`).
+- This handoff update creates a newer docs-only HEAD; reconfirm exact PR HEAD/CI/Netlify before further writes or release decisions.
 - PR #4 remains open/unmerged. Never merge without explicit owner instruction.
 
 ## Production facts
@@ -85,7 +86,7 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 ## NEXT — execute without asking
 1. Reconfirm exact final HEAD after this handoff commit, exact PR-triggered GitHub release check and correct `netlify/importverifier/deploy-preview`; repair any regression immediately.
 2. Continue genuinely new multidisciplinary review findings, prioritizing demonstrated security/revenue/correctness/user-friction issues over speculative architecture.
-3. Audit Dashboard billing accessibility/keyboard semantics and localized pricing presentation after CI is green; change only demonstrated issues.
+3. Audit keyboard/focus behavior and announcement semantics across the full free-quota → three-option Checkout path; change only demonstrated issues.
 4. Production acceptance when browser/payment conditions permit: monthly → webhook → Unlimited → Portal/cancel; annual equivalent; Lifetime paid → persistent Unlimited → controlled refund/dispute lifecycle.
 5. Fresh-account acceptance: signup/login → five-product sample accepted → sixth rejected → isolated history → premium PDF/XLSX.
 6. Obtain TTFB/LCP/TBT/CLS/resource evidence before performance changes.
