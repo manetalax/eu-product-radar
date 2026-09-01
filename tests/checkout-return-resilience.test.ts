@@ -15,3 +15,12 @@ test('checkout return bounds confirmation latency and never exposes JSON parser 
   assert.doesNotMatch(source, /body\.error/);
   assert.match(source, /billingText\(language, 'paymentOpen'\)/);
 });
+
+test('checkout return retries only transient confirmation states within the global timeout', () => {
+  assert.match(source, /MAX_CONFIRM_ATTEMPTS = 3/);
+  assert.match(source, /RETRYABLE_CONFIRM_STATUSES = new Set\(\[409, 429, 502, 503, 504\]\)/);
+  assert.match(source, /for \(let attempt = 0; attempt < MAX_CONFIRM_ATTEMPTS; attempt \+= 1\)/);
+  assert.match(source, /RETRYABLE_CONFIRM_STATUSES\.has\(response\.status\)/);
+  assert.match(source, /retryDelay\(attempt\)/);
+  assert.match(source, /controller\.signal\.aborted/);
+});
