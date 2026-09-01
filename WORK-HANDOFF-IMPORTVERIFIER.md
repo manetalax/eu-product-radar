@@ -4,11 +4,11 @@ Production target: `https://importverifier.netlify.app/`
 
 Repository: `manetalax/eu-product-radar`
 
-Active PR: `#4` — **Import Rules Verifier · versión paralela basada en PR #3**
+Historical PR: `#4` — **Import Rules Verifier · versión paralela basada en PR #3** — merged externally into `main` on 2026-09-01 at 11:11:57Z. Do not attempt another merge.
 
-Active branch: `feat/import-rules-verifier-branding`
+Continued hardening branch: `feat/import-rules-verifier-branding`
 
-Always read `WORK-CHAT-CONTINUITY.md` first. It is the operational source of truth for exact HEAD, CI, Deploy Preview, blockers and immediate NEXT. Never create a replacement project and never merge PR #4 without explicit owner instruction.
+Always read `WORK-CHAT-CONTINUITY.md` first. It is the operational source of truth for exact branch HEAD, CI, deployment status, blockers and immediate NEXT. Never create a replacement project and never merge or retarget work without explicit owner instruction.
 
 ---
 
@@ -219,7 +219,19 @@ Shopify, Amazon and Etsy share prepared capability/catalog architecture. Direct 
 
 ---
 
-## 10. Release acceptance
+## 10. Post-merge hardening state — 2026-09-01
+
+- PR #4 is merged/closed externally; merge commit: `3cc3e1f43458d35ddcf1962eab29141c529e27f6`.
+- Continued work remains on `feat/import-rules-verifier-branding` until the owner explicitly changes the working branch.
+- Last pre-hardening branch HEAD known green: `33c4e4bd55e278019a27e89f0bf9fc4525b79ad0`; release check #1836 SUCCESS.
+- Dynamic exhausted-quota upgrade copy now announces itself through a polite atomic status region without moving keyboard focus.
+- `tests/free-trial-upgrade-live-quota.test.ts` locks that announcement and absence of forced `.focus()`.
+- After PR #4 closed, the branch had lost all CI because it had previously been removed from direct-push validation to avoid duplicate PR checks. Direct `push` validation for `feat/import-rules-verifier-branding` is restored.
+- Push release checks are now being created for post-merge hardening commits; treat the exact latest check as authoritative before release decisions.
+
+---
+
+## 11. Release acceptance
 
 Do not call ImportVerifier fully launched until the exact production candidate proves:
 
@@ -238,7 +250,7 @@ Do not call ImportVerifier fully launched until the exact production candidate p
 
 ---
 
-## 11. Current external blockers
+## 12. Current external blockers
 
 - Final Netlify production environment/promotion with complete truthful legal/provider variables, runtime secrets and free-only AI values.
 - Controlled real monthly/annual/Lifetime purchase/cancel/refund/dispute acceptance.
