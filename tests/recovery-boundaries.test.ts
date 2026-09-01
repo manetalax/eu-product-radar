@@ -19,6 +19,7 @@ test('recovery surface is localized, self-contained and does not expose raw exce
     assert.match(recovery, new RegExp(`\\b${language}: \\{`));
   }
   assert.match(recovery, /minHeight: '100vh'/);
+  assert.match(recovery, /document\.documentElement\.lang = detected/);
   assert.match(recovery, /window\.location\.reload\(\)/);
   assert.doesNotMatch(recovery, /error\.(message|stack|cause)/);
   assert.doesNotMatch(recovery, /digest\}/);
