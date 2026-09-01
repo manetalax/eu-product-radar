@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 
 type Language = 'es' | 'en' | 'fr' | 'de' | 'it' | 'pt';
 type RecoveryMode = 'error' | 'global' | 'not-found';
@@ -22,6 +22,17 @@ const copy: Record<Language, {
   de: { errorTitle: 'Etwas ist nicht wie erwartet abgeschlossen worden', errorBody: 'ImportVerifier hat diesen Vorgang sicher beendet. Du kannst es erneut versuchen oder zur Startseite zurückkehren.', notFoundTitle: 'Diese Seite existiert nicht', notFoundBody: 'Der Link wurde möglicherweise geändert oder ist nicht mehr verfügbar. Dein Konto und deine Analysen wurden nicht verändert.', retry: 'Erneut versuchen', home: 'Zur Startseite', label: 'Sichere Wiederherstellung' },
   it: { errorTitle: 'Qualcosa non si è concluso come previsto', errorBody: 'ImportVerifier ha interrotto questa operazione in modo sicuro. Puoi riprovare o tornare alla pagina iniziale.', notFoundTitle: 'Questa pagina non esiste', notFoundBody: 'Il link potrebbe essere cambiato o non essere più disponibile. Il tuo account e le tue analisi non sono stati modificati.', retry: 'Riprova', home: 'Torna all’inizio', label: 'Ripristino sicuro' },
   pt: { errorTitle: 'Algo não foi concluído como esperado', errorBody: 'O ImportVerifier interrompeu esta operação de forma segura. Pode tentar novamente ou voltar à página inicial.', notFoundTitle: 'Esta página não existe', notFoundBody: 'A ligação pode ter mudado ou já não estar disponível. A sua conta e as suas análises não foram alteradas.', retry: 'Tentar novamente', home: 'Voltar ao início', label: 'Recuperação segura' },
+};
+
+const styles: Record<string, CSSProperties> = {
+  page: { minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24, background: '#f6f7fb', color: '#101828', fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  card: { width: 'min(100%, 560px)', background: '#fff', border: '1px solid #e4e7ec', borderRadius: 24, padding: 'clamp(24px, 5vw, 40px)', boxShadow: '0 24px 70px rgba(16, 24, 40, 0.10)' },
+  label: { margin: 0, color: '#4f46e5', fontSize: 12, fontWeight: 900, letterSpacing: '.12em', textTransform: 'uppercase' },
+  title: { margin: '12px 0 14px', fontSize: 'clamp(30px, 6vw, 44px)', lineHeight: 1.04, letterSpacing: '-.04em' },
+  body: { margin: 0, color: '#667085', fontSize: 17, lineHeight: 1.6 },
+  actions: { display: 'grid', gap: 10, marginTop: 26 },
+  primary: { display: 'inline-flex', minHeight: 48, alignItems: 'center', justifyContent: 'center', border: 0, borderRadius: 12, padding: '12px 16px', background: '#111827', color: '#fff', font: 'inherit', fontWeight: 800, cursor: 'pointer', textDecoration: 'none' },
+  secondary: { display: 'inline-flex', minHeight: 48, alignItems: 'center', justifyContent: 'center', border: '1px solid #e4e7ec', borderRadius: 12, padding: '12px 16px', background: '#fff', color: '#101828', fontWeight: 800, textDecoration: 'none' },
 };
 
 function detectLanguage(): Language {
@@ -47,17 +58,17 @@ export default function RecoveryPage({ mode, reset }: { mode: RecoveryMode; rese
   const homeHref = useMemo(() => `/${language}`, [language]);
   const missing = mode === 'not-found';
 
-  return <main className="shell">
-    <section className="login card" role={missing ? undefined : 'alert'} aria-live={missing ? undefined : 'assertive'}>
-      <p className="eyebrow">{text.label}</p>
-      <h1>{missing ? text.notFoundTitle : text.errorTitle}</h1>
-      <p className="lead">{missing ? text.notFoundBody : text.errorBody}</p>
-      <div className="auth-actions">
-        {!missing && <button className="btn primary full" type="button" onClick={() => {
+  return <main style={styles.page}>
+    <section style={styles.card} role={missing ? undefined : 'alert'} aria-live={missing ? undefined : 'assertive'}>
+      <p style={styles.label}>{text.label}</p>
+      <h1 style={styles.title}>{missing ? text.notFoundTitle : text.errorTitle}</h1>
+      <p style={styles.body}>{missing ? text.notFoundBody : text.errorBody}</p>
+      <div style={styles.actions}>
+        {!missing && <button style={styles.primary} type="button" onClick={() => {
           if (reset) reset();
           else window.location.reload();
         }}>{text.retry}</button>}
-        <a className="btn ghost full" href={homeHref}>{text.home}</a>
+        <a style={styles.secondary} href={homeHref}>{text.home}</a>
       </div>
     </section>
   </main>;
