@@ -29,3 +29,17 @@ test('review UI states explicitly that quota is consumed only after confirmation
   assert.match(review, /Your quota has not been consumed yet/);
   assert.match(review, /disabled=\{busy \|\| !valid\}/);
 });
+
+test('cancelling review restores keyboard focus only to the still-mounted opener', () => {
+  assert.match(gate, /const reviewOpener = useRef<HTMLElement \| null>\(null\)/);
+  assert.match(gate, /reviewOpener\.current = document\.activeElement instanceof HTMLElement \? document\.activeElement : null/);
+  const cancel = gate.slice(gate.indexOf('const cancel ='), gate.indexOf('const confirm = async'));
+  assert.match(cancel, /const opener = reviewOpener\.current/);
+  assert.match(cancel, /requestAnimationFrame\(\(\) => \{[\s\S]{0,100}opener\?\.isConnected[\s\S]{0,60}opener\.focus\(\)/);
+});
+
+test('successful review confirmation does not restore stale opener focus over the results destination', () => {
+  const confirm = gate.slice(gate.indexOf('const confirm = async'));
+  assert.match(confirm, /reviewOpener\.current = null/);
+  assert.doesNotMatch(confirm, /opener\.focus\(\)/);
+});
