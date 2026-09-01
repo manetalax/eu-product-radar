@@ -12,6 +12,39 @@ import { createClient } from '@/lib/supabase/server';
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: PRIVATE_HEADERS });
 const UNLIMITED_INTERNAL_PLAN_ID = 'starter' as const;
+const TERMINAL_SUBSCRIPTION_STATUSES = new Set(['canceled', 'incomplete_expired']);
+
+async function hasCurrentStripeSubscription(stripe: ReturnType<typeof stripeClient>, customerId: string) {
+  let startingAfter: string | undefined;
+  let hasCurrent = false;
+
+  do {
+    const page = await stripe.subscriptions.list({
+      customer: customerId,
+      status: 'all',
+      limit: 100,
+      ...(startingAfter ? { starting_after: startingAfter } : {}),
+    });
+
+    for (const subscription of page.data) {
+      if (TERMINAL_SUBSCRIPTION_STATUSES.has(subscription.status)) continue;
+      if (subscription.status === 'incomplete') {
+        // An abandoned/incomplete Checkout must not block the customer indefinitely or
+        // remain payable after a new successful subscription is started.
+        await stripe.subscriptions.cancel(subscription.id);
+        continue;
+      }
+      hasCurrent = true;
+    }
+
+    if (!page.has_more) return hasCurrent;
+    const lastId = page.data.at(-1)?.id;
+    if (!lastId) throw new Error('stripe_subscription_pagination_failed');
+    startingAfter = lastId;
+  } while (startingAfter);
+
+  return hasCurrent;
+}
 
 export async function POST(request: Request) {
   const language = requestLanguage(request);
@@ -56,7 +89,11 @@ export async function POST(request: Request) {
     const siteOrigin = configuredSiteOrigin();
     if (!siteOrigin) throw new Error(b('siteUrl'));
 
-    if (billingStatus(record).planId !== 'free') {
+    // Supabase is a projection of billing state and can lag behind Stripe webhooks. Re-read
+    // the customer directly before creating new recurring value. Incomplete abandoned
+    // subscriptions are canceled; any other non-terminal subscription routes to Portal.
+    const stripeHasCurrentSubscription = await hasCurrentStripeSubscription(stripe, customerId);
+    if (billingStatus(record).planId !== 'free' || stripeHasCurrentSubscription) {
       const portal = await stripe.billingPortal.sessions.create({ customer: customerId, return_url: `${siteOrigin}/dashboard` });
       const portalUrl = trustedStripeNavigationUrl(portal.url, 'portal');
       if (!portalUrl) throw new Error(b('stripePage'));
