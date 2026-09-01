@@ -41,18 +41,20 @@ Continue autonomously through actionable IN PROGRESS/NEXT work. Skip anything al
 - Checkout return no longer claims payment success before server confirmation.
 - Checkout return confirmation uses explicit atomic status semantics for assistive technology; failures remain alerts.
 - Account-deletion confirmation moves focus into the form and restores focus on cancel; mobile inputs are 16px with touch-sized controls.
+- Dashboard destructive view changes preserve keyboard focus by moving it to the updated workspace heading, while persistent side navigation keeps focus on the selected nav control.
+- Cancelling the pre-analysis product-review dialog restores focus to its still-mounted opener; successful confirmation intentionally does not restore stale opener focus over the results destination.
 
 ## DONE — current hardening execution (2026-09-01)
 - Reconfirmed pre-change branch HEAD `543a11e03872563651e648901d47c68912757534`; exact push release check **#1862 SUCCESS**.
-- Audited programmatic Dashboard view changes as a genuinely new keyboard/focus surface.
-- Found that Dashboard actions such as “view products”, “view results” and opening a history analysis switch to Products while unmounting the initiating control, allowing keyboard focus to fall back to the document/body.
-- Added an explicit focus-preserving transition path: destructive view changes mark the destination, switch tabs, then focus the persistent workspace `h1` after React commits the new view. The heading is programmatically focusable with `tabIndex={-1}`.
-- Successful catalogue ingestion and successful history-open also use the same destination focus handoff because their previous file/history controls may no longer provide a useful focus position.
-- Persistent side navigation intentionally continues to call plain `setTab`, so focus remains on the selected navigation button rather than being moved unnecessarily.
-- Added `tests/dashboard-tab-focus.test.ts` to lock the focus target, destructive-transition path and persistent-side-nav behavior.
-- Functional commit: `ec6e6bb1e51fb961b270f3f3b5acf3ddaccb2a1f`.
-- Test commit / functional HEAD before this handoff update: `3aacde8a9c5bb6e88e5761d772424c0d1610ec07`.
-- Exact release check for `3aacde8…`: **#1865** was `pending` at the last observation; do not call it green until GitHub reports `completed/success`.
+- Found Dashboard actions such as “view products”, “view results” and opening history switched to Products while unmounting the initiating control. Added `moveToTabWithFocus`, a programmatically focusable workspace `h1`, and post-commit focus handoff. Successful catalogue ingestion/history-open share that path. Persistent side-nav buttons intentionally retain their own focus.
+- Added `tests/dashboard-tab-focus.test.ts`.
+- Functional Dashboard focus commit: `ec6e6bb1e51fb961b270f3f3b5acf3ddaccb2a1f`.
+- Release check **#1866** on documentation HEAD `f7229da1c4caf212875639ac8c5abcf18c8b916b` failed in `npm test`; `npm ci` passed and typecheck/build were skipped after the test failure. Root cause was a new static regression assertion expecting JSX label/onClick tokens in the wrong textual order, not a production-code failure.
+- Corrected that assertion without weakening the behavior being tested. Test-fix commit: `504af4c75e726a3d90349ea2c865fdaa81ace642`.
+- Continued to the next new accessibility surface: pre-analysis `ProductReview` correctly moved focus into its modal but cancel/unmount did not explicitly restore the user’s prior keyboard position.
+- `AnalysisReviewGate` now records the active opener before rendering review; cancel clears state and restores focus on the next animation frame only when that opener remains connected. Confirm/error paths clear the stored opener without restoring it so successful analysis can hand focus to the Products destination instead.
+- Product-review focus commit: `1f88a30ea107a6722b9fd3783160588e870efeb7`.
+- Extended `tests/analysis-review-gate.test.ts` to lock cancel restoration and no stale-focus restoration after confirmation. Test commit / functional HEAD before this handoff update: `123ea6d1b782600227c29f581f3c87a21e76ea35`.
 
 ## Production facts
 - Supabase project `hfuwwjdcyudflamwwnon` is production.
@@ -63,8 +65,8 @@ Continue autonomously through actionable IN PROGRESS/NEXT work. Skip anything al
 - Production env templates intentionally omit secrets and sensitive legal identifiers.
 
 ## NEXT — execute without asking
-1. Reconfirm the exact current branch HEAD after this documentation commit and its exact GitHub Actions release check. If a test/typecheck/build failure appears, diagnose and fix it before new feature work.
-2. Continue genuinely new accessibility review after closing Dashboard destructive-tab focus, prioritizing asynchronous status/error surfaces or controls that become disabled/unmounted during server work; do not manufacture changes where focus remains stable.
+1. Reconfirm the exact current branch HEAD after this documentation commit and its exact GitHub Actions release check. If tests/typecheck/build fail, diagnose and fix before new feature work.
+2. Continue genuinely new asynchronous accessibility review: status/error announcements, disabled controls and focus behavior around server work. Do not repeat the Dashboard, Checkout-return, account-delete or product-review focus work now DONE.
 3. Continue new evidence-backed findings across security, mobile/iPad/PWA, billing, AI, Evidence, reports and Radar; prioritize correctness, revenue protection, privacy and customer friction over cosmetic churn.
 4. Obtain browser performance evidence before any TTFB/LCP/TBT/CLS optimization.
 5. Inspect PDF typography/overflow only against a real multi-product output.
