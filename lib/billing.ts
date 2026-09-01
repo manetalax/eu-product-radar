@@ -28,6 +28,7 @@ export type BillingStatus = {
   productLimit: number;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
+  billingOption: UnlimitedBillingOption | null;
 };
 
 export type SubscriptionRecord = {
@@ -35,6 +36,7 @@ export type SubscriptionRecord = {
   status?: unknown;
   current_period_end?: unknown;
   cancel_at_period_end?: unknown;
+  stripe_price_id?: unknown;
 };
 
 export function isUnlimitedBillingOption(value: unknown): value is UnlimitedBillingOption {
@@ -49,6 +51,7 @@ export function unlimitedBillingStatus(status: 'lifetime' | 'active' = 'lifetime
     productLimit: UNLIMITED_FAIR_USE_CEILING,
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
+    billingOption: status === 'lifetime' ? 'lifetime' : null,
   };
 }
 
@@ -58,7 +61,18 @@ export function billingStatus(record: SubscriptionRecord | null, now = new Date(
   const periodEnd = typeof record?.current_period_end === 'string' ? record.current_period_end : null;
   const endIsValid = !periodEnd || new Date(periodEnd).getTime() > now.getTime();
   const paid = Boolean(storedPlanId && status && ACTIVE_SUBSCRIPTION_STATUSES.includes(status as typeof ACTIVE_SUBSCRIPTION_STATUSES[number]) && endIsValid);
-  if (!paid || !storedPlanId) return { planId: 'free', planName: 'Gratis', status, productLimit: FREE_TRIAL_PRODUCT_LIMIT, currentPeriodEnd: periodEnd, cancelAtPeriodEnd: Boolean(record?.cancel_at_period_end) };
+  if (!paid || !storedPlanId) return {
+    planId: 'free',
+    planName: 'Gratis',
+    status,
+    productLimit: FREE_TRIAL_PRODUCT_LIMIT,
+    currentPeriodEnd: periodEnd,
+    cancelAtPeriodEnd: Boolean(record?.cancel_at_period_end),
+    billingOption: null,
+  };
+
+  const priceId = typeof record?.stripe_price_id === 'string' ? record.stripe_price_id : null;
+  const billingOption = billingOptionForStripePrice(priceId);
 
   // Historical subscription plan IDs remain readable in persistence/webhooks, but every
   // currently active paid subscriber receives the public ImportVerifier Unlimited entitlement.
@@ -69,6 +83,7 @@ export function billingStatus(record: SubscriptionRecord | null, now = new Date(
     productLimit: UNLIMITED_PLAN.monthlyProductLimit,
     currentPeriodEnd: periodEnd,
     cancelAtPeriodEnd: Boolean(record?.cancel_at_period_end),
+    billingOption: billingOption === 'lifetime' ? null : billingOption,
   };
 }
 
