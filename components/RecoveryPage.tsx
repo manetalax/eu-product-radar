@@ -52,7 +52,11 @@ function detectLanguage(): Language {
 export default function RecoveryPage({ mode, reset }: { mode: RecoveryMode; reset?: () => void }) {
   const [language, setLanguage] = useState<Language>('en');
 
-  useEffect(() => setLanguage(detectLanguage()), []);
+  useEffect(() => {
+    const detected = detectLanguage();
+    setLanguage(detected);
+    document.documentElement.lang = detected;
+  }, []);
 
   const text = copy[language];
   const homeHref = useMemo(() => `/${language}`, [language]);
