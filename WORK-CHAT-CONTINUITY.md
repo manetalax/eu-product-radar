@@ -47,16 +47,25 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Static localized landing, recovery surfaces, SEO, security headers and production release guard.
 - Shopify/Amazon/Etsy architecture exists but direct integrations remain inactive pending official credentials.
 
-## DONE — 2026-09-01 current execution
+## DONE — earlier 2026-09-01 execution
 - Reconfirmed starting HEAD `084a1106c0d2a00861d63ee14f5316b037e4f22c`: release check **#1665 SUCCESS** and correct `netlify/importverifier/deploy-preview` **SUCCESS** at `https://deploy-preview-4--importverifier.netlify.app`.
 - **Account deletion current-state billing safety:** deletion no longer trusts stale local subscription status. It locates the Stripe customer and paginates all current Stripe subscriptions, immediately canceling every cancellable non-terminal subscription before Supabase account deletion. This also prevents a duplicate/historical subscription from surviving because the local projection only stores one row. Already-missing Stripe customer/subscription (`resource_missing`) is safe to continue; all other Stripe failures remain fail-closed.
 - **Checkout duplicate-subscription preflight:** before creating new paid value, Checkout paginates the customer's current Stripe subscriptions directly. Terminal subscriptions are ignored; abandoned `incomplete` subscriptions are canceled; any other current recurring subscription routes to Billing Portal. This reduces duplicate billing when a webhook/local projection is delayed.
 - **Browser confirmation semantics:** recurring Checkout return now synchronizes the latest Stripe subscription but reports `confirmed: true` only for `active`/`trialing`. Incomplete/past-due/non-entitling state is presented as pending instead of false purchase success.
 - **Truthful Lifetime UX:** Checkout return progress copy now says Unlimited “access” rather than “subscription” in ES/EN/FR/DE/IT/PT, so Lifetime is not mislabeled as recurring.
 - Added regression coverage for complete account-deletion cancellation, live Stripe Checkout preflight and active/trialing-only browser confirmation.
-- Functional/test commits in this execution: `2d89957efc160aeb7a961e36e383da567ffb9db7`, `6862ee5e2587b46339f5d844bf3d6e68adfc3877`, `ac1b5f5a20921864df27fc0fdf6990f6a4a3a2b6`, `2806074c843edea359a11c7f9655feb0cb526919`, `7111cd49b4d542b33f6eb77492c5637ee23b107a`, `9b8f253283a60154716c8298090d7a5256e5f221`, `e5cf09e5f73624c68ffda5c21b437ba2a8f4e841`, `6e2c6b0ca2ca65b7f1df8be8dcbf825c4dfa9cc5`, `036f04310a41d8e9f7878ceb6762bd1af14a127d`.
+- Functional/test commits: `2d89957efc160aeb7a961e36e383da567ffb9db7`, `6862ee5e2587b46339f5d844bf3d6e68adfc3877`, `ac1b5f5a20921864df27fc0fdf6990f6a4a3a2b6`, `2806074c843edea359a11c7f9655feb0cb526919`, `7111cd49b4d542b33f6eb77492c5637ee23b107a`, `9b8f253283a60154716c8298090d7a5256e5f221`, `e5cf09e5f73624c68ffda5c21b437ba2a8f4e841`, `6e2c6b0ca2ca65b7f1df8be8dcbf825c4dfa9cc5`, `036f04310a41d8e9f7878ceb6762bd1af14a127d`.
 - Durable handoff update: `22bb71b82073995e1f87aa93da1845ccff45e7e3`.
-- This short-handoff commit creates the newest docs-only HEAD. Reconfirm its exact release check and correct ImportVerifier Deploy Preview; fix any regression rather than assuming prior green state applies.
+
+## DONE — latest 2026-09-01 execution
+- Starting branch had regressed at `d17c03417acb64cc2b21e5a6efaa5571c5b6ecb3`; exact release check failed in `npm test`.
+- Root cause was an accidental destructive rewrite of `tests/analysis.test.ts`: wrong module imports, an invented unsupported `CA` market and lost analysis/export/security regression coverage. Restored the complete valid suite while retaining the legitimate new free billing contract `billingOption: null`. Fix commit: `15ffe39927acc5fd11f08ee66003082513615a19`.
+- Corrected paid-quota period semantics: free and Lifetime report `periodStart: lifetime`; monthly/annual recurring Unlimited report `periodStart: subscription`. This avoids presenting Lifetime as a subscription in API/UI/telemetry. Functional commit: `e3c9c0063374bfa3f84582a65383305a06ebf37f`.
+- CI then exposed one stale legal-page assertion, not a product regression. The Terms page intentionally canonicalizes fallback copy through `canonicalLegalBrand`; updated the test to lock that behavior instead of expecting the retired direct fallback. Commit: `61b576f2f9dca8cc1308789601bfdea3e3e84fba`.
+- Added a dedicated regression test locking recurring-vs-Lifetime quota period semantics. Commit: `2d2b8e9dca6eaed804a16189de0fefd3f4cfd105`.
+- Exact-head release check **#1730 SUCCESS** on `2d2b8e9d...`: `npm ci`, full tests, typecheck and production build all passed. The job reports 0 audited npm vulnerabilities.
+- Correct `netlify/importverifier/deploy-preview` for exact `2d2b8e9d...` was still **pending/processing** at the last status read; do not infer readiness from an older preview.
+- This handoff commit creates a newer docs-only HEAD. Reconfirm exact CI and the correct ImportVerifier Deploy Preview before treating final repository HEAD as fully verified.
 
 ## Production facts
 - Supabase project `hfuwwjdcyudflamwwnon` was last established ACTIVE_HEALTHY.
@@ -66,8 +75,8 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Supabase leaked-password protection remains disabled externally.
 
 ## NEXT — execute without asking
-1. Reconfirm exact final HEAD after this handoff, release check and correct ImportVerifier Netlify Deploy Preview; repair any regression immediately.
-2. Continue only genuinely new billing/security/reliability findings. In particular inspect cross-modality concurrent open Checkout-session behavior without redoing already-covered subscription/Lifetime replay sweeps.
+1. Reconfirm exact final HEAD after this handoff commit, exact GitHub release check and correct `netlify/importverifier/deploy-preview`; repair any regression immediately.
+2. Continue only genuinely new billing/security/reliability findings; do not redo Checkout/subscription/Lifetime replay sweeps already locked by tests.
 3. Production acceptance when browser/payment conditions permit: monthly → webhook → Unlimited → Portal/cancel; annual equivalent; Lifetime paid → persistent Unlimited → controlled refund/dispute lifecycle.
 4. Fresh-account acceptance: signup/login → five-product sample accepted → sixth rejected → isolated history → premium PDF/XLSX.
 5. Obtain TTFB/LCP/TBT/CLS/resource evidence before performance changes.
