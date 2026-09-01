@@ -7,19 +7,25 @@ const webhook = readFileSync(new URL('../app/api/billing/webhook/route.ts', impo
 const subscriptionSync = readFileSync(new URL('../lib/stripe/subscription-sync.ts', import.meta.url), 'utf8');
 const edgeDelete = readFileSync(new URL('../supabase/functions/delete-account/index.ts', import.meta.url), 'utf8');
 
-test('el borrado de cuenta consulta Stripe actual y cancela antes de eliminar Supabase', () => {
-  const retrieveIndex = route.indexOf('subscriptions.retrieve');
+test('el borrado de cuenta cancela todas las suscripciones Stripe antes de eliminar Supabase', () => {
+  const listIndex = route.indexOf('subscriptions.list');
   const cancelIndex = route.indexOf('subscriptions.cancel');
   const deleteIndex = route.indexOf("functions.invoke('delete-account'");
-  assert.ok(retrieveIndex >= 0, 'falta lectura del estado actual de Stripe');
+  assert.ok(listIndex >= 0, 'falta lectura de todas las suscripciones actuales de Stripe');
   assert.ok(cancelIndex >= 0, 'falta cancelación Stripe');
   assert.ok(deleteIndex >= 0, 'falta invocación de borrado');
-  assert.ok(retrieveIndex < cancelIndex, 'Stripe debe releerse antes de decidir la cancelación');
+  assert.ok(listIndex < cancelIndex, 'Stripe debe listar el estado actual antes de cancelar');
   assert.ok(cancelIndex < deleteIndex, 'Stripe debe cancelarse antes de borrar la cuenta');
-  assert.match(route, /latestSubscription\.status !== 'canceled'/);
+  assert.match(route, /customer: customerId/);
+  assert.match(route, /status: 'all'/);
+  assert.match(route, /limit: 100/);
+  assert.match(route, /page\.has_more/);
+  assert.match(route, /NON_CANCELLABLE_SUBSCRIPTION_STATUSES/);
 });
 
-test('una suscripción ya ausente en Stripe no bloquea el cierre de cuenta', () => {
+test('el borrado conserva fallback por subscription id y tolera recursos Stripe ya ausentes', () => {
+  assert.match(route, /cancelKnownSubscription\(subscriptionId\)/);
+  assert.match(route, /subscriptions\.retrieve\(subscriptionId\)/);
   assert.match(route, /error as \{ code\?: unknown \}\)\.code === 'resource_missing'/);
   assert.match(route, /if \(!isStripeResourceMissing\(error\)\) throw error/);
 });
