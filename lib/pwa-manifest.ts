@@ -33,8 +33,8 @@ export function manifestFor(language: Language): MetadataRoute.Manifest {
       { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
     ],
     shortcuts: [
-      { name: shortcuts.open, short_name: 'ImportVerifier', url: '/dashboard' },
-      { name: shortcuts.privacy, short_name: shortcuts.privacy, url: '/privacy' },
+      { name: shortcuts.open, short_name: 'ImportVerifier', url: `/dashboard?lang=${language}` },
+      { name: shortcuts.privacy, short_name: shortcuts.privacy, url: `/privacy?lang=${language}` },
     ],
   };
 }
