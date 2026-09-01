@@ -47,7 +47,7 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Universal CSV/XLS/XLSX/document/text/photo ingestion, HEIC/HEIF, prompt-injection/upload boundaries.
 - EU deterministic regulatory engine, Evidence, Regulatory Twin and fail-closed Regulatory Impact Radar architecture.
 - Official regulatory/evidence URL allowlists and persistence/render/export/AI-context sanitization.
-- PWA private-cache hardening, credentialless public-shell caching, localized start/offline/shortcuts and iOS/mobile upload/export safeguards.
+- PWA private-cache hardening, credentialless public-shell and shared-static-asset caching, localized start/offline/shortcuts and iOS/mobile upload/export safeguards.
 - Premium localized PDF/XLSX with evidence traceability and spreadsheet formula-injection protection.
 - Static localized landing, recovery surfaces, SEO, security headers and production release guard.
 - Shopify/Amazon/Etsy architecture exists but direct integrations remain inactive pending official credentials.
@@ -66,15 +66,20 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Audited Checkout-return truthfulness and found that Dashboard announced `Pago recibido`/equivalent on any `checkout=success` URL before `/api/billing/confirm` had confirmed entitlement/payment state.
 - Fixed the premature success claim: an unsynced Checkout return remains in the neutral `CheckoutReturnSync` live confirmation state; Dashboard only emits the localized success notice after the server-confirmed redirect carries `synced=1`.
 - Added `tests/checkout-return-truthfulness.test.ts` to prevent regression and preserve the neutral polite live state plus failure alert semantics.
-- Intermediate test-only commit `74fbe020ec0108dc212a959123b682144950dcc9` intentionally exposed the defect and release check #1844 failed before the implementation fix; it is not a release candidate.
-- Functional fix commit `b3d7785ddbd38f162e76bfd5eab605a94d495af4` passed release check **#1845 SUCCESS**, including `npm test`, typecheck and production build.
+- Intermediate test-only commit `74fbe020ec0108dc212a959123b682144950dcc9` intentionally exposed the Checkout defect and release check #1844 failed before the implementation fix; it is not a release candidate.
+- Functional Checkout fix `b3d7785ddbd38f162e76bfd5eab605a94d495af4` passed release check #1845 SUCCESS.
+- Hardened the shared PWA asset cache: cache generation is now `importverifier-shell-v8`, prior shell generations are invalidated, and same-origin CSS/JS/image/font requests are reconstructed with `credentials: 'omit'` before a response can enter the shared cache. Response cacheability still fails closed on private/no-store/no-cache and `Vary: Cookie/Authorization`.
+- Added regression coverage proving that shared cacheable assets are credentialless, complementing the already credentialless public landing navigation cache boundary.
+- Fixed the demonstrated Dashboard Settings keyboard-focus gap in account deletion: opening the destructive confirmation now moves focus explicitly to the email confirmation field after mount; cancelling clears confirmation state and restores focus to the opener after it remounts.
+- Added `tests/account-delete-focus.test.ts` to lock both focus-entry and focus-return behavior.
+- Intermediate test commit `c9ec2a9693db448009b7bf1fed764e512ee2ccd9` made release check #1850 fail solely because the new test used top-level `await` under the CJS test transform; implementation was not implicated. The regression fixture was corrected to `readFileSync` in `35f536d6a087e254834414537d1818615eb58e79`.
 
 ## Latest exact verification — 2026-09-01
-- Last exact functional HEAD fully verified green: **`b3d7785ddbd38f162e76bfd5eab605a94d495af4`**.
-- Exact release check for that functional HEAD: **#1845 SUCCESS**; install, full tests, typecheck and production build all passed.
-- Prior documentation HEAD `9001d4ccbd590a85d36c8a4bf287223bc2838cb4` also passed release check #1843 SUCCESS before this hardening pass.
+- Latest exact functional HEAD: **`35f536d6a087e254834414537d1818615eb58e79`**.
+- Exact release check: **#1851** on that SHA. `npm ci`, full `npm test`, typecheck and production build all completed successfully; only runner post-job cleanup remained in progress at the final pre-handoff observation.
+- Previous exact functional Checkout HEAD `b3d7785ddbd38f162e76bfd5eab605a94d495af4` passed release check #1845 SUCCESS.
 - PR #4 is **merged/closed**, not open. Do not attempt another merge.
-- This file is updated after the green functional commit; after this documentation commit, reconfirm the branch HEAD and exact-HEAD CI before any release decision. A documentation-only HEAD must not be confused with the separately proven functional HEAD above.
+- This file is a documentation-only commit after the verified functional SHA. Reconfirm the branch HEAD and exact-HEAD CI before a release decision; do not confuse a documentation-only HEAD with the separately proven functional HEAD above.
 
 ## Production facts
 - Supabase project `hfuwwjdcyudflamwwnon` is production.
@@ -86,9 +91,9 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Production env template intentionally keeps privileged secrets and sensitive legal identifiers blank; never commit them.
 
 ## NEXT — execute without asking
-1. Reconfirm exact branch HEAD and exact-HEAD GitHub release check after this handoff update; repair any failing test/typecheck/build regression immediately.
-2. Continue keyboard/focus audit in Dashboard Settings. Highest-priority demonstrated candidate: opening the account-deletion confirmation removes the opener button while the newly mounted form has no explicit focus destination/restore path; verify and fix with regression coverage if confirmed.
-3. Continue genuinely new multidisciplinary review findings, prioritizing demonstrated security/revenue/correctness/user-friction issues over speculative architecture.
+1. Reconfirm the documentation-only branch HEAD and its exact-HEAD release check; repair any failing test/typecheck/build regression immediately.
+2. Continue genuinely new keyboard/focus review outside the now-fixed account-deletion flow, prioritizing demonstrated traps in Settings, billing return and dynamically mounted customer actions rather than speculative rewrites.
+3. Continue genuinely new multidisciplinary findings across security, mobile/iPad/PWA, billing, AI, evidence, reports and Radar, prioritizing demonstrated correctness/revenue/privacy/user-friction issues.
 4. Production acceptance when browser/payment conditions permit: monthly → webhook → Unlimited → Portal/cancel; annual equivalent; Lifetime paid → persistent Unlimited → controlled refund/dispute lifecycle.
 5. Fresh-account acceptance: signup/login → five-product sample accepted → sixth rejected → isolated history → premium PDF/XLSX.
 6. Obtain TTFB/LCP/TBT/CLS/resource evidence before performance changes.
