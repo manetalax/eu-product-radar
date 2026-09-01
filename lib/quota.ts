@@ -13,7 +13,7 @@ export type ProductQuota = {
 
 export function productQuota(used: number, _now = new Date(), billing: BillingStatus = { planId: 'free', planName: 'Gratis', status: null, productLimit: FREE_ACCOUNT_PRODUCT_LIMIT, currentPeriodEnd: null, cancelAtPeriodEnd: false }): ProductQuota {
   const safeUsed = Number.isFinite(used) && used > 0 ? Math.floor(used) : 0;
-  const paid = billing.planId !== 'free' && billing.planId !== 'audit';
+  const paid = billing.planId !== 'free';
   return {
     limit: billing.productLimit,
     used: safeUsed,
@@ -24,14 +24,6 @@ export function productQuota(used: number, _now = new Date(), billing: BillingSt
 }
 
 export function quotaExceededMessage(incomingProducts: number, quota: ProductQuota, language: Language = 'es'): string {
-  const audit = {
-    es:`Tu auditoría profesional permite una única carga de hasta ${quota.limit} productos. Este archivo contiene ${incomingProducts}. No se ha guardado ningún producto.`,
-    en:`Your professional audit allows one upload of up to ${quota.limit} products. This file contains ${incomingProducts}. No products have been saved.`,
-    fr:`Votre audit professionnel permet un seul import de ${quota.limit} produits maximum. Ce fichier en contient ${incomingProducts}. Aucun produit n’a été enregistré.`,
-    de:`Ihr professionelles Audit ermöglicht einen einmaligen Upload von bis zu ${quota.limit} Produkten. Diese Datei enthält ${incomingProducts}. Es wurden keine Produkte gespeichert.`,
-    it:`L’audit professionale consente un solo caricamento fino a ${quota.limit} prodotti. Questo file ne contiene ${incomingProducts}. Nessun prodotto è stato salvato.`,
-    pt:`A auditoria profissional permite um único carregamento de até ${quota.limit} produtos. Este ficheiro contém ${incomingProducts}. Nenhum produto foi guardado.`,
-  } as const;
   const free = {
     es:`Tu prueba gratuita incluye 5 productos en total por cuenta. Este archivo contiene ${incomingProducts} y te quedan ${quota.remaining}. No se ha guardado ningún producto.`,
     en:`Your free trial includes 5 products in total per account. This file contains ${incomingProducts} and you have ${quota.remaining} left. No products have been saved.`,
@@ -48,7 +40,6 @@ export function quotaExceededMessage(incomingProducts: number, quota: ProductQuo
     it:'La richiesta supera una protezione tecnica del servizio. Dividi il catalogo in file più piccoli e riprova.',
     pt:'O pedido excede uma proteção técnica do serviço. Divida o catálogo em ficheiros mais pequenos e tente novamente.',
   } as const;
-  if (quota.billing.planId === 'audit') return audit[language];
   if (quota.billing.planId === 'free') return free[language];
   return technical[language];
 }
