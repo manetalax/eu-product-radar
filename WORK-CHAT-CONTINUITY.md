@@ -49,17 +49,17 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Free/Lifetime quota period semantics report `lifetime`; recurring Unlimited reports `subscription`.
 
 ## DONE — 2026-09-01 current execution
-- Reconfirmed starting HEAD `5a68123fb6a1df8798e445662e1f9d6007898f4f`: exact release check **#1732 SUCCESS** and correct `netlify/importverifier/deploy-preview` **SUCCESS/READY**.
-- **Production AI rate-limit permission repaired:** `consume_api_rate_limit(uuid,text,integer,integer)` had EXECUTE revoked not only from browser roles but also from `service_role`, while `lib/api-rate-limit.ts` invokes it through the admin client. This made the limiter fail closed even for valid server calls. Production migration `20260901090429_grant_api_rate_limit_service_role` now grants EXECUTE only to `service_role`/database owner and explicitly keeps `public`, `anon` and `authenticated` denied. Repo migration: `supabase/migrations/20260901090429_grant_api_rate_limit_service_role.sql`; regression: `tests/api-rate-limit-privilege.test.ts`.
-- **Production internal-table server privileges repaired:** Supabase/PostgREST `service_role` lacked object-level privileges required by billing, AI telemetry and Radar despite RLS/server intent. Production migration `20260901090719_grant_server_internal_table_privileges` grants only the operations actually used: `subscriptions` SELECT/INSERT/UPDATE; `unlimited_lifetime_entitlements` SELECT/INSERT/UPDATE; `ai_usage_events` SELECT/INSERT; `regulatory_change_events` SELECT/INSERT/UPDATE; `stripe_webhook_events` SELECT/INSERT/UPDATE. No DELETE or browser grants were added. A transaction under `SET LOCAL ROLE service_role` successfully read all affected server tables after migration. Regression: `tests/server-internal-table-privileges.test.ts`.
-- Supabase security advisor after the repair did not expose these internal objects to clients. Existing external warning remains leaked-password protection disabled; intentional no-client-policy internal tables remain INFO only.
-- **Stripe same-event webhook concurrency hardened:** a duplicate delivery arriving while the first handler was still `processing` could previously execute the same handler in parallel. The webhook ledger now serializes execution. A recent in-flight duplicate returns non-2xx (409) so Stripe keeps retry pressure if the first worker crashes. A `processing` row older than five minutes can be recovered only by one retry through an atomic conditional claim on `status=processing` + stale `updated_at`. Completed events remain idempotent duplicates. Regression: `tests/stripe-webhook-concurrency.test.ts`.
-- CI caught two stale account-deletion test expectations (`storedSubscriptionId`, literal `4096`/404 semantics). Production logic was already correct; tests were aligned to current `subscriptionId`, `resource_missing`, and `4 * 1024` contract. Fix commit: `186301bdf9d9f902d38b363dc68923e4b790e3ed`.
-- Durable architecture handoff updated in commit `43ba81358f451b4f23e242f3935316a97058c925` with the service-role privilege model and webhook serialization/recovery contract.
-- **Latest verified functional/test HEAD:** `186301bdf9d9f902d38b363dc68923e4b790e3ed`.
-- GitHub `ImportVerifier release check` **#1753 SUCCESS** on exact `186301bd...`: `npm ci`, full tests, typecheck and production build all passed.
-- Correct `netlify/importverifier/deploy-preview` on exact `186301bd...` is **SUCCESS/READY** at `https://deploy-preview-4--importverifier.netlify.app`.
-- PR #4 remained open and unmerged at verification. This handoff commit creates a newer docs-only HEAD; reconfirm its exact CI and Netlify status before treating the final repository HEAD as fully verified.
+- Reconfirmed starting documented HEAD `be6d507a0226138b3200c222eaa68556a296986f`: exact GitHub release checks **#1755/#1756 SUCCESS** and correct `netlify/importverifier/deploy-preview` **SUCCESS/READY**.
+- Production AI rate-limit and internal-table `service_role` privilege repairs remain applied; browser roles stay closed. Do not repeat this sweep unless a new server path or migration changes the privilege surface.
+- Stripe same-event webhook execution serialization/stale recovery remains in place and covered.
+- **Billing request boundary tightened:** Checkout and synchronous Checkout confirmation use a 4 KiB JSON body ceiling rather than the generic multi-megabyte API limit.
+- **Checkout confirmation authority tightened:** recurring confirmation derives monthly/annual from the current Stripe subscription item price after re-reading Stripe, not mutable Checkout metadata.
+- **Billing Portal current-state check tightened:** Portal is created only when Stripe currently has a non-terminal recurring subscription for that customer; Lifetime-only customers no longer receive a misleading subscription-management destination.
+- **Stripe customer ownership tightened:** recurring subscription synchronization requires an already persisted `stripe_customer_id` → user ownership row. Mutable subscription metadata cannot attach an unknown Stripe customer to an ImportVerifier account; conflicting metadata is rejected.
+- **Post-auth billing-option recovery added:** a fresh authenticated `plan_interest` in Supabase user metadata can recover annual/Lifetime for the immediate dashboard Checkout when the client omits `billingOption`; the intent is strictly validated, expires after 15 minutes, explicit request billing remains authoritative and stale/invalid intent falls back to monthly. Regression: `tests/auth-billing-option-continuity.test.ts`.
+- **PWA public-cache credential isolation tightened:** public landing navigations that may enter the shared offline shell are now fetched through `credentials: 'omit'` before caching rather than reusing a possibly cookie-bearing navigation request. Cache generation rotated to `importverifier-shell-v7`, evicting older shell behavior. Regression: `tests/pwa-cache-boundary.test.ts`. Functional commits: `67eb84ff3976ff0678fcd7bf2762dc2a9938ecbc`, `3627545944c3e1ad4837ef4444cbce0fa6ea1edf`.
+- Exact release check **#1791** for functional/test HEAD `3627545944c3e1ad4837ef4444cbce0fa6ea1edf` was running at handoff time; `npm ci` had passed and full tests were in progress. Do not infer green until the exact run finishes.
+- PR #4 remained open, mergeable and unmerged at verification. This documentation commit creates a newer docs-only HEAD; reconfirm exact CI and `netlify/importverifier/deploy-preview` on the final HEAD before treating it as verified.
 
 ## Production facts
 - Supabase project `hfuwwjdcyudflamwwnon` is the production project used by current migrations.
@@ -71,14 +71,15 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 
 ## NEXT — execute without asking
 1. Reconfirm exact final HEAD after this handoff commit, exact GitHub release check and correct `netlify/importverifier/deploy-preview`; repair any regression immediately.
-2. Continue only genuinely new security/billing/reliability findings. In particular, verify new server-side PostgREST/RPC paths retain minimum privileges without broadening browser access; do not repeat the completed privilege sweep unless code/migrations change.
-3. Production acceptance when browser/payment conditions permit: monthly → webhook → Unlimited → Portal/cancel; annual equivalent; Lifetime paid → persistent Unlimited → controlled refund/dispute lifecycle.
-4. Fresh-account acceptance: signup/login → five-product sample accepted → sixth rejected → isolated history → premium PDF/XLSX.
-5. Obtain TTFB/LCP/TBT/CLS/resource evidence before performance changes.
-6. Inspect PDF typography/overflow only against a real multi-product output.
-7. Keep Radar disabled until same strong ingest secret exists in runtime/scheduler and real official EUR-Lex ingestion persists events.
-8. Review Supabase leaked-password protection/CAPTCHA when console capability is available.
-9. Keep EU the only active market and direct marketplace connectors inactive until legitimate credentials exist.
+2. Continue only genuinely new security/billing/reliability findings. In particular, verify new server-side PostgREST/RPC paths retain minimum privileges without broadening browser access; do not repeat completed privilege sweeps unless code/migrations change.
+3. Improve authenticated billing UX so Lifetime accounts never present subscription-only management language/actions, while recurring monthly/annual retain Portal management.
+4. Production acceptance when browser/payment conditions permit: monthly → webhook → Unlimited → Portal/cancel; annual equivalent; Lifetime paid → persistent Unlimited → controlled refund/dispute lifecycle.
+5. Fresh-account acceptance: signup/login → five-product sample accepted → sixth rejected → isolated history → premium PDF/XLSX.
+6. Obtain TTFB/LCP/TBT/CLS/resource evidence before performance changes.
+7. Inspect PDF typography/overflow only against a real multi-product output.
+8. Keep Radar disabled until same strong ingest secret exists in runtime/scheduler and real official EUR-Lex ingestion persists events.
+9. Review Supabase leaked-password protection/CAPTCHA when console capability is available.
+10. Keep EU the only active market and direct marketplace connectors inactive until legitimate credentials exist.
 
 ## BLOCKED EXTERNAL
 - Final production env/promotion with complete legal/provider, runtime and free-only AI secrets.
