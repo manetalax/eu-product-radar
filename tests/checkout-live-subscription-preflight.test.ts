@@ -20,7 +20,13 @@ test('Checkout cancels abandoned incomplete subscriptions but preserves other cu
   assert.match(checkout, /await stripe\.subscriptions\.cancel\(subscription\.id\)/);
   assert.match(checkout, /TERMINAL_SUBSCRIPTION_STATUSES/);
   assert.match(checkout, /stripeHasCurrentSubscription/);
-  assert.match(checkout, /billingStatus\(record\)\.planId !== 'free' \|\| stripeHasCurrentSubscription/);
+  assert.match(checkout, /if \(stripeHasCurrentSubscription\)/);
+});
+
+test('stale local subscription status cannot block re-subscription when Stripe has no current subscription', () => {
+  assert.doesNotMatch(checkout, /billingStatus\(record\)/);
+  assert.doesNotMatch(checkout, /billingStatus,/);
+  assert.match(checkout, /Stripe is authoritative/);
 });
 
 test('Checkout reuses same-option open sessions and expires sibling billing modalities', () => {
