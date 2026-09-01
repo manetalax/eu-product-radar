@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { billingStatus, isUnlimitedBillingOption, stripePriceIdForBillingOption, UNLIMITED_PRICE_CONFIG } from '@/lib/billing';
+import { isUnlimitedBillingOption, stripePriceIdForBillingOption, UNLIMITED_PRICE_CONFIG } from '@/lib/billing';
 import { billingText } from '@/lib/billing-i18n';
 import { configuredSiteOrigin, sameOrigin, PRIVATE_HEADERS, readJsonBody } from '@/lib/http';
 import { legalConfig } from '@/lib/legal-config';
@@ -139,11 +139,12 @@ export async function POST(request: Request) {
     const siteOrigin = configuredSiteOrigin();
     if (!siteOrigin) throw new Error(b('siteUrl'));
 
-    // Supabase is a projection of billing state and can lag behind Stripe webhooks. Re-read
-    // the customer directly before creating new recurring value. Incomplete abandoned
-    // subscriptions are canceled; any other non-terminal subscription routes to Portal.
+    // Supabase is a projection and may lag behind signed webhooks. Stripe is authoritative
+    // for whether recurring billing exists right now. This allows a customer whose local row
+    // is stale after cancellation to subscribe again, while any real current Stripe subscription
+    // still routes safely to Portal.
     const stripeHasCurrentSubscription = await hasCurrentStripeSubscription(stripe, customerId);
-    if (billingStatus(record).planId !== 'free' || stripeHasCurrentSubscription) {
+    if (stripeHasCurrentSubscription) {
       const portal = await stripe.billingPortal.sessions.create({ customer: customerId, return_url: `${siteOrigin}/dashboard` });
       const portalUrl = trustedStripeNavigationUrl(portal.url, 'portal');
       if (!portalUrl) throw new Error(b('stripePage'));
