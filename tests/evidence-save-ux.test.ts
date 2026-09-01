@@ -28,3 +28,18 @@ test('evidence save failure copy exists in all six supported languages', () => {
     assert.ok(panel.includes(text), text);
   }
 });
+
+
+test('same-row evidence writes are synchronously serialized without blocking unrelated rows', () => {
+  assert.match(panel, /const savingTokens = useRef\(new Set<string>\(\)\)/);
+  assert.match(panel, /if \(savingTokens\.current\.has\(token\)\) return false/);
+  assert.match(panel, /savingTokens\.current\.add\(token\)/);
+  assert.match(panel, /savingTokens\.current\.delete\(token\)/);
+  assert.equal(panel.match(/disabled=\{savingKeys\.has\(token\)\}/g)?.length, 5);
+  assert.doesNotMatch(panel, /disabled=\{savingKeys\.size > 0\}/);
+});
+
+test('evidence saving progress has a persistent polite atomic announcement', () => {
+  assert.match(panel, /<p className="sr-only" role="status" aria-live="polite" aria-atomic="true">\{savingKeys\.size > 0 \? t\.saving : ''\}<\/p>/);
+  assert.match(panel, /\{savingKeys\.has\(token\) && <small className="muted">\{t\.saving\}<\/small>\}/);
+});
