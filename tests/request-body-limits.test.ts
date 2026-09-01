@@ -33,3 +33,13 @@ test('small billing JSON endpoints do not inherit the generic 2 MB request allow
     assert.match(route, /readJsonBody\(request, BILLING_JSON_MAX_BYTES\)/);
   }
 });
+
+test('small billing endpoints preserve HTTP 413 without exposing body-parser details', () => {
+  for (const path of ['../app/api/billing/checkout/route.ts', '../app/api/billing/confirm/route.ts']) {
+    const route = readFileSync(new URL(path, import.meta.url), 'utf8');
+    assert.match(route, /RequestBodyTooLargeError/);
+    assert.match(route, /error instanceof RequestBodyTooLargeError \? 413 : 400/);
+    assert.match(route, /return json\(\{ error: b\('invalidRequest'\) \}/);
+    assert.doesNotMatch(route, /error instanceof Error \? error\.message/);
+  }
+});
