@@ -1,4 +1,4 @@
-import { FREE_TRIAL_PRODUCT_LIMIT, isPlanId, ONE_TIME_AUDIT, PlanId, PLANS_BY_ID } from './plans';
+import { FREE_TRIAL_PRODUCT_LIMIT, isPlanId, ONE_TIME_AUDIT, PlanId, UNLIMITED_PLAN } from './plans';
 
 export const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'trialing'] as const;
 export const IMPORTVERIFIER_UNLIMITED_PRICE_ID = 'price_1UAJy5HJnO8odw1Mn4jMVjFt';
@@ -21,14 +21,23 @@ export type SubscriptionRecord = {
 };
 
 export function billingStatus(record: SubscriptionRecord | null, now = new Date()): BillingStatus {
-  const planId = isPlanId(record?.plan_id) ? record.plan_id : null;
+  const storedPlanId = isPlanId(record?.plan_id) ? record.plan_id : null;
   const status = typeof record?.status === 'string' ? record.status : null;
   const periodEnd = typeof record?.current_period_end === 'string' ? record.current_period_end : null;
   const endIsValid = !periodEnd || new Date(periodEnd).getTime() > now.getTime();
-  const paid = Boolean(planId && status && ACTIVE_SUBSCRIPTION_STATUSES.includes(status as typeof ACTIVE_SUBSCRIPTION_STATUSES[number]) && endIsValid);
-  if (!paid || !planId) return { planId: 'free', planName: 'Gratis', status, productLimit: FREE_TRIAL_PRODUCT_LIMIT, currentPeriodEnd: periodEnd, cancelAtPeriodEnd: Boolean(record?.cancel_at_period_end) };
-  const plan = PLANS_BY_ID[planId];
-  return { planId, planName: plan.name, status, productLimit: plan.monthlyProductLimit, currentPeriodEnd: periodEnd, cancelAtPeriodEnd: Boolean(record?.cancel_at_period_end) };
+  const paid = Boolean(storedPlanId && status && ACTIVE_SUBSCRIPTION_STATUSES.includes(status as typeof ACTIVE_SUBSCRIPTION_STATUSES[number]) && endIsValid);
+  if (!paid || !storedPlanId) return { planId: 'free', planName: 'Gratis', status, productLimit: FREE_TRIAL_PRODUCT_LIMIT, currentPeriodEnd: periodEnd, cancelAtPeriodEnd: Boolean(record?.cancel_at_period_end) };
+
+  // Historical plan IDs remain readable in persistence/webhooks, but every currently
+  // active paid subscriber receives the single public ImportVerifier Unlimited entitlement.
+  return {
+    planId: UNLIMITED_PLAN.id,
+    planName: UNLIMITED_PLAN.name,
+    status,
+    productLimit: UNLIMITED_PLAN.monthlyProductLimit,
+    currentPeriodEnd: periodEnd,
+    cancelAtPeriodEnd: Boolean(record?.cancel_at_period_end),
+  };
 }
 
 export function auditBillingStatus(): BillingStatus {
