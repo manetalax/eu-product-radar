@@ -13,6 +13,12 @@ test('release workflow cancels stale runs and keeps the canonical ImportVerifier
   assert.match(workflow, /NEXT_PUBLIC_SITE_URL: https:\/\/importverifier\.netlify\.app/);
 });
 
+test('release workflow pins Node 24-compatible GitHub Actions to immutable release commits', () => {
+  assert.match(workflow, /actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\.0\.1/);
+  assert.match(workflow, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0/);
+  assert.doesNotMatch(workflow, /actions\/(?:checkout|setup-node)@v4/);
+});
+
 test('release workflow still runs install, tests, typecheck and build', () => {
   for (const command of ['npm ci','npm test','npm run typecheck','npm run build']) assert.ok(workflow.includes(command), command);
 });
