@@ -73,10 +73,13 @@ Continue autonomously through actionable work. If one item is BLOCKED EXTERNAL, 
 - Fixed the demonstrated Dashboard Settings keyboard-focus gap in account deletion: opening the destructive confirmation now moves focus explicitly to the email confirmation field after mount; cancelling clears confirmation state and restores focus to the opener after it remounts.
 - Added `tests/account-delete-focus.test.ts` to lock both focus-entry and focus-return behavior.
 - Intermediate test commit `c9ec2a9693db448009b7bf1fed764e512ee2ccd9` made release check #1850 fail solely because the new test used top-level `await` under the CJS test transform; implementation was not implicated. The regression fixture was corrected to `readFileSync` in `35f536d6a087e254834414537d1818615eb58e79`.
+- Fixed a demonstrated iPhone Safari usability issue in the destructive account flow: the inputs inherit the 12px label font, so the mobile breakpoint now raises account-deletion inputs to 16px while retaining 46px minimum control height and the existing one-column layout, avoiding focus zoom without disabling browser zoom.
+- Extended `tests/account-delete-focus.test.ts` to lock the 16px mobile input rule and touch-sized control floor.
 
 ## Latest exact verification — 2026-09-01
-- Latest exact functional HEAD: **`35f536d6a087e254834414537d1818615eb58e79`**.
-- Exact release check: **#1851** on that SHA. `npm ci`, full `npm test`, typecheck and production build all completed successfully; only runner post-job cleanup remained in progress at the final pre-handoff observation.
+- Latest exact functional HEAD fully verified green: **`a3b5f6f7694cfb3a80d754d56947c6bdb44db342`**.
+- Exact release check for that SHA: **#1854 SUCCESS**; `npm ci`, full `npm test`, typecheck and production build all completed successfully.
+- Previous focus/PWA functional HEAD `35f536d6a087e254834414537d1818615eb58e79` passed release check #1851 SUCCESS.
 - Previous exact functional Checkout HEAD `b3d7785ddbd38f162e76bfd5eab605a94d495af4` passed release check #1845 SUCCESS.
 - PR #4 is **merged/closed**, not open. Do not attempt another merge.
 - This file is a documentation-only commit after the verified functional SHA. Reconfirm the branch HEAD and exact-HEAD CI before a release decision; do not confuse a documentation-only HEAD with the separately proven functional HEAD above.
