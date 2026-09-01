@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { formatPrice, LANGUAGES } from '../lib/landing-i18n';
-import { UNLIMITED_PLAN } from '../lib/plans';
+import { UNLIMITED_ANNUAL_PRICE_EUR, UNLIMITED_LIFETIME_PRICE_EUR, UNLIMITED_MONTHLY_PRICE_EUR, UNLIMITED_PLAN } from '../lib/plans';
 
 test('canonical Unlimited price is EUR 9.95 and keeps cents in every supported locale', () => {
   assert.equal(UNLIMITED_PLAN.monthlyPriceEur, 9.95);
@@ -12,7 +12,7 @@ test('canonical Unlimited price is EUR 9.95 and keeps cents in every supported l
   }
 });
 
-test('integer EUR prices remain clean without forced cents', () => {
+test('all three public Unlimited prices retain their cents in every locale', () => {\n  const expected = [UNLIMITED_MONTHLY_PRICE_EUR, UNLIMITED_ANNUAL_PRICE_EUR, UNLIMITED_LIFETIME_PRICE_EUR];\n  for (const language of LANGUAGES) {\n    for (const price of expected) assert.match(formatPrice(language, price), /[,.]95/, language);\n  }\n});\n\ntest('integer EUR prices remain clean without forced cents', () => {
   for (const language of LANGUAGES) {
     const formatted = formatPrice(language, 29);
     assert.doesNotMatch(formatted, /29[,.]00/, language);
