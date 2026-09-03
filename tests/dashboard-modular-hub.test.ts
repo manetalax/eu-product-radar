@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const page = await readFile(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8');
 const hub = await readFile(new URL('../components/DashboardExtrasHub.tsx', import.meta.url), 'utf8');
+const organizer = await readFile(new URL('../components/DashboardModuleOrganizer.tsx', import.meta.url), 'utf8');
 const brand = await readFile(new URL('../components/Brand.tsx', import.meta.url), 'utf8');
 
 test('advanced dashboard surfaces are grouped instead of rendered as an endless tail', () => {
@@ -13,6 +14,15 @@ test('advanced dashboard surfaces are grouped instead of rendered as an endless 
   assert.ok(page.includes('assessment={<LatestRegulatoryAssessment />}'));
   assert.ok(hub.includes('<details className="iv-tool-module"'));
   assert.ok(hub.includes('<summary className="iv-tool-summary"'));
+});
+
+test('dashboard organizer keeps persistent modular controls and quick-view presets', () => {
+  assert.ok(page.includes('<DashboardModuleOrganizer'));
+  assert.ok(organizer.includes("importverifier:dashboard-layout:v2"));
+  assert.ok(organizer.includes("applyPreset('focus')"));
+  assert.ok(organizer.includes("applyPreset('complete')"));
+  assert.ok(organizer.includes("applyPreset('default')"));
+  assert.ok(organizer.includes('MutationObserver'));
 });
 
 test('the primary brand exposes the Active Verifier stamp and adjacent PASS seal', () => {
