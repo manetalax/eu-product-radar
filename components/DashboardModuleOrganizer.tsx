@@ -24,13 +24,7 @@ const PRESETS: Record<LayoutPreset, ModuleState[]> = {
     { id: 'market', hidden: true, collapsed: true },
     { id: 'onboarding', hidden: true, collapsed: true },
   ],
-  complete: [
-    { id: 'import', hidden: false, collapsed: false },
-    { id: 'overview', hidden: false, collapsed: false },
-    { id: 'selected', hidden: false, collapsed: false },
-    { id: 'market', hidden: false, collapsed: false },
-    { id: 'onboarding', hidden: false, collapsed: false },
-  ],
+  complete: DEFAULTS.map(item => ({ ...item, collapsed: false })),
   default: DEFAULTS,
 };
 
@@ -80,7 +74,6 @@ export default function DashboardModuleOrganizer() {
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(modules));
-
     const apply = () => {
       modules.forEach((module, index) => {
         SELECTORS[module.id].forEach(selector => {
@@ -93,7 +86,6 @@ export default function DashboardModuleOrganizer() {
         });
       });
     };
-
     apply();
     const observer = new MutationObserver(apply);
     observer.observe(document.body, { childList: true, subtree: true });
@@ -106,9 +98,13 @@ export default function DashboardModuleOrganizer() {
 
   function move(id: ModuleId, direction: -1 | 1) {
     setModules(items => {
+      const visibleIds = items.filter(item => !item.hidden).map(item => item.id);
+      const visibleIndex = visibleIds.indexOf(id);
+      const targetId = visibleIds[visibleIndex + direction];
+      if (visibleIndex < 0 || !targetId) return items;
       const index = items.findIndex(item => item.id === id);
-      const target = index + direction;
-      if (index < 0 || target < 0 || target >= items.length) return items;
+      const target = items.findIndex(item => item.id === targetId);
+      if (index < 0 || target < 0) return items;
       const next = [...items];
       [next[index], next[target]] = [next[target], next[index]];
       return next;
@@ -145,23 +141,9 @@ export default function DashboardModuleOrganizer() {
     <div className="iv-organizer" aria-label={t.title}>
       <button className="iv-organizer-toggle" type="button" aria-expanded={open} onClick={() => setOpen(value => !value)}>{t.toggle}</button>
       {open && <div className="iv-organizer-panel">
-        <h2>{t.title}</h2>
-        <p>{t.body}</p>
-        <div className="iv-presets" aria-label={t.presets}>
-          <span>{t.presets}</span>
-          <button className="iv-preset" type="button" onClick={() => applyPreset('focus')}>{t.focus}</button>
-          <button className="iv-preset" type="button" onClick={() => applyPreset('complete')}>{t.complete}</button>
-          <button className="iv-preset" type="button" onClick={() => applyPreset('default')}>{t.reset}</button>
-        </div>
-        {visible.map((module, index) => <div className="iv-module-row" key={module.id}>
-          <strong>{t.labels[module.id]}</strong>
-          <div className="iv-module-actions">
-            <button type="button" disabled={index === 0} onClick={() => move(module.id, -1)} aria-label={`${t.up}: ${t.labels[module.id]}`}>↑</button>
-            <button type="button" disabled={index === visible.length - 1} onClick={() => move(module.id, 1)} aria-label={`${t.down}: ${t.labels[module.id]}`}>↓</button>
-            <button type="button" onClick={() => patch(module.id, { collapsed: !module.collapsed })}>{module.collapsed ? t.open : t.collapse}</button>
-            <button type="button" onClick={() => patch(module.id, { hidden: true })}>{t.remove}</button>
-          </div>
-        </div>)}
+        <h2>{t.title}</h2><p>{t.body}</p>
+        <div className="iv-presets" aria-label={t.presets}><span>{t.presets}</span><button className="iv-preset" type="button" onClick={() => applyPreset('focus')}>{t.focus}</button><button className="iv-preset" type="button" onClick={() => applyPreset('complete')}>{t.complete}</button><button className="iv-preset" type="button" onClick={() => applyPreset('default')}>{t.reset}</button></div>
+        {visible.map((module, index) => <div className="iv-module-row" key={module.id}><strong>{t.labels[module.id]}</strong><div className="iv-module-actions"><button type="button" disabled={index === 0} onClick={() => move(module.id, -1)} aria-label={`${t.up}: ${t.labels[module.id]}`}>↑</button><button type="button" disabled={index === visible.length - 1} onClick={() => move(module.id, 1)} aria-label={`${t.down}: ${t.labels[module.id]}`}>↓</button><button type="button" onClick={() => patch(module.id, { collapsed: !module.collapsed })}>{module.collapsed ? t.open : t.collapse}</button><button type="button" onClick={() => patch(module.id, { hidden: true })}>{t.remove}</button></div></div>)}
         {hidden.length > 0 && <div className="iv-add-list" aria-label={t.add}>{hidden.map(module => <button className="iv-add" type="button" key={module.id} onClick={() => patch(module.id, { hidden: false, collapsed: false })}>+ {t.labels[module.id]}</button>)}</div>}
       </div>}
     </div>
