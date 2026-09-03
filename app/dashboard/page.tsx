@@ -1,4 +1,5 @@
 import Dashboard from '@/components/Dashboard';
+import DashboardExtrasHub from '@/components/DashboardExtrasHub';
 import DashboardModuleOrganizer from '@/components/DashboardModuleOrganizer';
 import AnalysisReviewGate from '@/components/AnalysisReviewGate';
 import CheckoutReturnSync from '@/components/CheckoutReturnSync';
@@ -29,8 +30,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     <AnalysisReviewGate />
     <DashboardModuleOrganizer />
     <Dashboard email={user.email ?? ''} />
-    <PersonalizedPlanOffer />
-    <IntelligenceSuite />
-    <LatestRegulatoryAssessment />
+    <DashboardExtrasHub
+      personalized={<PersonalizedPlanOffer />}
+      intelligence={<IntelligenceSuite />}
+      assessment={<LatestRegulatoryAssessment />}
+    />
   </LanguageProvider>;
 }
