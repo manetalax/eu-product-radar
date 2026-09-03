@@ -1,15 +1,17 @@
 import { FREE_TRIAL_PRODUCT_LIMIT, isPlanId, PlanId, UNLIMITED_FAIR_USE_CEILING, UNLIMITED_PLAN } from './plans';
 
 export const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'trialing'] as const;
-export const UNLIMITED_BILLING_OPTIONS = ['monthly', 'annual', 'lifetime', 'custom'] as const;
+export const UNLIMITED_BILLING_OPTIONS = ['monthly', 'annual', 'lifetime'] as const;
 export type UnlimitedBillingOption = typeof UNLIMITED_BILLING_OPTIONS[number];
+export const CHECKOUT_BILLING_OPTIONS = ['monthly', 'annual', 'lifetime', 'custom'] as const;
+export type CheckoutBillingOption = typeof CHECKOUT_BILLING_OPTIONS[number];
 
 export const IMPORTVERIFIER_UNLIMITED_PRICE_ID = 'price_1UAJy5HJnO8odw1Mn4jMVjFt';
 export const IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID = 'price_1UAjP0HJnO8odw1M7RBK8jsR';
 export const IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID = 'price_1UBV3KHJnO8odw1MUoBUpwdf';
 export const IMPORTVERIFIER_PERSONALIZED_PRICE_ID = 'price_1UBV3OHJnO8odw1MW2NRuBIl';
 
-export const UNLIMITED_PRICE_CONFIG: Record<UnlimitedBillingOption, {
+export const UNLIMITED_PRICE_CONFIG: Record<CheckoutBillingOption, {
   priceId: string;
   amountCents: number;
   checkoutMode: 'subscription' | 'payment';
@@ -45,7 +47,11 @@ export function isUnlimitedBillingOption(value: unknown): value is UnlimitedBill
   return typeof value === 'string' && (UNLIMITED_BILLING_OPTIONS as readonly string[]).includes(value);
 }
 
-export function billingOptionIncludesAi(option: UnlimitedBillingOption | null | undefined): boolean {
+export function isCheckoutBillingOption(value: unknown): value is CheckoutBillingOption {
+  return typeof value === 'string' && (CHECKOUT_BILLING_OPTIONS as readonly string[]).includes(value);
+}
+
+export function billingOptionIncludesAi(option: CheckoutBillingOption | null | undefined): boolean {
   return option === 'annual' || option === 'lifetime' || option === 'custom';
 }
 
@@ -63,7 +69,8 @@ export function unlimitedBillingStatus(status: 'lifetime' | 'active' = 'lifetime
 
 function billingOptionForStoredStripePrice(priceId: string | null): UnlimitedBillingOption | null {
   if (!priceId) return null;
-  return billingOptionForStripePrice(priceId, true) ?? billingOptionForStripePrice(priceId, false);
+  const option = billingOptionForStripePrice(priceId, true) ?? billingOptionForStripePrice(priceId, false);
+  return option === 'monthly' || option === 'annual' || option === 'lifetime' ? option : null;
 }
 
 export function billingStatus(record: SubscriptionRecord | null, now = new Date()): BillingStatus {
@@ -92,13 +99,13 @@ export function billingStatus(record: SubscriptionRecord | null, now = new Date(
     productLimit: UNLIMITED_PLAN.monthlyProductLimit,
     currentPeriodEnd: periodEnd,
     cancelAtPeriodEnd: Boolean(record?.cancel_at_period_end),
-    billingOption: billingOption === 'lifetime' || billingOption === 'custom' ? null : billingOption,
+    billingOption: billingOption === 'lifetime' ? null : billingOption,
   };
 }
 
-export function stripePriceIdForBillingOption(option: UnlimitedBillingOption, production = process.env.NODE_ENV === 'production'): string {
+export function stripePriceIdForBillingOption(option: CheckoutBillingOption, production = process.env.NODE_ENV === 'production'): string {
   if (production) return UNLIMITED_PRICE_CONFIG[option].priceId;
-  const envName: Record<UnlimitedBillingOption, string> = {
+  const envName: Record<CheckoutBillingOption, string> = {
     monthly: 'STRIPE_PRICE_STARTER',
     annual: 'STRIPE_PRICE_ANNUAL',
     lifetime: 'STRIPE_PRICE_LIFETIME',
@@ -109,9 +116,9 @@ export function stripePriceIdForBillingOption(option: UnlimitedBillingOption, pr
   return value;
 }
 
-export function billingOptionForStripePrice(priceId: string | null | undefined, production = process.env.NODE_ENV === 'production'): UnlimitedBillingOption | null {
+export function billingOptionForStripePrice(priceId: string | null | undefined, production = process.env.NODE_ENV === 'production'): CheckoutBillingOption | null {
   if (!priceId) return null;
-  const entries: Array<[UnlimitedBillingOption, string | undefined]> = production
+  const entries: Array<[CheckoutBillingOption, string | undefined]> = production
     ? [
       ['monthly', IMPORTVERIFIER_UNLIMITED_PRICE_ID],
       ['annual', IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID],
