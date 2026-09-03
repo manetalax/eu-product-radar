@@ -1,30 +1,32 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useLanguage } from '@/lib/use-language';
 
 type ModuleId = 'market' | 'import' | 'onboarding' | 'overview' | 'selected';
 type ModuleState = { id: ModuleId; hidden: boolean; collapsed: boolean };
 
-const STORAGE_KEY = 'importverifier:dashboard-layout:v1';
+const STORAGE_KEY = 'importverifier:dashboard-layout:v2';
 const DEFAULTS: ModuleState[] = [
-  { id: 'market', hidden: false, collapsed: false },
   { id: 'import', hidden: false, collapsed: false },
-  { id: 'onboarding', hidden: false, collapsed: false },
   { id: 'overview', hidden: false, collapsed: false },
   { id: 'selected', hidden: false, collapsed: false },
+  { id: 'market', hidden: false, collapsed: true },
+  { id: 'onboarding', hidden: false, collapsed: true },
 ];
 
-const LABELS: Record<ModuleId, string> = {
-  market: 'Mercados',
-  import: 'Nuevo análisis',
-  onboarding: 'Primeros pasos',
-  overview: 'Resumen y KPIs',
-  selected: 'Análisis seleccionado',
-};
+const COPY = {
+  es: { toggle: 'Personalizar panel', title: 'Organiza tu espacio', body: 'Ordena, pliega u oculta bloques. La configuración se guarda en este dispositivo.', open: 'Abrir', collapse: 'Plegar', remove: 'Quitar', add: 'Añadir módulos', up: 'Subir', down: 'Bajar', labels: { market: 'Mercados', import: 'Nuevo análisis', onboarding: 'Primeros pasos', overview: 'Resumen y KPIs', selected: 'Análisis seleccionado' } },
+  en: { toggle: 'Customize dashboard', title: 'Organize your workspace', body: 'Reorder, collapse or hide modules. Your layout is saved on this device.', open: 'Open', collapse: 'Collapse', remove: 'Remove', add: 'Add modules', up: 'Move up', down: 'Move down', labels: { market: 'Markets', import: 'New analysis', onboarding: 'Getting started', overview: 'Overview and KPIs', selected: 'Selected analysis' } },
+  fr: { toggle: 'Personnaliser le tableau', title: 'Organisez votre espace', body: 'Réorganisez, repliez ou masquez des modules. La disposition est enregistrée sur cet appareil.', open: 'Ouvrir', collapse: 'Replier', remove: 'Retirer', add: 'Ajouter des modules', up: 'Monter', down: 'Descendre', labels: { market: 'Marchés', import: 'Nouvelle analyse', onboarding: 'Premiers pas', overview: 'Vue d’ensemble et KPI', selected: 'Analyse sélectionnée' } },
+  de: { toggle: 'Dashboard anpassen', title: 'Arbeitsbereich organisieren', body: 'Module sortieren, einklappen oder ausblenden. Das Layout wird auf diesem Gerät gespeichert.', open: 'Öffnen', collapse: 'Einklappen', remove: 'Entfernen', add: 'Module hinzufügen', up: 'Nach oben', down: 'Nach unten', labels: { market: 'Märkte', import: 'Neue Analyse', onboarding: 'Erste Schritte', overview: 'Übersicht und KPIs', selected: 'Ausgewählte Analyse' } },
+  it: { toggle: 'Personalizza dashboard', title: 'Organizza il tuo spazio', body: 'Riordina, comprimi o nascondi i moduli. La disposizione viene salvata su questo dispositivo.', open: 'Apri', collapse: 'Comprimi', remove: 'Rimuovi', add: 'Aggiungi moduli', up: 'Sposta su', down: 'Sposta giù', labels: { market: 'Mercati', import: 'Nuova analisi', onboarding: 'Primi passi', overview: 'Panoramica e KPI', selected: 'Analisi selezionata' } },
+  pt: { toggle: 'Personalizar painel', title: 'Organize o seu espaço', body: 'Reordene, recolha ou oculte módulos. A disposição fica guardada neste dispositivo.', open: 'Abrir', collapse: 'Recolher', remove: 'Remover', add: 'Adicionar módulos', up: 'Subir', down: 'Descer', labels: { market: 'Mercados', import: 'Nova análise', onboarding: 'Primeiros passos', overview: 'Resumo e KPIs', selected: 'Análise selecionada' } },
+} as const;
 
 const SELECTORS: Record<ModuleId, string[]> = {
   market: ['.workspace > .market-rail', '.workspace > .trust-notice'],
-  import: ['.workspace > .premium-import'],
+  import: ['.workspace > .premium-import', '.workspace > .brand-logos'],
   onboarding: ['.workspace > .onboarding-card'],
   overview: ['.workspace > .section-heading', '.workspace > .premium-kpis'],
   selected: ['.workspace > .selected-analysis', '.workspace > .empty-state'],
@@ -47,6 +49,8 @@ function loadInitial(): ModuleState[] {
 }
 
 export default function DashboardModuleOrganizer() {
+  const { language } = useLanguage();
+  const t = COPY[language];
   const [open, setOpen] = useState(false);
   const [modules, setModules] = useState<ModuleState[]>(loadInitial);
   const hidden = useMemo(() => modules.filter(item => item.hidden), [modules]);
@@ -88,39 +92,42 @@ export default function DashboardModuleOrganizer() {
     });
   }
 
+  const visible = modules.filter(item => !item.hidden);
+
   return <>
     <style>{`
       .workspace{display:flex;flex-direction:column;min-width:0}
       .workspace>.workspace-heading{order:-100}.workspace>.workspace-subtitle{order:-99}
       .workspace>.file-input{order:-98}.workspace>.message{order:-97}
       .workspace>[data-dashboard-module]{transition:max-height .2s ease,opacity .2s ease;min-width:0}
-      .workspace>.iv-module-collapsed{max-height:76px!important;overflow:hidden!important;opacity:.88}
+      .workspace>.iv-module-collapsed{max-height:76px!important;overflow:hidden!important;opacity:.82;mask-image:linear-gradient(to bottom,#000 62%,transparent);-webkit-mask-image:linear-gradient(to bottom,#000 62%,transparent)}
       .iv-organizer{position:sticky;top:8px;z-index:40;margin:0 auto 12px;width:min(1180px,calc(100% - 24px));display:flex;justify-content:flex-end;pointer-events:none}
       .iv-organizer button,.iv-organizer-panel{pointer-events:auto}
-      .iv-organizer-toggle{border:1px solid rgba(15,23,42,.14);background:rgba(255,255,255,.96);border-radius:999px;padding:9px 14px;font-weight:750;box-shadow:0 8px 24px rgba(15,23,42,.08)}
-      .iv-organizer-panel{position:absolute;right:0;top:46px;width:min(390px,calc(100vw - 28px));background:#fff;border:1px solid rgba(15,23,42,.12);border-radius:18px;padding:14px;box-shadow:0 24px 64px rgba(15,23,42,.18)}
-      .iv-organizer-panel h2{font-size:16px;margin:0 0 4px}.iv-organizer-panel p{font-size:12px;margin:0 0 12px;color:#64748b}
+      .iv-organizer-toggle{border:1px solid rgba(15,23,42,.14);background:rgba(255,255,255,.96);border-radius:999px;padding:9px 14px;font-weight:750;box-shadow:0 8px 24px rgba(15,23,42,.08);backdrop-filter:blur(12px)}
+      .iv-organizer-panel{position:absolute;right:0;top:46px;width:min(410px,calc(100vw - 28px));background:#fff;border:1px solid rgba(15,23,42,.12);border-radius:18px;padding:14px;box-shadow:0 24px 64px rgba(15,23,42,.18)}
+      .iv-organizer-panel h2{font-size:16px;margin:0 0 4px}.iv-organizer-panel p{font-size:12px;margin:0 0 12px;color:#64748b;line-height:1.45}
       .iv-module-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 0;border-top:1px solid #eef2f7}
       .iv-module-row strong{font-size:13px}.iv-module-actions{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
       .iv-module-actions button,.iv-add{border:1px solid #dbe3ec;background:#fff;border-radius:9px;padding:6px 8px;font-size:12px}
+      .iv-module-actions button:hover,.iv-add:hover{background:#f8fafc}.iv-module-actions button:disabled{opacity:.38}
       .iv-add-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.iv-add{background:#f8fafc}
       @media(max-width:720px){.iv-organizer{top:4px;width:calc(100% - 16px)}.iv-organizer-toggle{padding:8px 11px}.iv-organizer-panel{right:0}.iv-module-row{grid-template-columns:1fr}.iv-module-actions{justify-content:flex-start}}
     `}</style>
-    <div className="iv-organizer" aria-label="Organización del dashboard">
-      <button className="iv-organizer-toggle" type="button" aria-expanded={open} onClick={() => setOpen(value => !value)}>Personalizar panel</button>
+    <div className="iv-organizer" aria-label={t.title}>
+      <button className="iv-organizer-toggle" type="button" aria-expanded={open} onClick={() => setOpen(value => !value)}>{t.toggle}</button>
       {open && <div className="iv-organizer-panel">
-        <h2>Organiza tu espacio</h2>
-        <p>Ordena, pliega u oculta bloques. La configuración se guarda en este dispositivo.</p>
-        {modules.filter(item => !item.hidden).map((module, index) => <div className="iv-module-row" key={module.id}>
-          <strong>{LABELS[module.id]}</strong>
+        <h2>{t.title}</h2>
+        <p>{t.body}</p>
+        {visible.map((module, index) => <div className="iv-module-row" key={module.id}>
+          <strong>{t.labels[module.id]}</strong>
           <div className="iv-module-actions">
-            <button type="button" disabled={index === 0} onClick={() => move(module.id, -1)} aria-label={`Subir ${LABELS[module.id]}`}>↑</button>
-            <button type="button" disabled={index === modules.filter(item => !item.hidden).length - 1} onClick={() => move(module.id, 1)} aria-label={`Bajar ${LABELS[module.id]}`}>↓</button>
-            <button type="button" onClick={() => patch(module.id, { collapsed: !module.collapsed })}>{module.collapsed ? 'Abrir' : 'Plegar'}</button>
-            <button type="button" onClick={() => patch(module.id, { hidden: true })}>Quitar</button>
+            <button type="button" disabled={index === 0} onClick={() => move(module.id, -1)} aria-label={`${t.up}: ${t.labels[module.id]}`}>↑</button>
+            <button type="button" disabled={index === visible.length - 1} onClick={() => move(module.id, 1)} aria-label={`${t.down}: ${t.labels[module.id]}`}>↓</button>
+            <button type="button" onClick={() => patch(module.id, { collapsed: !module.collapsed })}>{module.collapsed ? t.open : t.collapse}</button>
+            <button type="button" onClick={() => patch(module.id, { hidden: true })}>{t.remove}</button>
           </div>
         </div>)}
-        {hidden.length > 0 && <div className="iv-add-list" aria-label="Añadir módulos">{hidden.map(module => <button className="iv-add" type="button" key={module.id} onClick={() => patch(module.id, { hidden: false, collapsed: false })}>+ {LABELS[module.id]}</button>)}</div>}
+        {hidden.length > 0 && <div className="iv-add-list" aria-label={t.add}>{hidden.map(module => <button className="iv-add" type="button" key={module.id} onClick={() => patch(module.id, { hidden: false, collapsed: false })}>+ {t.labels[module.id]}</button>)}</div>}
       </div>}
     </div>
   </>;
