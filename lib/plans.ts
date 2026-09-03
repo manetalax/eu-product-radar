@@ -34,13 +34,18 @@ export const UNLIMITED_PUBLIC_OFFERS = [
   { id: 'monthly', priceEur: UNLIMITED_MONTHLY_PRICE_EUR, cadence: 'month', ai: false },
   { id: 'annual', priceEur: UNLIMITED_ANNUAL_PRICE_EUR, cadence: 'year', ai: true },
   { id: 'lifetime', priceEur: UNLIMITED_LIFETIME_PRICE_EUR, cadence: 'lifetime', ai: true },
-  { id: 'custom', priceEur: PERSONALIZED_PRICE_EUR, cadence: 'custom', ai: true },
 ] as const;
 
-// Only this entitlement is sold/displayed to new customers; billing choice is separate.
+export const PERSONALIZED_PUBLIC_OFFER = {
+  id: 'custom',
+  priceEur: PERSONALIZED_PRICE_EUR,
+  cadence: 'custom',
+  ai: true,
+  includes: ['technical-customization', 'domain', 'logo', 'whatsapp-integration'] as const,
+} as const;
+
 export const PLANS: readonly PlanDefinition[] = [UNLIMITED_PLAN] as const;
 
-// Hidden legacy subscription definitions keep historical subscriptions and Stripe webhooks readable.
 const LEGACY_PLANS: Record<Exclude<PlanId, 'starter'>, PlanDefinition> = {
   growth: { id: 'growth', name: 'Growth (legacy)', monthlyPriceEur: 29, monthlyProductLimit: 150, featured: false, legacy: true },
   pro: { id: 'pro', name: 'Pro (legacy)', monthlyPriceEur: 49, monthlyProductLimit: 500, featured: false, legacy: true },
