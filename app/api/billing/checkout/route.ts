@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isCheckoutBillingOption, isUnlimitedBillingOption, stripePriceIdForBillingOption, UNLIMITED_PRICE_CONFIG, type CheckoutBillingOption, type UnlimitedBillingOption } from '@/lib/billing';
+import { isCheckoutBillingOption, stripePriceIdForBillingOption, UNLIMITED_PRICE_CONFIG, type CheckoutBillingOption } from '@/lib/billing';
 import { billingText } from '@/lib/billing-i18n';
 import { configuredSiteOrigin, sameOrigin, PRIVATE_HEADERS, readJsonBody, RequestBodyTooLargeError } from '@/lib/http';
 import { legalConfig } from '@/lib/legal-config';
@@ -18,7 +18,7 @@ const MAX_CHECKOUT_SESSION_SCAN = 500;
 const BILLING_JSON_MAX_BYTES = 4 * 1024;
 const AUTH_BILLING_INTENT_MAX_AGE_MS = 15 * 60 * 1000;
 
-function cookieBillingIntent(request: Request): UnlimitedBillingOption | null {
+function cookieBillingIntent(request: Request): CheckoutBillingOption | null {
   const rawCookie = request.headers.get('cookie');
   if (!rawCookie) return null;
   for (const part of rawCookie.split(';')) {
@@ -26,7 +26,7 @@ function cookieBillingIntent(request: Request): UnlimitedBillingOption | null {
     if (rawName !== BILLING_INTENT_COOKIE) continue;
     try {
       const value = decodeURIComponent(rawValue.join('='));
-      return isUnlimitedBillingOption(value) ? value : null;
+      return isCheckoutBillingOption(value) ? value : null;
     } catch {
       return null;
     }
@@ -34,9 +34,9 @@ function cookieBillingIntent(request: Request): UnlimitedBillingOption | null {
   return null;
 }
 
-function recentAuthBillingIntent(userMetadata: Record<string, unknown> | undefined): UnlimitedBillingOption | null {
+function recentAuthBillingIntent(userMetadata: Record<string, unknown> | undefined): CheckoutBillingOption | null {
   if (!userMetadata || userMetadata.plan_interest_id !== UNLIMITED_INTERNAL_PLAN_ID) return null;
-  if (!isUnlimitedBillingOption(userMetadata.plan_interest_billing_option)) return null;
+  if (!isCheckoutBillingOption(userMetadata.plan_interest_billing_option)) return null;
   if (typeof userMetadata.plan_interest_at !== 'string') return null;
   const savedAt = Date.parse(userMetadata.plan_interest_at);
   if (!Number.isFinite(savedAt)) return null;

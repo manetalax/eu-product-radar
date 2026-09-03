@@ -1,8 +1,8 @@
 'use client';
 
 import { authService } from './auth-client';
-import type { UnlimitedBillingOption } from '@/lib/billing';
-import { isUnlimitedBillingOption } from '@/lib/billing';
+import type { CheckoutBillingOption } from '@/lib/billing';
+import { isCheckoutBillingOption } from '@/lib/billing';
 import { PurchaseId, purchaseName } from '@/lib/plans';
 
 const PLAN_INTENT_STORAGE_KEY = 'import-rules-verifier-purchase-intent';
@@ -10,9 +10,9 @@ export const BILLING_INTENT_COOKIE = 'importverifier-billing-intent';
 const PUBLIC_PURCHASE_INTENT = 'starter' as const;
 const BILLING_INTENT_MAX_AGE_SECONDS = 15 * 60;
 
-export type PlanIntent = { planId: typeof PUBLIC_PURCHASE_INTENT; billingOption: UnlimitedBillingOption };
+export type PlanIntent = { planId: typeof PUBLIC_PURCHASE_INTENT; billingOption: CheckoutBillingOption };
 
-function setBillingIntentCookie(billingOption: UnlimitedBillingOption) {
+function setBillingIntentCookie(billingOption: CheckoutBillingOption) {
   const secure = window.location.protocol === 'https:' ? '; Secure' : '';
   document.cookie = `${BILLING_INTENT_COOKIE}=${encodeURIComponent(billingOption)}; Path=/; Max-Age=${BILLING_INTENT_MAX_AGE_SECONDS}; SameSite=Lax${secure}`;
 }
@@ -22,7 +22,7 @@ function clearBillingIntentCookie() {
   document.cookie = `${BILLING_INTENT_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
 }
 
-export function planInterestMetadata(planId: PurchaseId, billingOption: UnlimitedBillingOption = 'monthly') {
+export function planInterestMetadata(planId: PurchaseId, billingOption: CheckoutBillingOption = 'monthly') {
   return {
     plan_interest_id: planId,
     plan_interest: purchaseName(planId),
@@ -31,7 +31,7 @@ export function planInterestMetadata(planId: PurchaseId, billingOption: Unlimite
   };
 }
 
-export function savePlanIntent(planId: PurchaseId, billingOption: UnlimitedBillingOption = 'monthly') {
+export function savePlanIntent(planId: PurchaseId, billingOption: CheckoutBillingOption = 'monthly') {
   if (planId === PUBLIC_PURCHASE_INTENT) {
     window.localStorage.setItem(PLAN_INTENT_STORAGE_KEY, JSON.stringify({ planId, billingOption } satisfies PlanIntent));
     // OAuth leaves the application origin, so localStorage cannot be read by the server
@@ -55,7 +55,7 @@ export function readPlanIntent(): PlanIntent | undefined {
   if (!stored) return undefined;
   try {
     const parsed = JSON.parse(stored) as Record<string, unknown>;
-    if (parsed.planId === PUBLIC_PURCHASE_INTENT && isUnlimitedBillingOption(parsed.billingOption)) {
+    if (parsed.planId === PUBLIC_PURCHASE_INTENT && isCheckoutBillingOption(parsed.billingOption)) {
       return { planId: PUBLIC_PURCHASE_INTENT, billingOption: parsed.billingOption };
     }
   } catch {
@@ -69,6 +69,6 @@ export function clearPlanIntent() {
   clearBillingIntentCookie();
 }
 
-export function registerPlanInterest(planId: PurchaseId, billingOption: UnlimitedBillingOption = 'monthly') {
+export function registerPlanInterest(planId: PurchaseId, billingOption: CheckoutBillingOption = 'monthly') {
   return authService.updateMetadata(planInterestMetadata(planId, billingOption));
 }

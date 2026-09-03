@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Brand from '@/components/Brand';
 import TrustMark from '@/components/TrustMark';
 import { authCopy, authErrorKey, AuthErrorKey, AuthMode, AuthNoticeKey, LoginNoticeKey } from '@/lib/auth-i18n';
-import type { UnlimitedBillingOption } from '@/lib/billing';
+import type { CheckoutBillingOption } from '@/lib/billing';
 import { landingCopy, Language, LANGUAGE_OPTIONS } from '@/lib/landing-i18n';
 import { PurchaseId, purchaseName } from '@/lib/plans';
 import { IMPORTVERIFIER_PRODUCTION_URL } from '@/lib/release-config';
@@ -41,7 +41,7 @@ export default function AuthForm({
   initialMode?: AuthMode;
   initialMessageKey?: LoginNoticeKey;
   requestedPlan?: PurchaseId;
-  requestedBillingOption?: UnlimitedBillingOption;
+  requestedBillingOption?: CheckoutBillingOption;
 }) {
   const { language, setLanguage } = useLanguage();
   const t = authCopy[language];
