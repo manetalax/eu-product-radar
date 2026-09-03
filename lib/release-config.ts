@@ -3,7 +3,7 @@ import { LEGAL_ENV_KEYS, legalConfig } from './legal-config';
 import { IMPORTVERIFIER_SUPABASE_URL, trustedSupabaseProjectUrl } from './supabase/config';
 
 export { IMPORTVERIFIER_SUPABASE_URL } from './supabase/config';
-export const IMPORTVERIFIER_PRODUCTION_URL = 'https://importverifier.netlify.app';
+export const IMPORTVERIFIER_PRODUCTION_URL = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://sites.example.com';
 export const IMPORTVERIFIER_UNLIMITED_PRICE_ID = 'price_1UAJy5HJnO8odw1Mn4jMVjFt';
 export const IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID = 'price_1UAjP0HJnO8odw1M7RBK8jsR';
 export const IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID = 'price_1UAjP8HJnO8odw1MmSXdkNIh';
@@ -21,13 +21,36 @@ const requiredSecrets = [
 
 const requiredPublic = ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'] as const;
 
+function isSitesProductionOrigin(value: string | undefined): boolean {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    return (
+      url.protocol === 'https:' &&
+      !url.username &&
+      !url.password &&
+      !url.port &&
+      !url.search &&
+      !url.hash &&
+      (url.pathname === '/' || url.pathname === '') &&
+      host !== 'netlify.app' &&
+      !host.endsWith('.netlify.app')
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function checkReleaseConfig(env: NodeJS.ProcessEnv = process.env): ReleaseConfigCheck {
   const errors: string[] = [];
   const warnings: string[] = [];
   const production = env.NODE_ENV === 'production';
-  if (production && env.NEXT_PUBLIC_SITE_URL !== IMPORTVERIFIER_PRODUCTION_URL) {
-    errors.push(`NEXT_PUBLIC_SITE_URL debe ser ${IMPORTVERIFIER_PRODUCTION_URL} en producción.`);
+
+  if (production && !isSitesProductionOrigin(env.NEXT_PUBLIC_SITE_URL)) {
+    errors.push('NEXT_PUBLIC_SITE_URL debe ser el origen HTTPS canónico de Sites y no puede apuntar a Netlify ni a un preview legacy.');
   }
+
   for (const key of requiredPublic) if (!env[key]) errors.push(`Falta ${key}.`);
   for (const key of requiredSecrets) if (!env[key]) errors.push(`Falta ${key}.`);
 
