@@ -23,6 +23,8 @@ test('dashboard organizer keeps persistent modular controls and quick-view prese
   assert.ok(organizer.includes("applyPreset('complete')"));
   assert.ok(organizer.includes("applyPreset('default')"));
   assert.ok(organizer.includes('MutationObserver'));
+  assert.ok(organizer.includes("const visibleIds = items.filter(item => !item.hidden).map(item => item.id)"));
+  assert.ok(organizer.includes('const targetId = visibleIds[visibleIndex + direction]'));
 });
 
 test('the primary brand exposes the Active Verifier stamp and adjacent PASS seal', () => {
