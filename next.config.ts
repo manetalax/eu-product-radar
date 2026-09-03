@@ -1,7 +1,10 @@
 import type { NextConfig } from 'next';
 import { checkReleaseConfig } from './lib/release-config';
 
-if (process.env.NETLIFY === 'true' && process.env.CONTEXT === 'production') {
+// Sites (or any canonical production runner) opts into the strict release gate explicitly.
+// CI and local builds can compile without production secrets while the release validator
+// remains independently covered by tests.
+if (process.env.IMPORTVERIFIER_VALIDATE_RELEASE === 'true') {
   const release = checkReleaseConfig({ ...process.env, NODE_ENV: 'production' });
   for (const warning of release.warnings) console.warn(`ImportVerifier production warning: ${warning}`);
   if (!release.ok) {
