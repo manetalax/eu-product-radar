@@ -1,4 +1,5 @@
 import Dashboard from '@/components/Dashboard';
+import DashboardModuleOrganizer from '@/components/DashboardModuleOrganizer';
 import AnalysisReviewGate from '@/components/AnalysisReviewGate';
 import CheckoutReturnSync from '@/components/CheckoutReturnSync';
 import FreeTrialUpgradePrompt from '@/components/FreeTrialUpgradePrompt';
@@ -25,6 +26,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     <UnlimitedExperience />
     <FreeTrialUpgradePrompt />
     <AnalysisReviewGate />
+    <DashboardModuleOrganizer />
     <Dashboard email={user.email ?? ''} />
     <IntelligenceSuite />
     <LatestRegulatoryAssessment />
