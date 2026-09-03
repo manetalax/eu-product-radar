@@ -1,12 +1,21 @@
 import { isTrustedSiliconFlowBaseUrl } from './ai-provider';
+import {
+  IMPORTVERIFIER_PERSONALIZED_PRICE_ID,
+  IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID,
+  IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID,
+  IMPORTVERIFIER_UNLIMITED_PRICE_ID,
+} from './billing';
 import { LEGAL_ENV_KEYS, legalConfig } from './legal-config';
 import { IMPORTVERIFIER_SUPABASE_URL, trustedSupabaseProjectUrl } from './supabase/config';
 
 export { IMPORTVERIFIER_SUPABASE_URL } from './supabase/config';
+export {
+  IMPORTVERIFIER_PERSONALIZED_PRICE_ID,
+  IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID,
+  IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID,
+  IMPORTVERIFIER_UNLIMITED_PRICE_ID,
+} from './billing';
 export const IMPORTVERIFIER_PRODUCTION_URL = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://sites.example.com';
-export const IMPORTVERIFIER_UNLIMITED_PRICE_ID = 'price_1UAJy5HJnO8odw1Mn4jMVjFt';
-export const IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID = 'price_1UAjP0HJnO8odw1M7RBK8jsR';
-export const IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID = 'price_1UAjP8HJnO8odw1MmSXdkNIh';
 
 export type ReleaseConfigCheck = { ok: boolean; errors: string[]; warnings: string[] };
 
@@ -17,6 +26,7 @@ const requiredSecrets = [
   'STRIPE_PRICE_STARTER',
   'STRIPE_PRICE_ANNUAL',
   'STRIPE_PRICE_LIFETIME',
+  'STRIPE_PRICE_CUSTOM',
 ] as const;
 
 const requiredPublic = ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'] as const;
@@ -69,15 +79,19 @@ export function checkReleaseConfig(env: NodeJS.ProcessEnv = process.env): Releas
   if (production && env.STRIPE_WEBHOOK_SECRET && !env.STRIPE_WEBHOOK_SECRET.startsWith('whsec_')) {
     errors.push('STRIPE_WEBHOOK_SECRET debe ser el signing secret del webhook de Stripe.');
   }
-  if (production && env.STRIPE_PRICE_STARTER && env.STRIPE_PRICE_STARTER !== IMPORTVERIFIER_UNLIMITED_PRICE_ID) {
-    errors.push(`STRIPE_PRICE_STARTER debe ser el price live canónico mensual de ImportVerifier Unlimited: ${IMPORTVERIFIER_UNLIMITED_PRICE_ID}.`);
+
+  const canonicalPrices = [
+    ['STRIPE_PRICE_STARTER', IMPORTVERIFIER_UNLIMITED_PRICE_ID, 'mensual'],
+    ['STRIPE_PRICE_ANNUAL', IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID, 'anual'],
+    ['STRIPE_PRICE_LIFETIME', IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID, 'Lifetime'],
+    ['STRIPE_PRICE_CUSTOM', IMPORTVERIFIER_PERSONALIZED_PRICE_ID, 'Personalizada'],
+  ] as const;
+  if (production) {
+    for (const [key, canonical, label] of canonicalPrices) {
+      if (env[key] && env[key] !== canonical) errors.push(`${key} debe ser el price live canónico ${label} de ImportVerifier: ${canonical}.`);
+    }
   }
-  if (production && env.STRIPE_PRICE_ANNUAL && env.STRIPE_PRICE_ANNUAL !== IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID) {
-    errors.push(`STRIPE_PRICE_ANNUAL debe ser el price live canónico anual de ImportVerifier Unlimited: ${IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID}.`);
-  }
-  if (production && env.STRIPE_PRICE_LIFETIME && env.STRIPE_PRICE_LIFETIME !== IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID) {
-    errors.push(`STRIPE_PRICE_LIFETIME debe ser el price live canónico Lifetime de ImportVerifier Unlimited: ${IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID}.`);
-  }
+
   if (production && !legalConfig(env)) {
     errors.push(`Falta completar la información legal obligatoria para aceptar pagos: ${LEGAL_ENV_KEYS.join(', ')}.`);
   }
