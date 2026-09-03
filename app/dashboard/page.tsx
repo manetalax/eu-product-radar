@@ -5,6 +5,7 @@ import CheckoutReturnSync from '@/components/CheckoutReturnSync';
 import FreeTrialUpgradePrompt from '@/components/FreeTrialUpgradePrompt';
 import IntelligenceSuite from '@/components/IntelligenceSuite';
 import LatestRegulatoryAssessment from '@/components/LatestRegulatoryAssessment';
+import PersonalizedPlanOffer from '@/components/PersonalizedPlanOffer';
 import UnlimitedExperience from '@/components/UnlimitedExperience';
 import WelcomeFlash from '@/components/WelcomeFlash';
 import { serverLanguage } from '@/lib/server-language';
@@ -28,6 +29,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     <AnalysisReviewGate />
     <DashboardModuleOrganizer />
     <Dashboard email={user.email ?? ''} />
+    <PersonalizedPlanOffer />
     <IntelligenceSuite />
     <LatestRegulatoryAssessment />
   </LanguageProvider>;
