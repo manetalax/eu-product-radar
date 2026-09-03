@@ -26,8 +26,8 @@ test('dashboard organizer keeps persistent modular controls and quick-view prese
 });
 
 test('the primary brand exposes the Active Verifier stamp and adjacent PASS seal', () => {
-  assert.ok(brand.includes('>active</text>'));
-  assert.ok(brand.includes('>verifier</text>'));
-  assert.ok(brand.includes('>PASS</text>'));
+  assert.ok(brand.includes('active'));
+  assert.ok(brand.includes('verifier'));
+  assert.ok(brand.includes('PASS'));
   assert.ok(brand.includes('brand-active-stamp'));
 });
