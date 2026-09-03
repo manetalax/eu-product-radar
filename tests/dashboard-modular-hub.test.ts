@@ -7,17 +7,17 @@ const hub = await readFile(new URL('../components/DashboardExtrasHub.tsx', impor
 const brand = await readFile(new URL('../components/Brand.tsx', import.meta.url), 'utf8');
 
 test('advanced dashboard surfaces are grouped instead of rendered as an endless tail', () => {
-  assert.match(page, /<DashboardExtrasHub/);
-  assert.match(page, /personalized={<PersonalizedPlanOffer \/>}/);
-  assert.match(page, /intelligence={<IntelligenceSuite \/>}/);
-  assert.match(page, /assessment={<LatestRegulatoryAssessment \/>}/);
-  assert.match(hub, /<details className="iv-tool-module"/);
-  assert.match(hub, /<summary className="iv-tool-summary"/);
+  assert.ok(page.includes('<DashboardExtrasHub'));
+  assert.ok(page.includes('personalized={<PersonalizedPlanOffer />}'));
+  assert.ok(page.includes('intelligence={<IntelligenceSuite />}'));
+  assert.ok(page.includes('assessment={<LatestRegulatoryAssessment />}'));
+  assert.ok(hub.includes('<details className="iv-tool-module"'));
+  assert.ok(hub.includes('<summary className="iv-tool-summary"'));
 });
 
 test('the primary brand exposes the Active Verifier stamp and adjacent PASS seal', () => {
-  assert.match(brand, />active<\/text>/);
-  assert.match(brand, />verifier<\/text>/);
-  assert.match(brand, />PASS<\/text>/);
-  assert.match(brand, /brand-active-stamp/);
+  assert.ok(brand.includes('>active</text>'));
+  assert.ok(brand.includes('>verifier</text>'));
+  assert.ok(brand.includes('>PASS</text>'));
+  assert.ok(brand.includes('brand-active-stamp'));
 });
