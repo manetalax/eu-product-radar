@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { billingOptionForStripePrice, isUnlimitedBillingOption } from '@/lib/billing';
+import { billingOptionForStripePrice, isCheckoutBillingOption } from '@/lib/billing';
 import { billingText } from '@/lib/billing-i18n';
 import { PRIVATE_HEADERS, readJsonBody, RequestBodyTooLargeError, sameOrigin } from '@/lib/http';
 import { requestLanguage } from '@/lib/request-language';
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     if (session.mode === 'payment') {
       if (session.payment_status !== 'paid') return json({ error: b('paymentOpen') }, 409);
       const billingOption = session.metadata?.billing_option;
-      if (!isUnlimitedBillingOption(billingOption) || (billingOption !== 'lifetime' && billingOption !== 'custom')) return json({ error: b('paymentOpen') }, 409);
+      if (!isCheckoutBillingOption(billingOption) || (billingOption !== 'lifetime' && billingOption !== 'custom')) return json({ error: b('paymentOpen') }, 409);
       const granted = await syncLifetimeCheckoutSession(session);
       if (!granted) return json({ error: b('paymentOpen') }, 409);
       return json({ confirmed: true, billingOption });
