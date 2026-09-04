@@ -34,5 +34,5 @@ test('the primary brand exposes the Import and Verifier mark with a separate PAS
   assert.ok(brand.includes('PASS'));
   assert.ok(brand.includes('brand-import-mark'));
   assert.ok(brand.includes('brand-pass-stamp'));
-  assert.ok(brand.includes('#c62828'));
+  assert.ok(brand.includes('#e5483b'));
 });
