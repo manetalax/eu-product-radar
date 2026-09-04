@@ -7,7 +7,7 @@ on:
       - feat/import-rules-verifier-branding
 
 concurrency:
-  group: importverifier-release-${{ github.workflow }}-${{ github.sha }}
+  group: importverifier-release-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

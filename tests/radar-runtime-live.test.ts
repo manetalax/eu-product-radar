@@ -6,7 +6,6 @@ import { radarRuntimeConfigured, radarRuntimeEnabled } from '../lib/radar-runtim
 const route = readFileSync(new URL('../app/api/regulatory-changes/route.ts', import.meta.url), 'utf8');
 const agentRoute = readFileSync(new URL('../app/api/regulatory-agent/route.ts', import.meta.url), 'utf8');
 const refreshRoute = readFileSync(new URL('../app/api/internal/regulatory-refresh/route.ts', import.meta.url), 'utf8');
-const netlifyScheduler = readFileSync(new URL('../netlify/functions/regulatory-radar.mjs', import.meta.url), 'utf8');
 const githubScheduler = readFileSync(new URL('../.github/workflows/regulatory-radar.yml', import.meta.url), 'utf8');
 
 test('Radar live requires the flag, a strong ingest secret and persisted events', () => {
@@ -29,20 +28,16 @@ test('pre-live Radar events are not exposed to clients or ImportVerifier AI', ()
   assert.match(agentRoute, /: \[\];/);
 });
 
-test('both Radar schedulers use the canonical authenticated JSON refresh contract', () => {
-  assert.match(netlifyScheduler, /CANONICAL_REFRESH_URL = 'https:\/\/importverifier\.netlify\.app\/api\/internal\/regulatory-refresh'/);
-  assert.match(netlifyScheduler, /fetch\(CANONICAL_REFRESH_URL/);
-  assert.doesNotMatch(netlifyScheduler, /NEXT_PUBLIC_SITE_URL/);
-  assert.match(netlifyScheduler, /Authorization: `Bearer \$\{secret\}`/);
-  assert.match(netlifyScheduler, /'Content-Type': 'application\/json'/);
-  assert.match(netlifyScheduler, /body: '\{\}'/);
-  assert.match(netlifyScheduler, /secret\.length < 32/);
-  assert.match(netlifyScheduler, /AbortController/);
-
-  assert.match(githubScheduler, /https:\/\/importverifier\.netlify\.app\/api\/internal\/regulatory-refresh/);
+test('Sites-neutral Radar scheduler uses the configured canonical HTTPS origin and authenticated JSON refresh contract', () => {
+  assert.match(githubScheduler, /SITE_ORIGIN: \$\{\{ vars\.NEXT_PUBLIC_SITE_URL \}\}/);
+  assert.match(githubScheduler, /REGULATORY_INGEST_SECRET: \$\{\{ secrets\.REGULATORY_INGEST_SECRET \}\}/);
+  assert.match(githubScheduler, /new URL\(process\.env\.SITE_ORIGIN\)/);
+  assert.match(githubScheduler, /u\.protocol !== 'https:'/);
   assert.match(githubScheduler, /Authorization: Bearer \$REGULATORY_INGEST_SECRET/);
   assert.match(githubScheduler, /Content-Type: application\/json/);
   assert.match(githubScheduler, /--data '\{\}'/);
+  assert.match(githubScheduler, /\$\{SITE_ORIGIN%\/\}\/api\/internal\/regulatory-refresh/);
+  assert.doesNotMatch(githubScheduler, /netlify/i);
 });
 
 test('internal Radar refresh accepts only a tiny empty JSON command after bearer authentication', () => {

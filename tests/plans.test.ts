@@ -27,11 +27,12 @@ test('la oferta pública diferencia IA, Lifetime y Personalizada', () => {
   assert.deepEqual(PERSONALIZED_PUBLIC_OFFER.includes, ['technical-customization', 'domain', 'logo', 'whatsapp-integration']);
 });
 
-test('la intención pública estándar sigue siendo one-shot y compatible con mensual/anual/Lifetime', () => {
+test('la intención pública sigue siendo one-shot y conserva mensual/anual/Lifetime/Personalizada', () => {
   assert.match(planInterest, /const PUBLIC_PURCHASE_INTENT = 'starter'/);
   assert.match(planInterest, /window\.localStorage\.removeItem\(PLAN_INTENT_STORAGE_KEY\)/);
   assert.match(planInterest, /if \(stored === PUBLIC_PURCHASE_INTENT\) return \{ planId: PUBLIC_PURCHASE_INTENT, billingOption: 'monthly' \}/);
-  assert.match(planInterest, /isUnlimitedBillingOption\(parsed\.billingOption\)/);
+  assert.match(planInterest, /isCheckoutBillingOption\(parsed\.billingOption\)/);
+  assert.match(planInterest, /billingOption: CheckoutBillingOption/);
   assert.match(loginPage, /const requestedPlan = plan === 'starter' \? 'starter' as const : undefined/);
   assert.doesNotMatch(loginPage, /isPurchaseId/);
 });
