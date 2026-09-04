@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-const page = await readFile(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8');
-const hub = await readFile(new URL('../components/DashboardExtrasHub.tsx', import.meta.url), 'utf8');
-const organizer = await readFile(new URL('../components/DashboardModuleOrganizer.tsx', import.meta.url), 'utf8');
-const brand = await readFile(new URL('../components/Brand.tsx', import.meta.url), 'utf8');
+const page = readFileSync(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8');
+const hub = readFileSync(new URL('../components/DashboardExtrasHub.tsx', import.meta.url), 'utf8');
+const organizer = readFileSync(new URL('../components/DashboardModuleOrganizer.tsx', import.meta.url), 'utf8');
+const brand = readFileSync(new URL('../components/Brand.tsx', import.meta.url), 'utf8');
 
 test('advanced dashboard surfaces are grouped instead of rendered as an endless tail', () => {
   assert.ok(page.includes('<DashboardExtrasHub'));
