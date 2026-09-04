@@ -27,9 +27,12 @@ test('dashboard organizer keeps persistent modular controls and quick-view prese
   assert.ok(organizer.includes('const targetId = visibleIds[visibleIndex + direction]'));
 });
 
-test('the primary brand exposes the Active Verifier stamp and adjacent PASS seal', () => {
-  assert.ok(brand.includes('active'));
-  assert.ok(brand.includes('verifier'));
+test('the primary brand exposes the Import and Verifier mark with a separate PASS stamp', () => {
+  assert.ok(brand.includes('IMPORT'));
+  assert.ok(brand.includes('AND'));
+  assert.ok(brand.includes('VERIFIER'));
   assert.ok(brand.includes('PASS'));
-  assert.ok(brand.includes('brand-active-stamp'));
+  assert.ok(brand.includes('brand-import-mark'));
+  assert.ok(brand.includes('brand-pass-stamp'));
+  assert.ok(brand.includes('#c62828'));
 });
