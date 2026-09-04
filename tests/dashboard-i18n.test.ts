@@ -38,7 +38,8 @@ test('Dashboard.tsx está conectado estructuralmente al idioma activo', () => {
   assert.match(dashboardSource, /pdfBytes\(current, language\)/);
   assert.match(dashboardSource, /reportBytes\(current, language\)/);
   assert.match(dashboardSource, /guideScopeFor\(language\)/);
-  assert.match(dashboardSource, /documentationFor\(product, currentMarketCode, language\)/);
+  assert.match(dashboardSource, /documentationFor\(current\.products\[0\], currentMarketCode, language\)/);
+  assert.match(dashboardSource, /<ScalableDocumentationList products=\{current\.products\} marketCode=\{currentMarketCode\} language=\{language\}/);
   assert.doesNotMatch(dashboardSource, /\bGUIDE_SCOPE\b/);
   assert.doesNotMatch(dashboardSource, /formatPrice\('es'/);
   assert.doesNotMatch(dashboardSource, /\['dashboard', 'Resumen', 'Vista general'\]/);
