@@ -93,7 +93,7 @@ export default function FreeTrialUpgradePrompt() {
   ];
 
   return <section className="card content-card trial-upgrade-premium" aria-label={t.aria}>
-    <div className="trial-upgrade-copy"><span className="eyebrow">{t.eyebrow}</span><h2>{t.title}</h2><p className="muted">{t.body}</p></div>
+    <div className="trial-upgrade-copy" role="status" aria-live="polite" aria-atomic="true"><span className="eyebrow">{t.eyebrow}</span><h2>{t.title}</h2><p className="muted">{t.body}</p></div>
     <ul className="trial-upgrade-benefits">{t.benefits.map(benefit => <li key={benefit}>✓ {benefit}</li>)}</ul>
     <div className="trial-upgrade-options">
       {options.map(option => <button key={option.id} className={`btn ${option.id === 'annual' ? 'primary' : 'ghost'} trial-upgrade-option`} disabled={busy !== null} onClick={() => void upgrade(option.id)}>

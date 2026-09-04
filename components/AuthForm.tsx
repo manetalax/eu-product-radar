@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Brand from '@/components/Brand';
 import TrustMark from '@/components/TrustMark';
 import { authCopy, authErrorKey, AuthErrorKey, AuthMode, AuthNoticeKey, LoginNoticeKey } from '@/lib/auth-i18n';
-import type { UnlimitedBillingOption } from '@/lib/billing';
+import type { CheckoutBillingOption } from '@/lib/billing';
 import { landingCopy, Language, LANGUAGE_OPTIONS } from '@/lib/landing-i18n';
 import { PurchaseId, purchaseName } from '@/lib/plans';
 import { IMPORTVERIFIER_PRODUCTION_URL } from '@/lib/release-config';
@@ -41,7 +41,7 @@ export default function AuthForm({
   initialMode?: AuthMode;
   initialMessageKey?: LoginNoticeKey;
   requestedPlan?: PurchaseId;
-  requestedBillingOption?: UnlimitedBillingOption;
+  requestedBillingOption?: CheckoutBillingOption;
 }) {
   const { language, setLanguage } = useLanguage();
   const t = authCopy[language];
@@ -150,7 +150,7 @@ export default function AuthForm({
     }
   }
 
-  return <main className="shell"><section className="login card auth-card">
+  return <main className="shell"><section className="login card auth-card" aria-busy={busy}>
     <div className="auth-brand-row">
       <Brand market="EU" href={`/${language}`} />
       <label className="language-picker auth-language-picker">
@@ -163,6 +163,7 @@ export default function AuthForm({
     <h1>{t.titles[mode]}</h1>
     {requestedPlan && (mode === 'login' || mode === 'signup') && <p className="plan-intent-note"><strong>{t.selectedPlan(purchaseName(requestedPlan))}</strong> {t.selectedPlanHelp}</p>}
     <p className="muted">{t.intro}</p>
+    <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{busy ? t.processing : ''}</p>
 
     {(mode === 'login' || mode === 'signup') && <div className="auth-actions oauth-section">
       <button type="button" className="btn oauth-btn full" disabled={busy} onClick={signInWithGoogle}>

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   checkReleaseConfig,
+  IMPORTVERIFIER_PERSONALIZED_PRICE_ID,
   IMPORTVERIFIER_PRODUCTION_URL,
   IMPORTVERIFIER_SUPABASE_URL,
   IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID,
@@ -21,6 +22,7 @@ const baseEnv = {
   STRIPE_PRICE_STARTER: IMPORTVERIFIER_UNLIMITED_PRICE_ID,
   STRIPE_PRICE_ANNUAL: IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID,
   STRIPE_PRICE_LIFETIME: IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID,
+  STRIPE_PRICE_CUSTOM: IMPORTVERIFIER_PERSONALIZED_PRICE_ID,
   LEGAL_PROVIDER_NAME: 'Example Provider SL',
   LEGAL_PROVIDER_ADDRESS: 'Example street 1, Madrid, Spain',
   LEGAL_TAX_ID: 'B00000000',
@@ -81,11 +83,12 @@ test('producción no queda lista para cobrar sin identidad legal completa', () =
   assert.ok(result.errors.some(error => /información legal obligatoria/));
 });
 
-test('producción exige los tres Stripe prices Unlimited live canónicos', () => {
+test('producción exige los cuatro Stripe prices live canónicos', () => {
   const variants = [
     ['STRIPE_PRICE_STARTER', IMPORTVERIFIER_UNLIMITED_PRICE_ID],
     ['STRIPE_PRICE_ANNUAL', IMPORTVERIFIER_UNLIMITED_ANNUAL_PRICE_ID],
     ['STRIPE_PRICE_LIFETIME', IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID],
+    ['STRIPE_PRICE_CUSTOM', IMPORTVERIFIER_PERSONALIZED_PRICE_ID],
   ] as const;
 
   for (const [key, canonical] of variants) {

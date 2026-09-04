@@ -10,8 +10,12 @@ test('canonical product name is ImportVerifier everywhere brand constants are co
   assert.equal(BRAND_DOCUMENT_TITLE, 'IMPORTVERIFIER');
 });
 
-test('visible wordmark no longer renders the retired Import Rules Verifier name', () => {
-  assert.match(brand, /<strong>Import<\/strong><strong[^>]*>Verifier<\/strong>/);
+test('visible mark keeps Import and Verifier while the retired Rules name stays absent', () => {
+  assert.match(brand, /<strong>Import<\/strong>/);
+  assert.match(brand, /<strong[^>]*>Verifier<\/strong>/);
+  assert.match(brand, />IMPORT<\/text>/);
+  assert.match(brand, />AND<\/text>/);
+  assert.match(brand, />VERIFIER<\/text>/);
   assert.doesNotMatch(brand, />Rules</);
   assert.doesNotMatch(brand, /Import Rules Verifier/);
 });

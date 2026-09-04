@@ -18,6 +18,11 @@ test('upgrade prompt reacts when the live dashboard quota reaches 100 percent', 
   assert.match(prompt, /setExhausted\(true\)/);
 });
 
+test('newly exhausted quota is announced without stealing keyboard focus', () => {
+  assert.match(prompt, /className="trial-upgrade-copy" role="status" aria-live="polite" aria-atomic="true"/);
+  assert.doesNotMatch(prompt, /\.focus\(\)/);
+});
+
 test('checkout progress is announced without exposing provider errors', () => {
   assert.match(prompt, /role="status" aria-live="polite"/);
   assert.match(prompt, /trustedStripeNavigationUrl\(body\.url, 'checkout'\)/);

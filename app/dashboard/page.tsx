@@ -1,9 +1,12 @@
 import Dashboard from '@/components/Dashboard';
+import DashboardExtrasHub from '@/components/DashboardExtrasHub';
+import DashboardModuleOrganizer from '@/components/DashboardModuleOrganizer';
 import AnalysisReviewGate from '@/components/AnalysisReviewGate';
 import CheckoutReturnSync from '@/components/CheckoutReturnSync';
 import FreeTrialUpgradePrompt from '@/components/FreeTrialUpgradePrompt';
 import IntelligenceSuite from '@/components/IntelligenceSuite';
 import LatestRegulatoryAssessment from '@/components/LatestRegulatoryAssessment';
+import PersonalizedPlanOffer from '@/components/PersonalizedPlanOffer';
 import UnlimitedExperience from '@/components/UnlimitedExperience';
 import WelcomeFlash from '@/components/WelcomeFlash';
 import { serverLanguage } from '@/lib/server-language';
@@ -25,8 +28,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     <UnlimitedExperience />
     <FreeTrialUpgradePrompt />
     <AnalysisReviewGate />
+    <DashboardModuleOrganizer />
     <Dashboard email={user.email ?? ''} />
-    <IntelligenceSuite />
-    <LatestRegulatoryAssessment />
+    <DashboardExtrasHub
+      personalized={<PersonalizedPlanOffer />}
+      intelligence={<IntelligenceSuite />}
+      assessment={<LatestRegulatoryAssessment />}
+    />
   </LanguageProvider>;
 }

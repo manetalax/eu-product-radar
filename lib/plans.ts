@@ -14,12 +14,13 @@ export type PlanDefinition = {
 
 export const FREE_TRIAL_PRODUCT_LIMIT = 5;
 
-// Public entitlement: one Unlimited capability with three billing choices.
+// Public entitlement: Unlimited catalogue analysis with differentiated billing capabilities.
 // The numeric ceiling is an infrastructure fair-use guardrail, not a marketed product quota.
 export const UNLIMITED_FAIR_USE_CEILING = 1_000_000;
 export const UNLIMITED_MONTHLY_PRICE_EUR = 9.95;
 export const UNLIMITED_ANNUAL_PRICE_EUR = 89.95;
-export const UNLIMITED_LIFETIME_PRICE_EUR = 149;
+export const UNLIMITED_LIFETIME_PRICE_EUR = 299.95;
+export const PERSONALIZED_PRICE_EUR = 995.50;
 export const UNLIMITED_PLAN: PlanDefinition = {
   id: 'starter',
   name: 'Unlimited',
@@ -30,15 +31,21 @@ export const UNLIMITED_PLAN: PlanDefinition = {
 };
 
 export const UNLIMITED_PUBLIC_OFFERS = [
-  { id: 'monthly', priceEur: UNLIMITED_MONTHLY_PRICE_EUR, cadence: 'month' },
-  { id: 'annual', priceEur: UNLIMITED_ANNUAL_PRICE_EUR, cadence: 'year' },
-  { id: 'lifetime', priceEur: UNLIMITED_LIFETIME_PRICE_EUR, cadence: 'lifetime' },
+  { id: 'monthly', priceEur: UNLIMITED_MONTHLY_PRICE_EUR, cadence: 'month', ai: false },
+  { id: 'annual', priceEur: UNLIMITED_ANNUAL_PRICE_EUR, cadence: 'year', ai: true },
+  { id: 'lifetime', priceEur: UNLIMITED_LIFETIME_PRICE_EUR, cadence: 'lifetime', ai: true },
 ] as const;
 
-// Only this entitlement is sold/displayed to new customers; billing choice is separate.
+export const PERSONALIZED_PUBLIC_OFFER = {
+  id: 'custom',
+  priceEur: PERSONALIZED_PRICE_EUR,
+  cadence: 'custom',
+  ai: true,
+  includes: ['technical-customization', 'domain', 'logo', 'whatsapp-integration'] as const,
+} as const;
+
 export const PLANS: readonly PlanDefinition[] = [UNLIMITED_PLAN] as const;
 
-// Hidden legacy subscription definitions keep historical subscriptions and Stripe webhooks readable.
 const LEGACY_PLANS: Record<Exclude<PlanId, 'starter'>, PlanDefinition> = {
   growth: { id: 'growth', name: 'Growth (legacy)', monthlyPriceEur: 29, monthlyProductLimit: 150, featured: false, legacy: true },
   pro: { id: 'pro', name: 'Pro (legacy)', monthlyPriceEur: 49, monthlyProductLimit: 500, featured: false, legacy: true },

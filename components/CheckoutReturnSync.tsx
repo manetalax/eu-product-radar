@@ -101,8 +101,8 @@ export default function CheckoutReturnSync({ checkout, sessionId, synced = false
   }, [checkout, synced]);
 
   if (!busy && !error) return null;
-  return <section className="card content-card" aria-live="polite">
-    {busy && <p className="muted">{copy[language]}</p>}
+  return <section className="card content-card" aria-live="polite" aria-atomic="true">
+    {busy && <p role="status" className="muted">{copy[language]}</p>}
     {error && <p role="alert" className="message error">{error}</p>}
   </section>;
 }

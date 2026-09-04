@@ -38,6 +38,7 @@ export default function AnalysisReviewGate() {
   const [draft, setDraft] = useState<ReviewDraft | null>(null);
   const [busy, setBusy] = useState(false);
   const pending = useRef<PendingRequest | null>(null);
+  const reviewOpener = useRef<HTMLElement | null>(null);
   const originalFetch = useRef<typeof window.fetch | null>(null);
 
   useEffect(() => {
@@ -64,6 +65,7 @@ export default function AnalysisReviewGate() {
       }
 
       const marketCode = typeof body.marketCode === 'string' && body.marketCode in MARKETS ? body.marketCode as MarketCode : 'EU';
+      reviewOpener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       setDraft({ filename: body.filename, marketLabel: marketDisplayFor(languageRef.current, marketCode).name, products });
 
       return new Promise<Response>((resolve, reject) => {
@@ -74,6 +76,7 @@ export default function AnalysisReviewGate() {
     return () => {
       window.fetch = nativeFetch;
       originalFetch.current = null;
+      reviewOpener.current = null;
       if (pending.current) {
         pending.current.reject(cancelledReview());
         pending.current = null;
@@ -84,9 +87,14 @@ export default function AnalysisReviewGate() {
   const cancel = () => {
     const request = pending.current;
     if (!request) return;
+    const opener = reviewOpener.current;
+    reviewOpener.current = null;
     pending.current = null;
     setDraft(null);
     request.reject(cancelledReview());
+    window.requestAnimationFrame(() => {
+      if (opener?.isConnected) opener.focus();
+    });
   };
 
   const confirm = async () => {
@@ -97,10 +105,12 @@ export default function AnalysisReviewGate() {
       const body = { ...request.body, products: draft.products };
       const response = await originalFetch.current(request.input, { ...request.init, body: JSON.stringify(body) });
       pending.current = null;
+      reviewOpener.current = null;
       setDraft(null);
       request.resolve(response);
     } catch (error) {
       pending.current = null;
+      reviewOpener.current = null;
       setDraft(null);
       request.reject(error);
     } finally {

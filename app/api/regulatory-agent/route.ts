@@ -3,6 +3,7 @@ import { analyze } from '@/lib/analysis';
 import { generateText } from '@/lib/ai-provider';
 import { recordAiUsage } from '@/lib/ai-telemetry';
 import { consumeApiRateLimit } from '@/lib/api-rate-limit';
+import { billingOptionIncludesAi, billingStatus } from '@/lib/billing';
 import { safeEvidenceUrl } from '@/lib/evidence';
 import { localizeEuRegulatoryAssessment } from '@/lib/eu-regulatory-i18n';
 import { readJsonBody, RequestBodyTooLargeError, sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
@@ -27,6 +28,18 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return json({ error: initialText('signIn') }, 401);
+
+  const admin = createAdminClient();
+  const [{ data: subscription, error: subscriptionError }, { data: permanent, error: permanentError }] = await Promise.all([
+    admin.from('subscriptions').select('plan_id,status,current_period_end,cancel_at_period_end,stripe_price_id').eq('user_id', user.id).maybeSingle(),
+    admin.from('unlimited_lifetime_entitlements').select('status').eq('user_id', user.id).maybeSingle(),
+  ]);
+  if ((subscriptionError && subscriptionError.code !== 'PGRST116') || (permanentError && permanentError.code !== 'PGRST116')) {
+    return json({ error: initialText('assistantFailure') }, 503);
+  }
+  const paidStatus = billingStatus(subscription ?? null);
+  const aiAllowed = permanent?.status === 'active' || billingOptionIncludesAi(paidStatus.billingOption);
+  if (!aiAllowed) return json({ error: 'ImportVerifier AI está incluido a partir del plan Anual.' }, 403);
 
   let body: { question?: unknown; analysisId?: unknown; productIndex?: unknown; language?: unknown };
   try { body = await readJsonBody(request) as typeof body; }
@@ -73,7 +86,7 @@ export async function POST(request: Request) {
     .eq('user_id', user.id)
     .eq('product_index', productIndex);
   const radarPromise = radarConfigured
-    ? createAdminClient().from('regulatory_change_events')
+    ? admin.from('regulatory_change_events')
         .select('id,source_name,source_url,title,summary,published_at,effective_at,severity,affected_keywords,official_reference,last_seen_at')
         .eq('active', true)
         .order('published_at', { ascending: false, nullsFirst: false })
@@ -84,10 +97,7 @@ export async function POST(request: Request) {
   if (evidenceResult.error) return json({ error: a('evidenceLoad') }, 503);
   if (radarResult?.error) return json({ error: a('radarLoad') }, 503);
 
-  const evidence = (evidenceResult.data ?? []).map(item => ({
-    ...item,
-    source_url: safeEvidenceUrl(item.source_url),
-  }));
+  const evidence = (evidenceResult.data ?? []).map(item => ({ ...item, source_url: safeEvidenceUrl(item.source_url) }));
   const radarRows = radarResult?.data ?? [];
   const radar = radarRuntimeEnabled(process.env.REGULATORY_RADAR_LIVE, process.env.REGULATORY_INGEST_SECRET, radarRows.length)
     ? relevantRadarChanges(

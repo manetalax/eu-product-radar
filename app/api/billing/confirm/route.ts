@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { billingOptionForStripePrice } from '@/lib/billing';
+import { billingOptionForStripePrice, isCheckoutBillingOption } from '@/lib/billing';
 import { billingText } from '@/lib/billing-i18n';
 import { PRIVATE_HEADERS, readJsonBody, RequestBodyTooLargeError, sameOrigin } from '@/lib/http';
 import { requestLanguage } from '@/lib/request-language';
@@ -18,7 +18,6 @@ export async function POST(request: Request) {
   const language = requestLanguage(request);
   const b = (key: Parameters<typeof billingText>[1]) => billingText(language, key);
   if (!sameOrigin(request)) return json({ error: b('origin') }, 403);
-
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return json({ error: b('signInCheckout') }, 401);
@@ -39,30 +38,25 @@ export async function POST(request: Request) {
     if (ownerId !== user.id) return json({ error: b('invalidRequest') }, 403);
 
     if (session.mode === 'subscription') {
-      if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') {
-        return json({ error: b('paymentOpen') }, 409);
-      }
+      if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') return json({ error: b('paymentOpen') }, 409);
       const subscriptionId = stripeObjectId(session.subscription);
       if (!subscriptionId) return json({ error: b('paymentOpen') }, 409);
       const subscription = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] });
       await syncStripeSubscription(subscription);
-      if (!CONFIRMED_SUBSCRIPTION_STATUSES.has(subscription.status)) {
-        return json({ error: b('paymentOpen') }, 409);
-      }
-
+      if (!CONFIRMED_SUBSCRIPTION_STATUSES.has(subscription.status)) return json({ error: b('paymentOpen') }, 409);
       const priceId = subscription.items.data.length === 1 ? subscription.items.data[0]?.price?.id : null;
       const billingOption = billingOptionForStripePrice(priceId);
-      if (billingOption !== 'monthly' && billingOption !== 'annual') {
-        return json({ error: b('paymentOpen') }, 409);
-      }
+      if (billingOption !== 'monthly' && billingOption !== 'annual') return json({ error: b('paymentOpen') }, 409);
       return json({ confirmed: true, billingOption });
     }
 
     if (session.mode === 'payment') {
       if (session.payment_status !== 'paid') return json({ error: b('paymentOpen') }, 409);
+      const billingOption = session.metadata?.billing_option;
+      if (!isCheckoutBillingOption(billingOption) || (billingOption !== 'lifetime' && billingOption !== 'custom')) return json({ error: b('paymentOpen') }, 409);
       const granted = await syncLifetimeCheckoutSession(session);
       if (!granted) return json({ error: b('paymentOpen') }, 409);
-      return json({ confirmed: true, billingOption: 'lifetime' });
+      return json({ confirmed: true, billingOption });
     }
 
     return json({ error: b('invalidRequest') }, 403);
