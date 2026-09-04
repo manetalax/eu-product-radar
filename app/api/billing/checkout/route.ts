@@ -168,7 +168,7 @@ export async function POST(request: Request) {
     const metadata = { user_id: user.id, plan_id: UNLIMITED_INTERNAL_PLAN_ID, billing_option: billingOption };
     const successUrl = `${siteOrigin}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${siteOrigin}/dashboard?checkout=cancelled`;
-    const checkoutIdempotencyKey = `checkout-${user.id}-${billingOption}-${generation}`;
+    const checkoutIdempotencyKey = `checkout-${user.id}-${generation}`;
     const session = expected.checkoutMode === 'subscription'
       ? await stripe.checkout.sessions.create({ mode: 'subscription', customer: customerId, client_reference_id: user.id, line_items: [{ price: priceId, quantity: 1 }], allow_promotion_codes: true, success_url: successUrl, cancel_url: cancelUrl, metadata, subscription_data: { metadata } }, { idempotencyKey: checkoutIdempotencyKey })
       : await stripe.checkout.sessions.create({ mode: 'payment', customer: customerId, client_reference_id: user.id, line_items: [{ price: priceId, quantity: 1 }], allow_promotion_codes: false, success_url: successUrl, cancel_url: cancelUrl, metadata, payment_intent_data: { metadata } }, { idempotencyKey: checkoutIdempotencyKey });
