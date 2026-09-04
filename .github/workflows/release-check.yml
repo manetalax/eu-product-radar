@@ -23,8 +23,10 @@ jobs:
       - run: npm ci
       - name: Diagnostic tests A-F
         run: node --import tsx --test tests/[a-f]*.test.ts
-      - name: Diagnostic tests G-L
-        run: node --import tsx --test tests/[g-l]*.test.ts
+      - name: Diagnostic tests G-I
+        run: node --import tsx --test tests/[g-i]*.test.ts
+      - name: Diagnostic tests J-L
+        run: node --import tsx --test tests/[j-l]*.test.ts
       - name: Diagnostic tests M-R
         run: node --import tsx --test tests/[m-r]*.test.ts
       - name: Diagnostic tests S-Z
