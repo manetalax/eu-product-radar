@@ -21,6 +21,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Diagnostic tests A-F
+        run: node --import tsx --test tests/[a-f]*.test.ts
+      - name: Diagnostic tests G-L
+        run: node --import tsx --test tests/[g-l]*.test.ts
+      - name: Diagnostic tests M-R
+        run: node --import tsx --test tests/[m-r]*.test.ts
+      - name: Diagnostic tests S-Z
+        run: node --import tsx --test tests/[s-z]*.test.ts
       - run: npm test
       - run: npm run typecheck
       - run: npm run build
