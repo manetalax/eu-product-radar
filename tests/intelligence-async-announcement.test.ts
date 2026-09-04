@@ -14,8 +14,8 @@ test('intelligence loading and failure states are exposed without a false empty 
 
 test('ImportVerifier AI keeps request context stable and announces progress, answers and errors', () => {
   assert.match(suite, /<article className=\{\x60\$\{styles\.card\} \$\{styles\.wide\}\x60\} aria-busy=\{aiBusy\}>/);
-  assert.match(suite, /className=\{styles\.productSelect\} value=\{selected\} disabled=\{aiBusy\}/);
-  assert.match(suite, /className=\{styles\.aiInput\} value=\{question\} disabled=\{aiBusy\}/);
+  assert.match(suite, /className=\{styles\.productSelect\} value=\{selected\} disabled=\{aiBusy \|\| !aiAccess\}/);
+  assert.match(suite, /className=\{styles\.aiInput\} value=\{question\} disabled=\{aiBusy \|\| !aiAccess\}/);
   assert.match(suite, /role="status" aria-live="polite" aria-atomic="true">\{aiBusy \? t\.asking : answer\}/);
   assert.match(suite, /\{aiError && <div className=\{styles\.error\} role="alert">\{aiError\}<\/div>\}/);
   assert.match(suite, /setAiError\(t\.aiError\)/);
