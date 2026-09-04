@@ -133,9 +133,11 @@ export default function IntelligenceSuite() {
     try {
       const response = await fetch('/api/regulatory-agent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: question.trim(), analysisId: analysis.id, productIndex: selected, language }) });
       const body = await jsonObject(response);
-      if (!response.ok || typeof body.answer !== 'string' || !body.answer.trim()) throw new Error(typeof body.error === 'string' ? body.error : t.aiError);
+      if (!response.ok || typeof body.answer !== 'string' || !body.answer.trim()) throw new Error(t.aiError);
       setAnswer(body.answer);
-    } catch (error) { setAiError(error instanceof Error && error.message ? error.message : t.aiError); }
+    } catch {
+      setAiError(t.aiError);
+    }
     finally { setAiBusy(false); }
   }
 
@@ -153,6 +155,7 @@ export default function IntelligenceSuite() {
         <select className={styles.productSelect} value={selected} disabled={aiBusy || !aiAccess} onChange={e => { setSelected(Number(e.target.value)); setAnswer(''); }} aria-label={t.productLabel}>{analysis.products.map((item, index) => <option value={index} key={`${item.name}-${index}`}>{item.name}</option>)}</select>
         <form className={styles.aiForm} onSubmit={askAi}><input className={styles.aiInput} value={question} disabled={aiBusy || !aiAccess} maxLength={2000} onChange={e => setQuestion(e.target.value)} placeholder={aiAccess ? t.questionPlaceholder : planCopy.aiLocked} /><button className={styles.button} disabled={aiBusy || !question.trim() || !aiAccess}>{aiBusy ? t.asking : t.ask}</button></form>
         {!aiAccess && <div className={styles.disclaimer}>{planCopy.aiLocked}</div>}
+        <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{aiBusy ? t.asking : answer}</p>
         {answer && <div className={styles.answer}>{answer}</div>}{aiError && <div className={styles.error} role="alert">{aiError}</div>}{aiAccess && <div className={styles.disclaimer}>{t.aiDisclaimer}</div>}
       </article>
 
