@@ -45,6 +45,17 @@ Continuar autónomamente por trabajo IN PROGRESS/NEXT. No repetir tareas ya cerr
 - `SETUP.md` saneado para Sites y para los planes vigentes.
 - El árbol actual de la rama activa no contiene archivos o carpetas con `netlify` en el nombre.
 
+## IA gratuita — actualización 2026-09-10
+
+- Añadido Cloudflare Workers AI como segundo proveedor gratuito, con `@cf/qwen/qwen3.8-27b` para texto/razonamiento y visión.
+- Orden conservador por defecto: **SiliconFlow → Cloudflare → OpenAI solo si la política permite coste**. No se cambia el proveedor gratuito ya operativo sin credenciales y benchmark real de producción.
+- Endpoint Cloudflare construido internamente desde un `CLOUDFLARE_ACCOUNT_ID` hexadecimal validado; no se admite base URL configurable para evitar desvíos de datos/SSRF.
+- Variables preparadas: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_AI_API_TOKEN`, `CLOUDFLARE_AI_MODEL`, `CLOUDFLARE_VISION_MODEL`.
+- Telemetría actualizada para considerar Cloudflare proveedor gratuito. El constraint de `public.ai_usage_events` en Supabase producción ya admite `cloudflare` además de los proveedores previos.
+- Pruebas estáticas añadidas para orden de fallback, modelo, endpoint fijo, validación de account id y timeout compartido.
+- Radar producción comprobado en BD el 2026-09-10: 2 eventos, 2 activos; evento más reciente visto el 2026-09-09 09:05:34 UTC.
+- El runner local de esta sesión no tiene salida de red a GitHub y los commits creados por la conexión GitHub no han generado todavía un workflow asociado al HEAD, por lo que tests/typecheck/build completos siguen pendientes de ejecución verificable en CI/Sites.
+
 ## NEXT
 
 1. Continuar el rediseño profundo del dashboard modular para cientos/miles de productos sin renderizado interminable.
