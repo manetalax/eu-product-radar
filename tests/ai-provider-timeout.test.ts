@@ -10,5 +10,5 @@ test('all external AI calls share a bounded provider fetch helper', () => {
   assert.match(source, /setTimeout\(\(\) => controller\.abort\(\), AI_PROVIDER_TIMEOUT_MS\)/);
   assert.match(source, /fetch\(input, \{ \.\.\.init, signal: controller\.signal \}\)/);
   assert.match(source, /clearTimeout\(timeout\)/);
-  assert.equal((source.match(/await providerFetch\(/g) ?? []).length, 4);
+  assert.equal((source.match(/await providerFetch\(/g) ?? []).length, 6);
 });
