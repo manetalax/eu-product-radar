@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import type { AiProvider } from '@/lib/ai-provider';
 
 export type AiTelemetryTask = 'regulatory_agent' | 'product_text' | 'product_vision' | 'product_document';
 
@@ -14,7 +15,7 @@ export type AiUsageSummary = {
 
 export async function recordAiUsage(input: {
   task: AiTelemetryTask;
-  provider: 'siliconflow' | 'openai';
+  provider: AiProvider;
   model: string;
   success?: boolean;
   fallback?: boolean;
