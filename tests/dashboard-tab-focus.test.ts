@@ -20,6 +20,8 @@ test('results and history-open transitions use the focus-preserving path', () =>
   assert.match(dashboard, /onClick=\{\(\) => moveToTabWithFocus\('products'\)\}>\{d\('viewResults'\)\}/);
 });
 
-test('persistent side navigation keeps focus on the selected navigation control', () => {
-  assert.match(dashboard, /tabs\.map\(\(\[id, label, description\]\) => <button[\s\S]{0,260}onClick=\{\(\) => \{ setTab\(id\); setNotice\(''\); \}\}/);
+test('compact dashboard menu hides navigation until opened and preserves the selected tab', () => {
+  assert.match(dashboard, /className="btn ghost dashboard-menu-toggle" aria-expanded=\{menuOpen\} aria-controls="dashboard-menu"/);
+  assert.match(dashboard, /className="dashboard-menu-popover" id="dashboard-menu" hidden=\{!menuOpen\}/);
+  assert.match(dashboard, /tabs\.map\(\(\[id, label, description\]\) => <button[\s\S]{0,320}aria-current=\{tab === id \? 'page' : undefined\}[\s\S]{0,260}onClick=\{\(\) => \{ setTab\(id\); setNotice\(''\); setMenuOpen\(false\); \}\}/);
 });

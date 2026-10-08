@@ -55,6 +55,7 @@ export default function Dashboard({ email }: { email: string }) {
   const marketName = (code: MarketCode) => landingCopy[language].markets.cards[code].name;
 
   const [tab, setTab] = useState<Tab>('dashboard');
+  const [menuOpen, setMenuOpen] = useState(false);
   const [selectedMarket, setSelectedMarket] = useState<MarketCode>('EU');
   const [current, setCurrent] = useState<Analysis | null>(null);
   const [history, setHistory] = useState<AnalysisSummary[]>([]);
@@ -413,20 +414,24 @@ export default function Dashboard({ email }: { email: string }) {
 
   return <main className="shell app-shell">
     <header className="toprow account-header app-header">
-      <Brand market={current ? currentMarketCode : undefined} />
-      <div className="header-actions"><span className="privacy-badge">{d('privateSession')}</span><button className="btn ghost" disabled={busy} onClick={signOut}>{d('signOut')}</button></div>
+      <Brand market={current ? currentMarketCode : undefined} inverse />
+      <div className="header-actions"><span className="privacy-badge">{d('privateSession')}</span></div>
     </header>
 
     <div className="dashboard premium-dashboard">
-      <aside className="side premium-side">
-        <div className="side-intro"><span className="side-kicker">{d('workspace')}</span><h2>{firstName || d('yourAccount')}</h2><p className="account-email">{email}</p></div>
-        <nav aria-label={d('sections')} className="side-nav">
-          {tabs.map(([id, label, description]) => <button key={id} aria-current={tab === id ? 'page' : undefined} className={tab === id ? 'active' : ''} onClick={() => { setTab(id); setNotice(''); }}><strong>{label}</strong><span>{description}</span></button>)}
-        </nav>
-        <div className="side-quota">
-          <div className="toprow"><span>{d('plan')} {unlimited ? 'Unlimited' : d('free')}</span><strong>{unlimited ? d('unlimited') : quota ? d('remaining', { n: quota.remaining }) : '—'}</strong></div>
-          {!unlimited && <><div className="quota-track" aria-label={d('freeUsage')}><span style={{ width: `${quotaPercent}%` }} /></div><small>{quota ? d('used', { used: quota.used, limit: quota.limit }) : d('calculating')}</small></>}
-          {!unlimited && <button className="side-upgrade" onClick={() => setTab('settings')}>{d('viewUnlimited')}</button>}
+      <aside className={`side premium-side${menuOpen ? ' is-open' : ''}`}>
+        <button type="button" className="btn ghost dashboard-menu-toggle" aria-expanded={menuOpen} aria-controls="dashboard-menu" onClick={() => setMenuOpen(open => !open)}><span aria-hidden="true">{menuOpen ? '×' : '☰'}</span>{d('sections')}</button>
+        <div className="dashboard-menu-popover" id="dashboard-menu" hidden={!menuOpen}>
+          <div className="side-intro"><span className="side-kicker">{d('workspace')}</span><h2>{firstName || d('yourAccount')}</h2><p className="account-email">{email}</p></div>
+          <nav aria-label={d('sections')} className="side-nav">
+            {tabs.map(([id, label, description]) => <button key={id} aria-current={tab === id ? 'page' : undefined} className={tab === id ? 'active' : ''} onClick={() => { setTab(id); setNotice(''); setMenuOpen(false); }}><strong>{label}</strong><span>{description}</span></button>)}
+          </nav>
+          <div className="side-quota">
+            <div className="toprow"><span>{d('plan')} {unlimited ? 'Unlimited' : d('free')}</span><strong>{unlimited ? d('unlimited') : quota ? d('remaining', { n: quota.remaining }) : '—'}</strong></div>
+            {!unlimited && <><div className="quota-track" aria-label={d('freeUsage')}><span style={{ width: `${quotaPercent}%` }} /></div><small>{quota ? d('used', { used: quota.used, limit: quota.limit }) : d('calculating')}</small></>}
+            {!unlimited && <button className="side-upgrade" onClick={() => { setTab('settings'); setMenuOpen(false); }}>{d('viewUnlimited')}</button>}
+          </div>
+          <button className="btn ghost dashboard-menu-signout" disabled={busy} onClick={signOut}>{d('signOut')}</button>
         </div>
       </aside>
 

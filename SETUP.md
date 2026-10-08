@@ -1,15 +1,15 @@
-# ImportVerifier — configuración actual para Sites
+# ImportVerifier — configuración objetivo para Vercel
 
 Este documento define el estado operativo vigente. Si un documento histórico lo contradice, prevalece este archivo y `WORK-CHAT-CONTINUITY.md`.
 
 ## Proyecto canónico
 
-- Frontend de producción: **Sites**
+- Frontend completo de producción: **Vercel**; GitHub Pages es solo edición local
 - Repositorio: `manetalax/eu-product-radar`
-- Rama activa de trabajo: `feat/import-rules-verifier-branding`
+- Rama activa de trabajo: `feat/fullstack-hosting-migration`
 - No crear ni restaurar despliegues Netlify, deploy previews o copias de producción anteriores.
 
-`NEXT_PUBLIC_SITE_URL` debe ser el origen HTTPS canónico publicado por Sites. No se permite usar un dominio `*.netlify.app` como origen de producción.
+`NEXT_PUBLIC_SITE_URL` debe ser el origen HTTPS canónico asignado por Vercel. No se permite usar un dominio `*.netlify.app` como origen de producción.
 
 ## Oferta comercial vigente
 
@@ -27,7 +27,7 @@ Los precios deben mostrarse con sus decimales exactos y con formato localizado.
 Variables públicas principales:
 
 ```text
-NEXT_PUBLIC_SITE_URL=<ORIGEN_HTTPS_DE_SITES>
+NEXT_PUBLIC_SITE_URL=<ORIGEN_HTTPS_CANONICO_DE_VERCEL>
 NEXT_PUBLIC_SUPABASE_URL=<SUPABASE_URL>
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<SUPABASE_PUBLISHABLE_KEY>
 ```
@@ -51,35 +51,35 @@ Los secretos no se publican en GitHub ni se exponen al cliente.
 
 El workflow `ImportVerifier regulatory radar` necesita dos valores en los ajustes del repositorio GitHub (`Settings → Secrets and variables → Actions`):
 
-- Variable `NEXT_PUBLIC_SITE_URL`: el origen HTTPS canónico de Sites, sin ruta ni barra final obligatoria.
+- Variable `NEXT_PUBLIC_SITE_URL`: el origen HTTPS canónico de Vercel, sin ruta ni barra final obligatoria.
 - Secret `REGULATORY_INGEST_SECRET`: un valor aleatorio de al menos 32 caracteres.
 
-En las variables de entorno de servidor de Sites configura también `REGULATORY_INGEST_SECRET` con el mismo valor y `REGULATORY_RADAR_LIVE=true`. Conserva configuradas las credenciales de Supabase de servidor. El endpoint valida el secreto de forma constante y el workflow muestra un error explícito si falta una variable o no tiene el formato esperado. No escribas el secreto en el repositorio ni en el código.
+En las variables de entorno de servidor de Vercel configura también `REGULATORY_INGEST_SECRET` con el mismo valor y `REGULATORY_RADAR_LIVE=true`. Conserva configuradas las credenciales de Supabase de servidor. El endpoint valida el secreto de forma constante y el workflow muestra un error explícito si falta una variable o no tiene el formato esperado. No escribas el secreto en el repositorio ni en el código.
 
 El workflow se ejecuta cada seis horas y también se puede iniciar manualmente desde GitHub Actions. Una ejecución correcta confirma que consultó EUR-Lex y guardó los eventos; tener la variable del workflow configurada por sí sola no activa la lectura del Radar en la aplicación.
 
 ## Supabase Auth y OAuth
 
-Configura `Site URL` y redirects con el origen real de Sites:
+Configura `Site URL` y redirects con el dominio canónico asignado por Vercel:
 
 ```text
-<ORIGEN_HTTPS_DE_SITES>/auth/callback
-<ORIGEN_HTTPS_DE_SITES>/auth/confirm
-<ORIGEN_HTTPS_DE_SITES>/reset-password
+<ORIGEN_HTTPS_CANONICO_DE_VERCEL>/auth/callback
+<ORIGEN_HTTPS_CANONICO_DE_VERCEL>/auth/confirm
+<ORIGEN_HTTPS_CANONICO_DE_VERCEL>/reset-password
 ```
 
-Elimina de las allowlists cualquier URL Netlify o preview antiguo que ya no se utilice. Google OAuth debe terminar siempre en el dominio canónico de Sites.
+Elimina de las allowlists cualquier URL Netlify o preview antiguo que ya no se utilice. Google OAuth debe terminar siempre en el dominio canónico de Vercel.
 
 ## Stripe
 
-Los success/cancel URLs y webhooks deben usar el origen canónico de Sites. No debe quedar ningún endpoint de cobro apuntando a Netlify o a previews antiguos.
+Los success/cancel URLs y webhooks deben usar el origen canónico de Vercel. No debe quedar ningún endpoint de cobro apuntando a Netlify o a previews antiguos.
 
 Antes de habilitar pagos reales, comprobar:
 
 - prices live correctos para cada plan;
 - webhook firmado y activo;
 - datos legales obligatorios completos;
-- retorno de Checkout al dominio de Sites;
+- retorno de Checkout al dominio de Vercel;
 - entitlement correcto después del pago.
 
 ## IA
@@ -96,7 +96,7 @@ El dashboard está orientado a catálogos grandes. Debe conservar módulos plega
 
 La entrada por URL debe comunicar una acción real y disponible: el usuario puede pegar una URL para conectar/importar, sin textos de “próximamente”.
 
-## QA obligatorio antes de Sites
+## QA obligatorio antes de Vercel
 
 Ejecutar:
 
@@ -107,7 +107,7 @@ npm run typecheck
 npm run build
 ```
 
-Y verificar en el dominio de Sites:
+Y verificar en el dominio de Vercel:
 
 1. registro/login y recuperación;
 2. importación de 5 productos y bloqueo correcto del 6.º gratuito;
