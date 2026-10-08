@@ -23,7 +23,7 @@ jobs:
             exit 1
           fi
           if [ -z "$REGULATORY_INGEST_SECRET" ]; then
-            echo "::error title=Radar configuration missing::Add the REGULATORY_INGEST_SECRET Actions secret and the matching server environment variable in Sites."
+            echo "::error title=Radar configuration missing::Add the REGULATORY_INGEST_SECRET Actions secret and the matching server environment variable in Vercel."
             exit 1
           fi
           if [ "${#REGULATORY_INGEST_SECRET}" -lt 32 ]; then
