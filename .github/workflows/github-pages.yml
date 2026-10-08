@@ -1,0 +1,67 @@
+name: ImportVerifier GitHub Pages
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/github-pages.yml'
+      - 'github-pages/**'
+      - 'lib/analysis.ts'
+      - 'lib/documentation.ts'
+      - 'lib/eu-regulatory-*.ts'
+      - 'lib/import-products.ts'
+      - 'lib/markets.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tests/github-pages-edition.test.ts'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/github-pages.yml'
+      - 'github-pages/**'
+      - 'lib/analysis.ts'
+      - 'lib/documentation.ts'
+      - 'lib/eu-regulatory-*.ts'
+      - 'lib/import-products.ts'
+      - 'lib/markets.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tests/github-pages-edition.test.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build:github-pages
+      - run: node --import tsx --test tests/github-pages-edition.test.ts
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
+        with:
+          path: github-pages
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#fffdf9" />
+    <meta name="description" content="Revisión inicial de catálogos de productos para el mercado de la Unión Europea. Análisis local en tu navegador." />
+    <title>ImportVerifier · revisión local</title>
+    <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./assets/styles.css" />
+    <script src="./assets/app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="ImportVerifier, inicio"><span class="brand-mark">IV</span><span>ImportVerifier</span></a>
+      <span class="edition">EDICIÓN GITHUB · ANÁLISIS LOCAL</span>
+    </header>
+
+    <main class="shell">
+      <section class="intro" aria-labelledby="page-title">
+        <div class="eyebrow"><span class="status-dot"></span> UNIÓN EUROPEA · REVISIÓN INICIAL</div>
+        <h1 id="page-title">Revisa tu catálogo.<br /><span>Con calma y claridad.</span></h1>
+        <p class="lead">Importa una hoja de cálculo y detecta datos básicos ausentes y posibles marcos regulatorios para revisar.</p>
+      </section>
+
+      <section class="import-card" aria-labelledby="import-title">
+        <div class="card-heading">
+          <div><p class="eyebrow">EN TU DISPOSITIVO</p><h2 id="import-title">Analizar un catálogo</h2></div>
+          <span class="privacy-chip">Tus archivos no se suben</span>
+        </div>
+        <label class="dropzone" id="dropzone" for="catalog-file" tabindex="0">
+          <span class="upload-icon" aria-hidden="true">↑</span>
+          <strong>Arrastra el archivo aquí</strong>
+          <span>o selecciona un CSV o Excel · máximo 5 MB</span>
+          <input id="catalog-file" type="file" accept=".csv,.xls,.xlsx" />
+        </label>
+        <div class="import-footer"><a class="text-link" href="./assets/importverifier-sample-5-products.csv" download>Descargar catálogo de ejemplo</a><span>Hasta 1.000 productos por archivo</span></div>
+        <p id="message" class="message" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="results" class="results" aria-labelledby="results-title" hidden>
+        <div class="results-heading"><div><p class="eyebrow">RESULTADO DEL CATÁLOGO</p><h2 id="results-title">Revisión inicial</h2><p id="filename" class="muted"></p></div><button id="export" class="button secondary" type="button">Descargar CSV</button></div>
+        <div class="metrics" aria-live="polite">
+          <article class="metric"><span>Productos</span><strong id="metric-products">—</strong></article>
+          <article class="metric"><span>Indicador medio</span><strong id="metric-average">—</strong></article>
+          <article class="metric"><span>Prioridad alta</span><strong id="metric-high">—</strong></article>
+        </div>
+        <div class="table-tools"><label for="search">Buscar producto</label><input id="search" type="search" placeholder="Nombre o dato pendiente" /><span id="result-count" class="muted"></span></div>
+        <div class="table-wrap"><table><thead><tr><th>Producto</th><th>Indicador</th><th>Prioridad</th><th>Datos básicos</th><th>Posible categoría</th></tr></thead><tbody id="result-rows"></tbody></table></div>
+        <nav class="pagination" aria-label="Páginas de resultados"><button id="previous" class="button secondary" type="button">Anterior</button><span id="page-label" class="muted"></span><button id="next" class="button secondary" type="button">Siguiente</button></nav>
+      </section>
+
+      <section class="note" aria-labelledby="scope-title">
+        <span class="note-icon" aria-hidden="true">i</span>
+        <div><h2 id="scope-title">Qué incluye esta edición</h2><p>El archivo se procesa localmente en tu navegador con el motor determinista de ImportVerifier. Esta edición pública no guarda análisis en cuentas ni incluye asistente de IA, sincronización, historial o pagos.</p><p>Los resultados son indicadores de revisión, no una certificación de cumplimiento. Las categorías regulatorias son candidatas y requieren confirmar el producto, su uso y la normativa aplicable.</p><a href="https://eur-lex.europa.eu/eli/reg/2023/988/oj" target="_blank" rel="noopener noreferrer">Consultar el Reglamento (UE) 2023/988 ↗</a></div>
+      </section>
+    </main>
+
+    <footer><span>ImportVerifier · análisis local de catálogos</span><span>© 2026</span></footer>
+  </body>
+</html>
