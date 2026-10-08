@@ -15,7 +15,7 @@ export {
   IMPORTVERIFIER_UNLIMITED_LIFETIME_PRICE_ID,
   IMPORTVERIFIER_UNLIMITED_PRICE_ID,
 } from './billing';
-export const IMPORTVERIFIER_PRODUCTION_URL = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://sites.example.com';
+export const IMPORTVERIFIER_PRODUCTION_URL = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://importverifier.vercel.app';
 
 export type ReleaseConfigCheck = { ok: boolean; errors: string[]; warnings: string[] };
 
@@ -31,7 +31,7 @@ const requiredSecrets = [
 
 const requiredPublic = ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'] as const;
 
-function isSitesProductionOrigin(value: string | undefined): boolean {
+function isProductionOrigin(value: string | undefined): boolean {
   if (!value) return false;
   try {
     const url = new URL(value);
@@ -57,8 +57,8 @@ export function checkReleaseConfig(env: NodeJS.ProcessEnv = process.env): Releas
   const warnings: string[] = [];
   const production = env.NODE_ENV === 'production';
 
-  if (production && !isSitesProductionOrigin(env.NEXT_PUBLIC_SITE_URL)) {
-    errors.push('NEXT_PUBLIC_SITE_URL debe ser el origen HTTPS canónico de Sites y no puede apuntar a Netlify ni a un preview legacy.');
+  if (production && !isProductionOrigin(env.NEXT_PUBLIC_SITE_URL)) {
+    errors.push('NEXT_PUBLIC_SITE_URL debe ser el origen HTTPS canónico de producción, sin rutas, credenciales, query ni fragmento.');
   }
 
   for (const key of requiredPublic) if (!env[key]) errors.push(`Falta ${key}.`);

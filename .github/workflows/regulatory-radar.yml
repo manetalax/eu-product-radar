@@ -19,7 +19,7 @@ jobs:
           REGULATORY_INGEST_SECRET: ${{ secrets.REGULATORY_INGEST_SECRET }}
         run: |
           if [ -z "$SITE_ORIGIN" ]; then
-            echo "::error title=Radar configuration missing::Add the repository variable NEXT_PUBLIC_SITE_URL with the canonical HTTPS Sites origin."
+            echo "::error title=Radar configuration missing::Add the repository variable NEXT_PUBLIC_SITE_URL with the canonical HTTPS production origin."
             exit 1
           fi
           if [ -z "$REGULATORY_INGEST_SECRET" ]; then

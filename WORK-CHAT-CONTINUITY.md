@@ -1,13 +1,13 @@
 # ImportVerifier — Chat ↔ Work continuity protocol
 
-## Estado canónico actual — 2026-09-03
+## Estado canónico actual — 2026-10-08
 
-- Frontend de producción: **Sites únicamente**.
-- Repositorio: `manetalax/eu-product-radar`.
-- Rama activa de trabajo: `feat/import-rules-verifier-branding`.
-- No crear, restaurar ni reutilizar Netlify, deploy previews ni copias legacy.
-- GitHub se usa como control de versiones y fuente del código; Sites es el único destino de publicación.
-- No empezar otro proyecto ni reconstruir ImportVerifier desde cero. Continuar desde el estado real existente y conservar lo que funciona.
+- El propietario ha solicitado explícitamente migrar el alojamiento de la aplicación completa a Vercel y conservar las funciones, usuarios, base de datos, pagos y precios existentes.
+- Repositorio: `manetalax/eu-product-radar`; Postispop está en otro sitio y no debe tocarse.
+- GitHub Pages solo publica una edición estática local y no puede alojar la aplicación completa Next.js. No presentarla como sustituto de producción.
+- El proyecto Supabase existente `EuProductRadar` (`hfuwwjdcyudflamwwnon`) se reactivó y está `ACTIVE_HEALTHY`. Están presentes sus migraciones y tablas; las filas de las tablas de producto consultadas eran cero.
+- Vercel MCP no devuelve equipos ni proyectos. El intento de enlazar GitHub reporta que falta una conexión de inicio de sesión GitHub; el navegador mostró OAuth con botón `Authorize` deshabilitado. No se ha creado un proyecto Vercel ni se han transferido secretos.
+- Continuar desde el Next.js existente en `manetalax/eu-product-radar`, sin reconstruirlo ni cambiar de base o de procesador de pago.
 
 ## Regla operativa
 
@@ -34,28 +34,25 @@ Continuar autónomamente por trabajo IN PROGRESS/NEXT. No repetir tareas ya cerr
 - Mejoras previas de accesibilidad asíncrona en Auth, Evidence, Intelligence Suite y otros flujos ya auditados.
 - Dashboard con herramientas de escalado para catálogos grandes y componentes modulares añadidos en la rama activa.
 
-## Sites-only cleanup completado en esta pasada
+## Trabajo completado en esta migración
 
-- Eliminado `NETLIFY-PRODUCTION-ENV.example`.
-- Eliminado `netlify-import-rules-verifier.toml`.
-- Eliminado `netlify.toml`.
-- Eliminada `netlify/functions/regulatory-radar.mjs`; al quedar vacía, la carpeta Netlify deja de formar parte del árbol activo.
-- El validador de release ya no fija `importverifier.netlify.app`; producción exige un origen HTTPS canónico y rechaza hosts `*.netlify.app`.
-- `docs/IMPORT_RULES_VERIFIER_DEPLOY.md` reescrito para Sites.
-- `SETUP.md` saneado para Sites y para los planes vigentes.
-- El árbol actual de la rama activa no contiene archivos o carpetas con `netlify` en el nombre.
+- Se publicó una edición ligera en GitHub Pages como sitio separado, sin tocar Postispop. No tiene servidor ni funciones de cuenta, historial, IA remota, Radar automático o pagos.
+- El panel completo oculta ahora la navegación tras un botón compacto; historial, informes, Radar, IA y suscripciones siguen en la aplicación Next.js.
+- Se reactivó el proyecto Supabase original y se comprobó que el esquema/migraciones están disponibles.
+- La documentación operativa ahora describe el objetivo Vercel, conserva el Supabase/Stripe existentes y detalla el cambio posterior de callbacks y webhook.
 
 ## NEXT
 
-1. Continuar el rediseño profundo del dashboard modular para cientos/miles de productos sin renderizado interminable.
-2. Aplicar en código/UI las reglas comerciales vigentes: IA disponible en Free y en todos los planes pagados; conservar Lifetime 299,95 € y Personalizada 995,50 €.
-3. Corregir todo copy de conexión por URL para expresar una función real: pegar URL para conectar/importar; nunca “próximamente”.
-4. Auditar referencias de host legacy dentro del contenido de archivos restantes y retirarlas cuando estén activas, sin borrar historial útil.
-5. Ejecutar tests, typecheck y build del HEAD exacto y corregir cualquier regresión.
-6. Verificar responsive y funcionalidades reales antes de preparar la versión final para Sites.
+1. Completar el inicio de sesión/conexión de GitHub con Vercel y enlazar el repositorio `manetalax/eu-product-radar`.
+2. Transferir a Vercel las claves existentes desde sus fuentes seguras (Supabase, Stripe, proveedor de IA y datos legales); nunca pedir que se peguen en el chat ni guardarlas en Git.
+3. Asignar el dominio canónico y actualizar Supabase Auth/Google OAuth, Stripe webhook y GitHub Actions Radar a ese dominio.
+4. Desplegar el Next.js completo en `main` y verificar login, importación, historial, IA, Radar, PDF/XLSX, pagos y portal de Stripe antes de retirar la edición estática de Pages.
+5. Mantener las ofertas actuales y el límite de 5 productos Free; no degradar el proyecto Supabase original.
 
 ## Bloqueos externos que no deben frenar el resto
 
+- La autorización de GitHub/Vercel y acceso al proyecto Vercel cuando no haya una sesión iniciada.
+- Los secretos de producción (Supabase server key, Stripe live/webhook, proveedor de IA, identidad legal y Radar) si no están presentes en un almacén conectado; no pueden recuperarse de forma segura desde este repositorio.
 - Configuración administrativa en proveedores externos cuando no haya acción disponible desde las herramientas conectadas.
 - QA físico específico en dispositivos si no existe navegador/dispositivo accesible en la sesión.
 - Eliminación de ramas Git remotas antiguas si la interfaz conectada no expone una operación de borrado de refs.
@@ -63,9 +60,9 @@ Continuar autónomamente por trabajo IN PROGRESS/NEXT. No repetir tareas ya cerr
 ## Diagnóstico Radar — 2026-10-08
 
 - Los runs programados de GitHub Actions fallan en `test -n "$SITE_ORIGIN"`: en el runner, `vars.NEXT_PUBLIC_SITE_URL` y `secrets.REGULATORY_INGEST_SECRET` llegan vacíos.
-- El workflow ahora señala explícitamente qué variable falta o no cumple formato. Para activar el refresco hacen falta el origen canónico y el secreto en GitHub Actions, más el mismo secreto y `REGULATORY_RADAR_LIVE=true` en Sites.
-- La integración actual de IA usa SiliconFlow y necesita `SILICONFLOW_API_KEY` en el entorno de servidor de Sites. Su crédito de bienvenida no garantiza uso gratuito permanente; vigilar coste operativo y límites. IA habilitada para Free y todos los planes pagados (10 consultas/hora/cuenta) por decisión del propietario el 2026-10-08.
+- El workflow ahora señala explícitamente qué variable falta o no cumple formato. Para activar el refresco hacen falta el dominio canónico y el secreto en GitHub Actions, más el mismo secreto y `REGULATORY_RADAR_LIVE=true` en Vercel.
+- La integración actual de IA usa SiliconFlow y necesita `SILICONFLOW_API_KEY` en el entorno de servidor de Vercel. Su crédito de bienvenida no garantiza uso gratuito permanente; vigilar coste operativo y límites. IA habilitada para Free y todos los planes pagados (10 consultas/hora/cuenta) por decisión del propietario el 2026-10-08.
 
 ## Definición de terminado
 
-No considerar ImportVerifier terminado hasta que el HEAD exacto pase tests/typecheck/build, el dominio canónico de Sites no dependa de Netlify, login/importación/historial/PDF/XLSX/billing/IA por plan funcionen según las reglas vigentes y el responsive esté validado en móvil, tablet y escritorio.
+No considerar ImportVerifier terminado hasta que Vercel despliegue el HEAD exacto con configuración segura, login/importación/historial/PDF/XLSX/billing/IA/Radar funcionen según las reglas vigentes y el responsive esté validado en móvil, tablet y escritorio.
