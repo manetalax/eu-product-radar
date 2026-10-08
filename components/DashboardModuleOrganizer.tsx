@@ -10,7 +10,7 @@ type LayoutPreset = 'focus' | 'complete' | 'default';
 const STORAGE_KEY = 'importverifier:dashboard-layout:v2';
 const DEFAULTS: ModuleState[] = [
   { id: 'import', hidden: false, collapsed: false },
-  { id: 'overview', hidden: false, collapsed: false },
+  { id: 'overview', hidden: false, collapsed: true },
   { id: 'selected', hidden: false, collapsed: false },
   { id: 'market', hidden: false, collapsed: true },
   { id: 'onboarding', hidden: false, collapsed: true },
@@ -18,8 +18,8 @@ const DEFAULTS: ModuleState[] = [
 
 const PRESETS: Record<LayoutPreset, ModuleState[]> = {
   focus: [
-    { id: 'import', hidden: false, collapsed: false },
     { id: 'selected', hidden: false, collapsed: false },
+    { id: 'import', hidden: false, collapsed: true },
     { id: 'overview', hidden: false, collapsed: true },
     { id: 'market', hidden: true, collapsed: true },
     { id: 'onboarding', hidden: true, collapsed: true },
@@ -124,6 +124,8 @@ export default function DashboardModuleOrganizer() {
       .workspace>.file-input{order:-98}.workspace>.message{order:-97}
       .workspace>[data-dashboard-module]{transition:max-height .2s ease,opacity .2s ease;min-width:0}
       .workspace>.iv-module-collapsed{max-height:76px!important;overflow:hidden!important;opacity:.82;mask-image:linear-gradient(to bottom,#000 62%,transparent);-webkit-mask-image:linear-gradient(to bottom,#000 62%,transparent)}
+      .workspace>.iv-module-collapsed>*{pointer-events:none}
+      .workspace>.iv-module-collapsed:focus-within{max-height:none!important;overflow:visible!important;opacity:1;mask-image:none;-webkit-mask-image:none}
       .iv-organizer{position:sticky;top:8px;z-index:40;margin:0 auto 12px;width:min(1180px,calc(100% - 24px));display:flex;justify-content:flex-end;pointer-events:none}
       .iv-organizer button,.iv-organizer-panel{pointer-events:auto}
       .iv-organizer-toggle{border:1px solid rgba(15,23,42,.14);background:rgba(255,255,255,.96);border-radius:999px;padding:9px 14px;font-weight:750;box-shadow:0 8px 24px rgba(15,23,42,.08);backdrop-filter:blur(12px)}

@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches:
+      - fix/radar-actions-config-diagnostics
       - feat/import-rules-verifier-branding
 
 concurrency:

@@ -52,7 +52,8 @@ export function isCheckoutBillingOption(value: unknown): value is CheckoutBillin
 }
 
 export function billingOptionIncludesAi(option: CheckoutBillingOption | null | undefined): boolean {
-  return option === 'annual' || option === 'lifetime' || option === 'custom';
+  // AI is available to every authenticated account, including Free and Monthly.
+  return true;
 }
 
 export function unlimitedBillingStatus(status: 'lifetime' | 'active' = 'lifetime'): BillingStatus {

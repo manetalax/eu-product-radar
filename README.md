@@ -24,8 +24,8 @@ Next.js + TypeScript. SaaS de análisis regulatorio de productos para importador
 
 ## Oferta comercial vigente
 
-- **Free:** 5 productos totales por cuenta.
-- **Mensual:** 9,95 €/mes, sin IA.
+- **Free:** 5 productos totales por cuenta, con ImportVerifier AI.
+- **Mensual:** 9,95 €/mes, con ImportVerifier AI.
 - **Anual:** 89,95 €/año, con IA.
 - **Lifetime:** 299,95 €, pago único, con IA.
 - **Personalizada:** 995,50 €, incluyendo personalización técnica de la plataforma, dominio, logo e integración de WhatsApp.

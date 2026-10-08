@@ -11,44 +11,44 @@ type Props = {
 
 const COPY = {
   es: {
-    kicker: 'Herramientas avanzadas',
-    title: 'Abre solo lo que necesites',
-    body: 'Las funciones secundarias quedan agrupadas para mantener el espacio de trabajo limpio incluso con catálogos grandes.',
+    kicker: 'Más herramientas',
+    title: 'Herramientas',
+    body: '',
     personalized: 'Plan y personalización',
     personalizedDesc: 'Opciones comerciales, personalización técnica y servicios adicionales.',
     intelligence: 'Asistente de IA',
-    intelligenceDesc: 'Consulta y análisis asistido para los planes que incluyen IA.',
+    intelligenceDesc: 'Consulta y análisis asistido disponibles para todas las cuentas.',
     assessment: 'Evaluación regulatoria',
     assessmentDesc: 'Revisión avanzada y estado normativo del análisis seleccionado.',
   },
   en: {
-    kicker: 'Advanced tools', title: 'Open only what you need', body: 'Secondary tools stay grouped so the workspace remains clean even with large catalogues.',
+    kicker: 'More tools', title: 'Tools', body: '',
     personalized: 'Plan and customization', personalizedDesc: 'Commercial options, technical customization and additional services.',
-    intelligence: 'AI assistant', intelligenceDesc: 'Assisted consultation and analysis for plans that include AI.',
+    intelligence: 'AI assistant', intelligenceDesc: 'Assisted consultation and analysis available to every account.',
     assessment: 'Regulatory assessment', assessmentDesc: 'Advanced review and regulatory status for the selected analysis.',
   },
   fr: {
-    kicker: 'Outils avancés', title: 'Ouvrez uniquement ce dont vous avez besoin', body: 'Les outils secondaires restent regroupés afin de préserver un espace de travail clair, même avec de grands catalogues.',
+    kicker: 'Autres outils', title: 'Outils', body: '',
     personalized: 'Offre et personnalisation', personalizedDesc: 'Options commerciales, personnalisation technique et services supplémentaires.',
-    intelligence: 'Assistant IA', intelligenceDesc: 'Consultation et analyse assistées pour les offres incluant l’IA.',
+    intelligence: 'Assistant IA', intelligenceDesc: 'Consultation et analyse assistées disponibles pour tous les comptes.',
     assessment: 'Évaluation réglementaire', assessmentDesc: 'Révision avancée et statut réglementaire de l’analyse sélectionnée.',
   },
   de: {
-    kicker: 'Erweiterte Werkzeuge', title: 'Öffnen Sie nur, was Sie brauchen', body: 'Sekundäre Werkzeuge bleiben gruppiert, damit der Arbeitsbereich auch bei großen Katalogen übersichtlich bleibt.',
+    kicker: 'Weitere Werkzeuge', title: 'Werkzeuge', body: '',
     personalized: 'Tarif und Anpassung', personalizedDesc: 'Kommerzielle Optionen, technische Anpassung und Zusatzleistungen.',
-    intelligence: 'KI-Assistent', intelligenceDesc: 'Unterstützte Abfragen und Analysen für Tarife mit KI.',
+    intelligence: 'KI-Assistent', intelligenceDesc: 'Unterstützte Abfragen und Analysen für alle Konten.',
     assessment: 'Regulatorische Bewertung', assessmentDesc: 'Erweiterte Prüfung und regulatorischer Status der ausgewählten Analyse.',
   },
   it: {
-    kicker: 'Strumenti avanzati', title: 'Apri solo ciò che ti serve', body: 'Gli strumenti secondari restano raggruppati per mantenere l’area di lavoro pulita anche con cataloghi grandi.',
+    kicker: 'Altri strumenti', title: 'Strumenti', body: '',
     personalized: 'Piano e personalizzazione', personalizedDesc: 'Opzioni commerciali, personalizzazione tecnica e servizi aggiuntivi.',
-    intelligence: 'Assistente IA', intelligenceDesc: 'Consultazione e analisi assistita per i piani che includono IA.',
+    intelligence: 'Assistente IA', intelligenceDesc: 'Consultazione e analisi assistita disponibile per tutti gli account.',
     assessment: 'Valutazione normativa', assessmentDesc: 'Revisione avanzata e stato normativo dell’analisi selezionata.',
   },
   pt: {
-    kicker: 'Ferramentas avançadas', title: 'Abra apenas o que precisa', body: 'As ferramentas secundárias ficam agrupadas para manter o espaço de trabalho limpo mesmo com catálogos grandes.',
+    kicker: 'Mais ferramentas', title: 'Ferramentas', body: '',
     personalized: 'Plano e personalização', personalizedDesc: 'Opções comerciais, personalização técnica e serviços adicionais.',
-    intelligence: 'Assistente de IA', intelligenceDesc: 'Consulta e análise assistida para os planos que incluem IA.',
+    intelligence: 'Assistente de IA', intelligenceDesc: 'Consulta e análise assistida disponível para todas as contas.',
     assessment: 'Avaliação regulamentar', assessmentDesc: 'Revisão avançada e estado regulamentar da análise selecionada.',
   },
 } as const;
@@ -64,17 +64,17 @@ export default function DashboardExtrasHub({ personalized, intelligence, assessm
 
   return <section className="iv-tools-hub" aria-labelledby="iv-tools-title">
     <style>{`
-      .iv-tools-hub{width:min(1180px,calc(100% - 32px));margin:22px auto 56px;padding:0;display:grid;gap:12px;color:#0f172a}
-      .iv-tools-heading{padding:4px 2px 8px}.iv-tools-heading span{display:block;color:#2563eb;font-size:11px;font-weight:850;letter-spacing:.11em;text-transform:uppercase}.iv-tools-heading h2{margin:4px 0 6px;font-size:clamp(20px,2.2vw,28px);letter-spacing:-.025em}.iv-tools-heading p{margin:0;max-width:760px;color:#64748b;line-height:1.55}
-      .iv-tool-module{border:1px solid #e2e8f0;border-radius:18px;background:#fff;box-shadow:0 8px 28px rgba(15,23,42,.045);overflow:hidden}
-      .iv-tool-module[open]{box-shadow:0 14px 36px rgba(15,23,42,.075)}
-      .iv-tool-summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:17px 18px;min-height:74px;user-select:none}
+      .iv-tools-hub{width:min(1180px,calc(100% - 32px));margin:14px auto 40px;padding:0;display:grid;gap:8px;color:#211f24}
+      .iv-tools-heading{padding:0 2px 2px}.iv-tools-heading span{display:block;color:#c81e2a;font-size:11px;font-weight:850;letter-spacing:.11em;text-transform:uppercase}.iv-tools-heading h2{margin:2px 0;font-size:15px;letter-spacing:-.01em}.iv-tools-heading p{display:none}
+      .iv-tool-module{border:1px solid #e5dfd6;border-radius:14px;background:#fffdf9;box-shadow:none;overflow:hidden}
+      .iv-tool-module[open]{border-color:#d5cfc6}
+      .iv-tool-summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;min-height:52px;user-select:none}
       .iv-tool-summary::-webkit-details-marker{display:none}.iv-tool-summary:focus-visible{outline:3px solid rgba(37,99,235,.2);outline-offset:-3px}
-      .iv-tool-summary-copy{min-width:0}.iv-tool-summary strong{display:block;font-size:15px;letter-spacing:-.01em}.iv-tool-summary small{display:block;margin-top:4px;color:#64748b;line-height:1.35}
-      .iv-tool-chevron{width:32px;height:32px;border-radius:10px;border:1px solid #dbe4ef;display:grid;place-items:center;color:#475569;font-size:18px;transition:transform .18s ease,background .18s ease}
-      .iv-tool-module[open] .iv-tool-chevron{transform:rotate(180deg);background:#f8fafc}
-      .iv-tool-content{border-top:1px solid #eef2f7;padding:2px 0 0}.iv-tool-content>*{margin-top:0!important}
-      @media(max-width:720px){.iv-tools-hub{width:calc(100% - 16px);margin-top:14px}.iv-tool-summary{padding:14px;min-height:66px}.iv-tool-summary small{font-size:12px}}
+      .iv-tool-summary-copy{min-width:0}.iv-tool-summary strong{display:block;font-size:14px;letter-spacing:-.01em}.iv-tool-summary small{display:none}
+      .iv-tool-chevron{width:28px;height:28px;border-radius:999px;border:1px solid #e5dfd6;display:grid;place-items:center;color:#6a6670;font-size:17px;transition:transform .18s ease,background .18s ease}
+      .iv-tool-module[open] .iv-tool-chevron{transform:rotate(180deg);background:#f5f1eb}
+      .iv-tool-content{border-top:1px solid #eee9e1;padding:2px 0 0}.iv-tool-content>*{margin-top:0!important}
+      @media(max-width:720px){.iv-tools-hub{width:calc(100% - 16px);margin-top:10px}.iv-tool-summary{padding:11px 12px;min-height:48px}}
     `}</style>
     <div className="iv-tools-heading">
       <span>{t.kicker}</span>

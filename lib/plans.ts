@@ -14,7 +14,7 @@ export type PlanDefinition = {
 
 export const FREE_TRIAL_PRODUCT_LIMIT = 5;
 
-// Public entitlement: Unlimited catalogue analysis with differentiated billing capabilities.
+// Public paid entitlement: Unlimited catalogue analysis. Billing modalities change payment terms, not feature access.
 // The numeric ceiling is an infrastructure fair-use guardrail, not a marketed product quota.
 export const UNLIMITED_FAIR_USE_CEILING = 1_000_000;
 export const UNLIMITED_MONTHLY_PRICE_EUR = 9.95;
@@ -31,7 +31,7 @@ export const UNLIMITED_PLAN: PlanDefinition = {
 };
 
 export const UNLIMITED_PUBLIC_OFFERS = [
-  { id: 'monthly', priceEur: UNLIMITED_MONTHLY_PRICE_EUR, cadence: 'month', ai: false },
+  { id: 'monthly', priceEur: UNLIMITED_MONTHLY_PRICE_EUR, cadence: 'month', ai: true },
   { id: 'annual', priceEur: UNLIMITED_ANNUAL_PRICE_EUR, cadence: 'year', ai: true },
   { id: 'lifetime', priceEur: UNLIMITED_LIFETIME_PRICE_EUR, cadence: 'lifetime', ai: true },
 ] as const;

@@ -19,12 +19,12 @@ type RadarEvent = { id: string; source_name: string; source_url: string; title: 
 type JsonObject = Record<string, unknown>;
 
 const PLAN_COPY = {
-  es: { aiLocked: 'ImportVerifier AI está incluido desde el plan Anual.', aiUpgrade: 'Anual, Lifetime y Personalizada incluyen IA.', urlHint: 'Pega la URL de tu tienda o catálogo para identificar la plataforma y preparar la conexión/importación.', detect: 'Preparar conexión', ready: 'URL reconocida. La conexión/importación queda preparada para este conector.' },
-  en: { aiLocked: 'ImportVerifier AI is included from the Annual plan.', aiUpgrade: 'Annual, Lifetime and Custom include AI.', urlHint: 'Paste your store or catalogue URL to identify the platform and prepare the connection/import.', detect: 'Prepare connection', ready: 'URL recognised. The connection/import is ready for this connector.' },
-  fr: { aiLocked: 'ImportVerifier AI est inclus à partir du forfait Annuel.', aiUpgrade: 'Annuel, Lifetime et Personnalisée incluent l’IA.', urlHint: 'Collez l’URL de votre boutique ou catalogue pour identifier la plateforme et préparer la connexion/import.', detect: 'Préparer la connexion', ready: 'URL reconnue. La connexion/import est prête pour ce connecteur.' },
-  de: { aiLocked: 'ImportVerifier AI ist ab dem Jahrestarif enthalten.', aiUpgrade: 'Jährlich, Lifetime und Individuell enthalten AI.', urlHint: 'Füge die URL deines Shops oder Katalogs ein, um die Plattform zu erkennen und Verbindung/Import vorzubereiten.', detect: 'Verbindung vorbereiten', ready: 'URL erkannt. Verbindung/Import ist für diesen Connector vorbereitet.' },
-  it: { aiLocked: 'ImportVerifier AI è incluso dal piano Annuale.', aiUpgrade: 'Annuale, Lifetime e Personalizzata includono l’IA.', urlHint: 'Incolla l’URL del negozio o catalogo per identificare la piattaforma e preparare connessione/importazione.', detect: 'Prepara connessione', ready: 'URL riconosciuto. Connessione/importazione pronta per questo connettore.' },
-  pt: { aiLocked: 'ImportVerifier AI está incluído a partir do plano Anual.', aiUpgrade: 'Anual, Lifetime e Personalizada incluem IA.', urlHint: 'Cole o URL da loja ou catálogo para identificar a plataforma e preparar a ligação/importação.', detect: 'Preparar ligação', ready: 'URL reconhecido. A ligação/importação está preparada para este conector.' },
+  es: { urlHint: 'Pega la URL de tu tienda o catálogo para identificar la plataforma y preparar la conexión/importación.', detect: 'Preparar conexión', ready: 'URL reconocida. La conexión/importación queda preparada para este conector.' },
+  en: { urlHint: 'Paste your store or catalogue URL to identify the platform and prepare the connection/import.', detect: 'Prepare connection', ready: 'URL recognised. The connection/import is ready for this connector.' },
+  fr: { urlHint: 'Collez l’URL de votre boutique ou catalogue pour identifier la plateforme et préparer la connexion/import.', detect: 'Préparer la connexion', ready: 'URL reconnue. La connexion/import est prête pour ce connecteur.' },
+  de: { urlHint: 'Füge die URL deines Shops oder Katalogs ein, um die Plattform zu erkennen und Verbindung/Import vorzubereiten.', detect: 'Verbindung vorbereiten', ready: 'URL erkannt. Verbindung/Import ist für diesen Connector vorbereitet.' },
+  it: { urlHint: 'Incolla l’URL del negozio o catalogo per identificare la piattaforma e preparare connessione/importazione.', detect: 'Prepara connessione', ready: 'URL riconosciuto. Connessione/importazione pronta per questo connettore.' },
+  pt: { urlHint: 'Cole o URL da loja ou catálogo para identificar a plataforma e preparar a ligação/importação.', detect: 'Preparar ligação', ready: 'URL reconhecido. A ligação/importação está preparada para este conector.' },
 } as const;
 
 async function jsonObject(response: Response): Promise<JsonObject> {
@@ -49,7 +49,6 @@ export default function IntelligenceSuite() {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
-  const [aiAccess, setAiAccess] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [aiError, setAiError] = useState('');
   const [platformUrl, setPlatformUrl] = useState('');
@@ -71,11 +70,6 @@ export default function IntelligenceSuite() {
         }
         if (!historyResponse.ok) throw new Error('history_request_failed');
         const historyBody = await jsonObject(historyResponse);
-        const quota = historyBody.quota && typeof historyBody.quota === 'object' ? historyBody.quota as JsonObject : null;
-        const billing = quota?.billing && typeof quota.billing === 'object' ? quota.billing as JsonObject : null;
-        const option = typeof billing?.billingOption === 'string' ? billing.billingOption : null;
-        const permanent = billing?.status === 'lifetime';
-        if (!cancelled) setAiAccess(permanent || option === 'annual' || option === 'lifetime' || option === 'custom');
         const analyses = Array.isArray(historyBody.analyses) ? historyBody.analyses as HistoryItem[] : [];
         const latest = analyses[0];
         if (!latest || cancelled || typeof latest.id !== 'string') return;
@@ -127,7 +121,6 @@ export default function IntelligenceSuite() {
 
   async function askAi(event: FormEvent) {
     event.preventDefault();
-    if (!aiAccess) { setAiError(planCopy.aiLocked); return; }
     if (!analysis || !product || !result || !question.trim() || aiBusy) return;
     setAiBusy(true); setAnswer(''); setAiError('');
     try {
@@ -151,12 +144,11 @@ export default function IntelligenceSuite() {
     {loadError && <div className={styles.error} role="alert">{loadError}</div>}
     {loading ? <div className={styles.empty}>{t.loading}</div> : loadError ? null : !analysis ? <div className={styles.empty}>{t.noAnalysis}</div> : <div className={styles.grid}>
       <article className={`${styles.card} ${styles.wide}`} aria-busy={aiBusy}>
-        <div className={styles.cardHead}><div><h3>ImportVerifier AI</h3><p>{aiAccess ? t.aiLead : planCopy.aiUpgrade}</p></div><span className={styles.status}>{aiAccess ? t.active : 'ANUAL+'}</span></div>
-        <select className={styles.productSelect} value={selected} disabled={aiBusy || !aiAccess} onChange={e => { setSelected(Number(e.target.value)); setAnswer(''); }} aria-label={t.productLabel}>{analysis.products.map((item, index) => <option value={index} key={`${item.name}-${index}`}>{item.name}</option>)}</select>
-        <form className={styles.aiForm} onSubmit={askAi}><input className={styles.aiInput} value={question} disabled={aiBusy || !aiAccess} maxLength={2000} onChange={e => setQuestion(e.target.value)} placeholder={aiAccess ? t.questionPlaceholder : planCopy.aiLocked} /><button className={styles.button} disabled={aiBusy || !question.trim() || !aiAccess}>{aiBusy ? t.asking : t.ask}</button></form>
-        {!aiAccess && <div className={styles.disclaimer}>{planCopy.aiLocked}</div>}
+        <div className={styles.cardHead}><div><h3>ImportVerifier AI</h3><p>{t.aiLead}</p></div><span className={styles.status}>{t.active}</span></div>
+        <select className={styles.productSelect} value={selected} disabled={aiBusy} onChange={e => { setSelected(Number(e.target.value)); setAnswer(''); }} aria-label={t.productLabel}>{analysis.products.map((item, index) => <option value={index} key={`${item.name}-${index}`}>{item.name}</option>)}</select>
+        <form className={styles.aiForm} onSubmit={askAi}><input className={styles.aiInput} value={question} disabled={aiBusy} maxLength={2000} onChange={e => setQuestion(e.target.value)} placeholder={t.questionPlaceholder} /><button className={styles.button} disabled={aiBusy || !question.trim()}>{aiBusy ? t.asking : t.ask}</button></form>
         <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{aiBusy ? t.asking : answer}</p>
-        {answer && <div className={styles.answer}>{answer}</div>}{aiError && <div className={styles.error} role="alert">{aiError}</div>}{aiAccess && <div className={styles.disclaimer}>{t.aiDisclaimer}</div>}
+        {answer && <div className={styles.answer}>{answer}</div>}{aiError && <div className={styles.error} role="alert">{aiError}</div>}<div className={styles.disclaimer}>{t.aiDisclaimer}</div>
       </article>
 
       <article className={styles.card}><div className={styles.cardHead}><div><h3>{section.twinTitle}</h3><p>{t.twinLead}</p></div><span className={styles.status}>{regulatory ? t.live : t.unclassified}</span></div>{regulatory ? <><div className={styles.meterRow}><div className={styles.meter} style={{ '--score': `${readiness}%` } as React.CSSProperties}><div className={styles.meterInner}>{readiness}%</div></div><div className={styles.facts}><div className={styles.fact}><span>{t.category}</span><strong>{regulatory.category}</strong></div><div className={styles.fact}><span>{t.confidence}</span><strong>{confidenceLabel(regulatory.confidence)}</strong></div><div className={styles.fact}><span>{t.evidenceAvailable}</span><strong>{suppliedCount}</strong></div><div className={styles.fact}><span>{t.pendingReview}</span><strong>{missingCount + reviewCount}</strong></div></div></div><ul className={styles.list}>{actions.slice(0, 4).map(action => <li key={action}>{action}</li>)}</ul><div className={styles.disclaimer}>{t.readinessDisclaimer}</div></> : <div className={styles.empty}>{t.noClassification}</div>}</article>
