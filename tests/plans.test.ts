@@ -18,7 +18,7 @@ test('la oferta pública diferencia IA, Lifetime y Personalizada', () => {
   assert.equal(PLANS[0].monthlyProductLimit, UNLIMITED_FAIR_USE_CEILING);
   assert.deepEqual(PLANS.filter(plan => plan.featured).map(plan => plan.id), ['starter']);
   assert.deepEqual(UNLIMITED_PUBLIC_OFFERS.map(offer => [offer.id, offer.priceEur, offer.cadence, offer.ai]), [
-    ['monthly', 9.95, 'month', false],
+    ['monthly', 9.95, 'month', true],
     ['annual', 89.95, 'year', true],
     ['lifetime', 299.95, 'lifetime', true],
   ]);

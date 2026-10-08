@@ -9,7 +9,7 @@ const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8')
 test('public standard offers remain monthly, annual and Lifetime with the new prices', () => {
   assert.deepEqual(UNLIMITED_PUBLIC_OFFERS.map(offer => offer.id), ['monthly', 'annual', 'lifetime']);
   assert.deepEqual(UNLIMITED_PUBLIC_OFFERS.map(offer => offer.priceEur), [9.95, 89.95, 299.95]);
-  assert.deepEqual(UNLIMITED_PUBLIC_OFFERS.map(offer => offer.ai), [false, true, true]);
+  assert.deepEqual(UNLIMITED_PUBLIC_OFFERS.map(offer => offer.ai), [true, true, true]);
   assert.equal(PERSONALIZED_PUBLIC_OFFER.priceEur, 995.50);
 });
 
@@ -19,7 +19,7 @@ test('landing publishes standard billing choices and the personalized offer', ()
   assert.match(landing, /UNLIMITED_PUBLIC_OFFERS\.find\(offer => offer\.id === 'annual'\)/);
   assert.match(landing, /UNLIMITED_PUBLIC_OFFERS\.find\(offer => offer\.id === 'lifetime'\)/);
   assert.match(landing, /PERSONALIZED_PUBLIC_OFFER\.priceEur/);
-  assert.match(landing, /ImportVerifier AI no incluido/);
+  assert.match(landing, /ImportVerifier AI incluido/);
   assert.match(landing, /Integración de WhatsApp/);
   assert.match(landing, /Dominio propio/);
 });

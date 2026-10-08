@@ -3,7 +3,6 @@ import { analyze } from '@/lib/analysis';
 import { generateText } from '@/lib/ai-provider';
 import { recordAiUsage } from '@/lib/ai-telemetry';
 import { consumeApiRateLimit } from '@/lib/api-rate-limit';
-import { billingOptionIncludesAi, billingStatus } from '@/lib/billing';
 import { safeEvidenceUrl } from '@/lib/evidence';
 import { localizeEuRegulatoryAssessment } from '@/lib/eu-regulatory-i18n';
 import { readJsonBody, RequestBodyTooLargeError, sameOrigin, PRIVATE_HEADERS } from '@/lib/http';
@@ -29,18 +28,6 @@ export async function POST(request: Request) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return json({ error: initialText('signIn') }, 401);
 
-  const admin = createAdminClient();
-  const [{ data: subscription, error: subscriptionError }, { data: permanent, error: permanentError }] = await Promise.all([
-    admin.from('subscriptions').select('plan_id,status,current_period_end,cancel_at_period_end,stripe_price_id').eq('user_id', user.id).maybeSingle(),
-    admin.from('unlimited_lifetime_entitlements').select('status').eq('user_id', user.id).maybeSingle(),
-  ]);
-  if ((subscriptionError && subscriptionError.code !== 'PGRST116') || (permanentError && permanentError.code !== 'PGRST116')) {
-    return json({ error: initialText('assistantFailure') }, 503);
-  }
-  const paidStatus = billingStatus(subscription ?? null);
-  const aiAllowed = permanent?.status === 'active' || billingOptionIncludesAi(paidStatus.billingOption);
-  if (!aiAllowed) return json({ error: 'ImportVerifier AI está incluido a partir del plan Anual.' }, 403);
-
   let body: { question?: unknown; analysisId?: unknown; productIndex?: unknown; language?: unknown };
   try { body = await readJsonBody(request) as typeof body; }
   catch (error) {
@@ -56,7 +43,7 @@ export async function POST(request: Request) {
   if (!question || question.length > 2000) return json({ error: a('question') }, 400);
   if (!uuid.test(analysisId) || !Number.isInteger(productIndex) || productIndex < 0 || productIndex >= 1000) return json({ error: a('productInvalid') }, 400);
 
-  const allowed = await consumeApiRateLimit({ userId: user.id, route: 'regulatory_agent', limit: 60, windowSeconds: 3600 });
+  const allowed = await consumeApiRateLimit({ userId: user.id, route: 'regulatory_agent', limit: 10, windowSeconds: 3600 });
   if (!allowed) return json({ error: a('rateLimit') }, 429);
 
   const { data: analysis, error: analysisError } = await supabase
@@ -80,6 +67,7 @@ export async function POST(request: Request) {
     : result;
 
   const radarConfigured = radarRuntimeConfigured(process.env.REGULATORY_RADAR_LIVE, process.env.REGULATORY_INGEST_SECRET);
+  const admin = createAdminClient();
   const evidencePromise = supabase.from('analysis_evidence')
     .select('product_index,evidence_key,status,note,source_document,source_page,source_url')
     .eq('analysis_id', analysisId)

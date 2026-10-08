@@ -14,9 +14,10 @@ Este documento define el estado operativo vigente. Si un documento histórico lo
 ## Oferta comercial vigente
 
 - Prueba gratuita: 5 productos totales por cuenta.
-- Mensual: 9,95 € / mes, **sin IA**.
-- Anual: 89,95 € / año, **con IA**.
-- Lifetime: 299,95 € pago único, **con IA**.
+- Mensual: 9,95 € / mes, con ImportVerifier AI.
+- Anual: 89,95 € / año, con ImportVerifier AI.
+- Lifetime: 299,95 € pago único, con ImportVerifier AI.
+- Free: 5 productos acumulativos por cuenta, con ImportVerifier AI.
 - Personalizada: 995,50 €, incluyendo personalización técnica de la plataforma, dominio, logo e integración de WhatsApp.
 
 Los precios deben mostrarse con sus decimales exactos y con formato localizado.
@@ -46,6 +47,17 @@ REGULATORY_INGEST_SECRET=...
 
 Los secretos no se publican en GitHub ni se exponen al cliente.
 
+## Radar regulatorio y GitHub Actions
+
+El workflow `ImportVerifier regulatory radar` necesita dos valores en los ajustes del repositorio GitHub (`Settings → Secrets and variables → Actions`):
+
+- Variable `NEXT_PUBLIC_SITE_URL`: el origen HTTPS canónico de Sites, sin ruta ni barra final obligatoria.
+- Secret `REGULATORY_INGEST_SECRET`: un valor aleatorio de al menos 32 caracteres.
+
+En las variables de entorno de servidor de Sites configura también `REGULATORY_INGEST_SECRET` con el mismo valor y `REGULATORY_RADAR_LIVE=true`. Conserva configuradas las credenciales de Supabase de servidor. El endpoint valida el secreto de forma constante y el workflow muestra un error explícito si falta una variable o no tiene el formato esperado. No escribas el secreto en el repositorio ni en el código.
+
+El workflow se ejecuta cada seis horas y también se puede iniciar manualmente desde GitHub Actions. Una ejecución correcta confirma que consultó EUR-Lex y guardó los eventos; tener la variable del workflow configurada por sí sola no activa la lectura del Radar en la aplicación.
+
 ## Supabase Auth y OAuth
 
 Configura `Site URL` y redirects con el origen real de Sites:
@@ -72,13 +84,11 @@ Antes de habilitar pagos reales, comprobar:
 
 ## IA
 
-La interfaz debe aplicar las reglas de plan:
+ImportVerifier AI está disponible para las cuentas Free y para todas las modalidades de Unlimited, incluida Mensual, Anual, Lifetime y Personalizada. Free conserva el límite acumulativo de 5 productos; los pagos no alteran el acceso a IA. Para proteger el servicio, cada cuenta tiene un máximo de 10 consultas por hora.
 
-- mensual: IA bloqueada/no incluida;
-- anual y lifetime: IA habilitada;
-- Personalizada: IA según la configuración comercial del servicio personalizado.
+La integración actual usa SiliconFlow para generación de texto y visión. Su oferta vigente incluye 1 USD en créditos iniciales y después cobra según consumo; por tanto, `AI_COST_POLICY=free_only` solo evita el fallback a OpenAI, pero no garantiza que SiliconFlow sea gratuito. Configura `SILICONFLOW_API_KEY` como secreto de servidor únicamente si se acepta ese modelo de costes y sus límites.
 
-La aplicación debe fallar de forma explícita si un proveedor necesario no está configurado; nunca simular un análisis exitoso.
+El acceso de los clientes a IA no tiene un suplemento ni exige un plan de pago. La aplicación debe fallar de forma explícita si un proveedor no está configurado o disponible; nunca simular un análisis exitoso. El proveedor de inferencia puede generar costes operativos para el servicio y debe tener límites de uso y presupuesto configurados.
 
 ## Importación y dashboard
 

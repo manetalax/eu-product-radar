@@ -15,8 +15,8 @@ Continuar autónomamente por trabajo IN PROGRESS/NEXT. No repetir tareas ya cerr
 
 ## Oferta comercial vigente
 
-- Free: 5 productos totales por cuenta.
-- Mensual: **9,95 € / mes**, sin IA.
+- Free: 5 productos totales por cuenta, con ImportVerifier AI.
+- Mensual: **9,95 € / mes**, con IA.
 - Anual: **89,95 € / año**, con IA.
 - Lifetime: **299,95 €**, pago único, con IA.
 - Personalizada: **995,50 €**, incluyendo personalización técnica, dominio, logo e integración de WhatsApp.
@@ -48,7 +48,7 @@ Continuar autónomamente por trabajo IN PROGRESS/NEXT. No repetir tareas ya cerr
 ## NEXT
 
 1. Continuar el rediseño profundo del dashboard modular para cientos/miles de productos sin renderizado interminable.
-2. Aplicar en código/UI las reglas comerciales vigentes: mensual sin IA, anual/lifetime con IA, Lifetime 299,95 €, Personalizada 995,50 €.
+2. Aplicar en código/UI las reglas comerciales vigentes: IA disponible en Free y en todos los planes pagados; conservar Lifetime 299,95 € y Personalizada 995,50 €.
 3. Corregir todo copy de conexión por URL para expresar una función real: pegar URL para conectar/importar; nunca “próximamente”.
 4. Auditar referencias de host legacy dentro del contenido de archivos restantes y retirarlas cuando estén activas, sin borrar historial útil.
 5. Ejecutar tests, typecheck y build del HEAD exacto y corregir cualquier regresión.
@@ -59,6 +59,12 @@ Continuar autónomamente por trabajo IN PROGRESS/NEXT. No repetir tareas ya cerr
 - Configuración administrativa en proveedores externos cuando no haya acción disponible desde las herramientas conectadas.
 - QA físico específico en dispositivos si no existe navegador/dispositivo accesible en la sesión.
 - Eliminación de ramas Git remotas antiguas si la interfaz conectada no expone una operación de borrado de refs.
+
+## Diagnóstico Radar — 2026-10-08
+
+- Los runs programados de GitHub Actions fallan en `test -n "$SITE_ORIGIN"`: en el runner, `vars.NEXT_PUBLIC_SITE_URL` y `secrets.REGULATORY_INGEST_SECRET` llegan vacíos.
+- El workflow ahora señala explícitamente qué variable falta o no cumple formato. Para activar el refresco hacen falta el origen canónico y el secreto en GitHub Actions, más el mismo secreto y `REGULATORY_RADAR_LIVE=true` en Sites.
+- La integración actual de IA usa SiliconFlow y necesita `SILICONFLOW_API_KEY` en el entorno de servidor de Sites. Su crédito de bienvenida no garantiza uso gratuito permanente; vigilar coste operativo y límites. IA habilitada para Free y todos los planes pagados (10 consultas/hora/cuenta) por decisión del propietario el 2026-10-08.
 
 ## Definición de terminado
 

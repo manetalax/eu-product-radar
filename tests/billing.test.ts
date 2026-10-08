@@ -42,12 +42,12 @@ test('Lifetime activo concede Unlimited sin fecha de caducidad', () => {
   assert.equal(lifetime.billingOption, 'lifetime');
 });
 
-test('la IA solo se incluye desde Anual y también en Lifetime/Personalizada', () => {
-  assert.equal(billingOptionIncludesAi('monthly'), false);
+test('ImportVerifier AI está disponible en todos los planes y en Free', () => {
+  assert.equal(billingOptionIncludesAi('monthly'), true);
   assert.equal(billingOptionIncludesAi('annual'), true);
   assert.equal(billingOptionIncludesAi('lifetime'), true);
   assert.equal(billingOptionIncludesAi('custom'), true);
-  assert.equal(billingOptionIncludesAi(null), false);
+  assert.equal(billingOptionIncludesAi(null), true);
 });
 
 test('los precios Stripe se validan y se relacionan con Unlimited fuera de producción', () => {
