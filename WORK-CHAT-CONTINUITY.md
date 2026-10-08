@@ -5,7 +5,7 @@
 - El propietario ha solicitado explícitamente migrar el alojamiento de la aplicación completa a Vercel y conservar las funciones, usuarios, base de datos, pagos y precios existentes.
 - Repositorio: `manetalax/eu-product-radar`; Postispop está en otro sitio y no debe tocarse.
 - GitHub Pages solo publica una edición estática local y no puede alojar la aplicación completa Next.js. No presentarla como sustituto de producción.
-- El proyecto Supabase existente `EuProductRadar` (`hfuwwjdcyudflamwwnon`) se reactivó y está `ACTIVE_HEALTHY`. Están presentes sus migraciones y tablas; las filas de las tablas de producto consultadas eran cero.
+- El proyecto Supabase existente `EuProductRadar` (`hfuwwjdcyudflamwwnon`) se reactivó y está `ACTIVE_HEALTHY`. Están presentes sus migraciones, tablas y datos de cuentas, análisis y suscripciones; no se ejecutó ninguna migración ni se alteraron datos.
 - Vercel MCP no devuelve equipos ni proyectos. El intento de enlazar GitHub reporta que falta una conexión de inicio de sesión GitHub; el navegador mostró OAuth con botón `Authorize` deshabilitado. No se ha creado un proyecto Vercel ni se han transferido secretos.
 - Continuar desde el Next.js existente en `manetalax/eu-product-radar`, sin reconstruirlo ni cambiar de base o de procesador de pago.
 

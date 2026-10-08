@@ -5,7 +5,7 @@ La aplicación completa es Next.js y requiere servidor. GitHub Pages solo puede 
 ## Estado de la migración
 
 - El código completo y sus rutas de servidor están en este repositorio.
-- El proyecto Supabase existente `EuProductRadar` (`hfuwwjdcyudflamwwnon`) fue reactivado y responde como `ACTIVE_HEALTHY`. Sus migraciones y tablas están presentes; las filas de las tablas públicas de producto consultadas estaban a cero.
+- El proyecto Supabase existente `EuProductRadar` (`hfuwwjdcyudflamwwnon`) fue reactivado y responde como `ACTIVE_HEALTHY`. Sus migraciones, tablas, cuentas, análisis y una suscripción existente siguen presentes; no se realizó ninguna migración ni cambio de datos.
 - La cuenta Vercel disponible aún no tiene la conexión de GitHub que permite enlazar el repositorio. No publicar la edición estática como si fuera la aplicación completa.
 - Mantener la URL canónica de producción que asigne Vercel en `NEXT_PUBLIC_SITE_URL`; no inventar ni reemplazar el dominio público hasta tenerlo confirmado.
 
