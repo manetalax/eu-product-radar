@@ -9,6 +9,12 @@ Next.js + TypeScript. SaaS de análisis regulatorio de productos para importador
 - No crear ni restaurar Netlify, deploy previews ni copias legacy.
 - `NEXT_PUBLIC_SITE_URL` debe ser el origen HTTPS canónico publicado por Sites.
 
+## Edición estática de GitHub Pages
+
+Este repositorio incluye una edición estática independiente en `github-pages/`, publicada en `https://manetalax.github.io/eu-product-radar/` mediante GitHub Actions cuando se integra en `main`. La edición procesa CSV/XLS/XLSX en el navegador con el motor determinista existente y no sube el catálogo.
+
+GitHub Pages no ejecuta las rutas Next.js del servidor. Esta edición no incluye cuentas, historial sincronizado, IA remota, Stripe ni el Radar automático; no sustituye la aplicación completa publicada en Sites. El análisis es orientativo y no certifica cumplimiento.
+
 ## Implementado
 
 - Registro, confirmación de correo, acceso, Google OAuth, cierre de sesión y recuperación de contraseña.

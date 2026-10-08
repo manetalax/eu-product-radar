@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">ImportVerifier</title>
+  <desc id="desc">ImportVerifier shield with verification mark</desc>
+  <rect width="512" height="512" rx="112" fill="#111827"/>
+  <path d="M256 72 392 122v111c0 92-54 166-136 207-82-41-136-115-136-207V122L256 72Z" fill="#4f46e5"/>
+  <path d="m185 256 44 44 98-104" fill="none" stroke="#fff" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M171 365h170" stroke="#c7d2fe" stroke-width="18" stroke-linecap="round" opacity=".9"/>
+</svg>
