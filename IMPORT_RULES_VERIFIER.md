@@ -5,7 +5,7 @@ Este archivo histórico ha sido retirado como fuente operativa porque contenía 
 Usar únicamente:
 
 - `WORK-CHAT-CONTINUITY.md` para estado y NEXT.
-- `SETUP.md` para configuración de Sites.
+- `SETUP.md` para configuración objetivo de Vercel.
 - `docs/IMPORT_RULES_VERIFIER_DEPLOY.md` para publicación.
 
-Frontend de producción: **Sites únicamente**. No restaurar previews, copias ni configuración Netlify.
+La aplicación completa requiere un host Next.js con servidor. El objetivo solicitado es Vercel; GitHub Pages conserva solo una edición ligera independiente.

@@ -4,16 +4,16 @@ Next.js + TypeScript. SaaS de análisis regulatorio de productos para importador
 
 ## Producción
 
-- Frontend objetivo: **Sites únicamente**.
+- La aplicación completa usa Next.js y necesita alojamiento con servidor; la migración solicitada tiene como destino Vercel conectado a `main`.
 - GitHub se mantiene como control de versiones y fuente del código.
-- No crear ni restaurar Netlify, deploy previews ni copias legacy.
-- `NEXT_PUBLIC_SITE_URL` debe ser el origen HTTPS canónico publicado por Sites.
+- Supabase y Stripe se conservan: cambiar el alojamiento web no significa cambiar de base de datos, usuarios, historial, precios ni pagos.
+- `NEXT_PUBLIC_SITE_URL` debe ser el origen HTTPS canónico de producción asignado por Vercel.
 
-## Edición estática de GitHub Pages
+## Edición ligera de GitHub Pages
 
-Este repositorio incluye una edición estática independiente en `github-pages/`, publicada en `https://manetalax.github.io/eu-product-radar/` mediante GitHub Actions cuando se integra en `main`. La edición procesa CSV/XLS/XLSX en el navegador con el motor determinista existente y no sube el catálogo.
+Este repositorio incluye una edición estática independiente en `github-pages/`, publicada en `https://manetalax.github.io/eu-product-radar/` mediante GitHub Actions cuando se integra en `main`. Procesa CSV/XLS/XLSX en el navegador con el motor determinista existente y no sube el catálogo.
 
-GitHub Pages no ejecuta las rutas Next.js del servidor. Esta edición no incluye cuentas, historial sincronizado, IA remota, Stripe ni el Radar automático; no sustituye la aplicación completa publicada en Sites. El análisis es orientativo y no certifica cumplimiento.
+GitHub Pages no ejecuta las rutas Next.js del servidor. Esta edición no incluye cuentas, historial sincronizado, IA remota, Stripe ni el Radar automático; es solo una edición ligera y no sustituye la aplicación completa. El análisis es orientativo y no certifica cumplimiento.
 
 ## Implementado
 
@@ -55,4 +55,4 @@ npm run dev
 
 ## Publicación
 
-Antes de publicar en Sites deben pasar tests, typecheck y build, además de verificarse login, importación, historial, PDF/XLSX, billing, acceso a IA según plan, entrada por URL y responsive en móvil/tablet/escritorio. No debe quedar ninguna dependencia activa de Netlify ni de previews anteriores.
+Antes de publicar la aplicación completa en Vercel deben pasar las comprobaciones de release y verificarse login, importación, historial, PDF/XLSX, billing, acceso a IA según plan, Radar y responsive en móvil/tablet/escritorio. La aceptación está descrita en `docs/IMPORT_RULES_VERIFIER_DEPLOY.md`.
